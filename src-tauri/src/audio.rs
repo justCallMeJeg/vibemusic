@@ -12,6 +12,7 @@ use state::PlaybackState;
 // Event names
 const EVENT_PLAYBACK_STATE: &str = "audio-playback-state";
 const EVENT_PLAYBACK_PROGRESS: &str = "audio-playback-progress";
+const EVENT_PLAYBACK_FINISHED: &str = "audio-playback-finished";
 
 pub struct AudioEngine {
     sink: Arc<Mutex<Sink>>,
@@ -123,16 +124,29 @@ pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
         loop {
             thread::sleep(Duration::from_millis(250)); // Update 4 times a second
 
-            let state_guard = engine.state.lock().unwrap();
+            // We need to check sink status
+            let is_sink_empty = {
+                let sink = engine.sink.lock().unwrap();
+                sink.empty()
+            };
 
-            if state_guard.is_playing && !state_guard.is_paused {
-                // Approximate position tracking not perfect with raw rodio sink
-                // For accurate tracking we'd need to track elapsed time manually
-                // Since rodio doesn't expose current position easily on Sink
-                // TODO: Implement more accurate manual timer based tracking
+            let mut state = engine.state.lock().unwrap();
 
-                // For now, we emit the state to frontend
-                app.emit(EVENT_PLAYBACK_PROGRESS, &*state_guard).ok();
+            if state.is_playing && !state.is_paused {
+                // If sink is empty but we think we are playing, the track finished
+                if is_sink_empty {
+                    state.is_playing = false;
+                    state.position_ms = 0;
+                    state.current_file = None;
+
+                    // Emit finished event
+                    app.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
+                    // Emit state update
+                    app.emit(EVENT_PLAYBACK_STATE, &*state).ok();
+                } else {
+                    // Still playing, emit progress
+                    app.emit(EVENT_PLAYBACK_PROGRESS, &*state).ok();
+                }
             }
         }
     });

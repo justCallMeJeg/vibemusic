@@ -6,3 +6,5 @@ export interface PlaybackState {
   duration_ms: number;
   volume: number;
 }
+
+export type RepeatMode = 'off' | 'all' | 'one';
