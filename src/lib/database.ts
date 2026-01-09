@@ -1,6 +1,12 @@
 /**
  * Database Service for VibMusic
- * Handles SQLite operations for the music library
+ * 
+ * Provides SQLite database operations for the music library including:
+ * - Track, Artist, Album CRUD operations
+ * - Playlist management
+ * - Play history tracking
+ * 
+ * @module database
  */
 
 import Database from '@tauri-apps/plugin-sql';
@@ -16,13 +22,26 @@ import type {
   CreatePlaylistInput,
 } from '../types/database';
 
-// Database instance singleton
+/** Database instance singleton */
 let db: Database | null = null;
 
+/** SQLite database file path */
 const DB_NAME = 'sqlite:library.db';
 
 /**
- * Initialize the database connection and run migrations
+ * Initialize the database connection and run migrations.
+ * 
+ * This function should be called once at app startup before any database operations.
+ * It creates the database file if it doesn't exist and applies any pending migrations.
+ * 
+ * @returns The initialized Database instance
+ * @throws Error if database connection fails
+ * 
+ * @example
+ * ```typescript
+ * await initializeDatabase();
+ * const tracks = await getTracks();
+ * ```
  */
 export async function initializeDatabase(): Promise<Database> {
   if (db) return db;
@@ -36,7 +55,16 @@ export async function initializeDatabase(): Promise<Database> {
 }
 
 /**
- * Get the database instance (must call initializeDatabase first)
+ * Get the database instance.
+ * 
+ * @returns The Database instance
+ * @throws Error if database has not been initialized via `initializeDatabase()`
+ * 
+ * @example
+ * ```typescript
+ * const db = getDatabase();
+ * const result = await db.select('SELECT * FROM tracks');
+ * ```
  */
 export function getDatabase(): Database {
   if (!db) {
@@ -181,11 +209,34 @@ async function applyInitialSchema(database: Database): Promise<void> {
 // Artist Operations
 // ============================================
 
+/**
+ * Get all artists from the database.
+ * 
+ * @returns Array of Artist objects sorted by name (A-Z)
+ * 
+ * @example
+ * ```typescript
+ * const artists = await getArtists();
+ * console.log(`Found ${artists.length} artists`);
+ * ```
+ */
 export async function getArtists(): Promise<Artist[]> {
   const database = getDatabase();
   return database.select('SELECT * FROM artists ORDER BY name ASC');
 }
 
+/**
+ * Get a single artist by ID.
+ * 
+ * @param id - The artist's unique identifier
+ * @returns The Artist object or null if not found
+ * 
+ * @example
+ * ```typescript
+ * const artist = await getArtistById(1);
+ * if (artist) console.log(artist.name);
+ * ```
+ */
 export async function getArtistById(id: number): Promise<Artist | null> {
   const database = getDatabase();
   const results = await database.select<Artist[]>(
@@ -195,6 +246,20 @@ export async function getArtistById(id: number): Promise<Artist | null> {
   return results[0] || null;
 }
 
+/**
+ * Get an existing artist by name or create a new one.
+ * 
+ * This is useful when importing tracks - it ensures no duplicate artists are created.
+ * 
+ * @param name - The artist's name (case-sensitive)
+ * @returns The existing or newly created Artist object
+ * 
+ * @example
+ * ```typescript
+ * const artist = await getOrCreateArtist('Taylor Swift');
+ * console.log(`Artist ID: ${artist.id}`);
+ * ```
+ */
 export async function getOrCreateArtist(name: string): Promise<Artist> {
   const database = getDatabase();
 
@@ -226,11 +291,22 @@ export async function getOrCreateArtist(name: string): Promise<Artist> {
 // Album Operations
 // ============================================
 
+/**
+ * Get all albums from the database.
+ * 
+ * @returns Array of Album objects sorted by title (A-Z)
+ */
 export async function getAlbums(): Promise<Album[]> {
   const database = getDatabase();
   return database.select('SELECT * FROM albums ORDER BY title ASC');
 }
 
+/**
+ * Get a single album by ID.
+ * 
+ * @param id - The album's unique identifier
+ * @returns The Album object or null if not found
+ */
 export async function getAlbumById(id: number): Promise<Album | null> {
   const database = getDatabase();
   const results = await database.select<Album[]>(
@@ -240,6 +316,17 @@ export async function getAlbumById(id: number): Promise<Album | null> {
   return results[0] || null;
 }
 
+/**
+ * Get an existing album by title and artist, or create a new one.
+ * 
+ * Albums are uniquely identified by their title + artist combination.
+ * This prevents duplicate albums when importing tracks.
+ * 
+ * @param title - The album title
+ * @param artistId - The artist's ID (null for compilations/unknown)
+ * @param year - Optional release year
+ * @returns The existing or newly created Album object
+ */
 export async function getOrCreateAlbum(
   title: string,
   artistId: number | null,
@@ -275,11 +362,22 @@ export async function getOrCreateAlbum(
 // Track Operations
 // ============================================
 
+/**
+ * Get all tracks from the database.
+ * 
+ * @returns Array of Track objects sorted by title (A-Z)
+ */
 export async function getTracks(): Promise<Track[]> {
   const database = getDatabase();
   return database.select('SELECT * FROM tracks ORDER BY title ASC');
 }
 
+/**
+ * Get a single track by ID.
+ * 
+ * @param id - The track's unique identifier
+ * @returns The Track object or null if not found
+ */
 export async function getTrackById(id: number): Promise<Track | null> {
   const database = getDatabase();
   const results = await database.select<Track[]>(
@@ -289,6 +387,15 @@ export async function getTrackById(id: number): Promise<Track | null> {
   return results[0] || null;
 }
 
+/**
+ * Get a track by its file path.
+ * 
+ * File paths are unique in the database, making this useful for
+ * checking if a file has already been indexed.
+ * 
+ * @param filePath - The absolute path to the audio file
+ * @returns The Track object or null if not found
+ */
 export async function getTrackByFilePath(filePath: string): Promise<Track | null> {
   const database = getDatabase();
   const results = await database.select<Track[]>(
@@ -298,6 +405,14 @@ export async function getTrackByFilePath(filePath: string): Promise<Track | null
   return results[0] || null;
 }
 
+/**
+ * Get all tracks with their related artist and album information.
+ * 
+ * This performs JOINs to include artist name, album title, and artwork path
+ * in a single query for display purposes.
+ * 
+ * @returns Array of TrackWithRelations objects
+ */
 export async function getTracksWithRelations(): Promise<TrackWithRelations[]> {
   const database = getDatabase();
   return database.select(`
@@ -313,6 +428,27 @@ export async function getTracksWithRelations(): Promise<TrackWithRelations[]> {
   `);
 }
 
+/**
+ * Add a new track to the database.
+ * 
+ * This function automatically creates artist and album records if they don't exist.
+ * Use `upsertTrack` instead if you want to update existing tracks.
+ * 
+ * @param input - The track metadata to insert
+ * @returns The newly created Track object
+ * @throws Error if a track with the same file_path already exists
+ * 
+ * @example
+ * ```typescript
+ * const track = await addTrack({
+ *   title: 'Song Name',
+ *   artist_name: 'Artist Name',
+ *   album_title: 'Album Name',
+ *   duration_ms: 180000,
+ *   file_path: '/path/to/song.mp3',
+ * });
+ * ```
+ */
 export async function addTrack(input: CreateTrackInput): Promise<Track> {
   const database = getDatabase();
 
@@ -365,16 +501,36 @@ export async function addTrack(input: CreateTrackInput): Promise<Track> {
   return created;
 }
 
+/**
+ * Delete a track by ID.
+ * 
+ * This also removes the track from any playlists and play history
+ * due to CASCADE delete constraints.
+ * 
+ * @param id - The track's unique identifier
+ */
 export async function deleteTrack(id: number): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM tracks WHERE id = ?', [id]);
 }
 
+/**
+ * Delete a track by its file path.
+ * 
+ * Useful when a file is moved/deleted from the file system.
+ * 
+ * @param filePath - The absolute path to the audio file
+ */
 export async function deleteTrackByFilePath(filePath: string): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM tracks WHERE file_path = ?', [filePath]);
 }
 
+/**
+ * Get the total number of tracks in the database.
+ * 
+ * @returns The total track count
+ */
 export async function getTrackCount(): Promise<number> {
   const database = getDatabase();
   const result = await database.select<{ count: number }[]>(
@@ -384,8 +540,27 @@ export async function getTrackCount(): Promise<number> {
 }
 
 /**
- * Insert or update a track based on file_path (upsert)
- * Returns { track, isNew } where isNew indicates if this was an insert
+ * Insert a new track or update an existing one (upsert).
+ * 
+ * This function checks if a track with the same file_path exists:
+ * - If it exists: Updates all metadata fields
+ * - If it doesn't exist: Creates a new track
+ * 
+ * This is the preferred method for library scanning as it handles
+ * both new files and metadata updates for existing files.
+ * 
+ * @param input - The track metadata to insert/update
+ * @returns Object containing the track and whether it was newly created
+ * 
+ * @example
+ * ```typescript
+ * const { track, isNew } = await upsertTrack({
+ *   title: 'Song Name',
+ *   file_path: '/path/to/song.mp3',
+ *   duration_ms: 180000,
+ * });
+ * console.log(isNew ? 'New track added' : 'Track updated');
+ * ```
  */
 export async function upsertTrack(input: CreateTrackInput): Promise<{ track: Track; isNew: boolean }> {
   const database = getDatabase();

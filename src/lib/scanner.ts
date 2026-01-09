@@ -1,6 +1,13 @@
 /**
- * Scanner Service
- * Frontend service for music file scanning operations
+ * Scanner Service for VibMusic
+ * 
+ * Provides music file scanning and indexing functionality:
+ * - Folder selection dialogs
+ * - Recursive audio file discovery
+ * - Metadata extraction using lofty-rs
+ * - Database indexing with progress events
+ * 
+ * @module scanner
  */
 
 import { invoke } from '@tauri-apps/api/core';
@@ -10,7 +17,18 @@ import type { TrackMetadata, ScanProgress, ScanResult } from '../types/scanner';
 import { upsertTrack } from './database';
 
 /**
- * Open a folder picker dialog to select a music folder
+ * Open a native folder picker dialog to select a music folder.
+ * 
+ * @returns The selected folder path, or null if the user cancelled
+ * 
+ * @example
+ * ```typescript
+ * const folder = await selectMusicFolder();
+ * if (folder) {
+ *   console.log(`Selected: ${folder}`);
+ *   await scanAndIndexLibrary([folder]);
+ * }
+ * ```
  */
 export async function selectMusicFolder(): Promise<string | null> {
   const selected = await open({
@@ -28,29 +46,75 @@ export async function selectMusicFolder(): Promise<string | null> {
 }
 
 /**
- * Get all audio file paths in a directory
+ * Scan a directory for audio files (recursive).
+ * 
+ * Supported formats: MP3, FLAC, WAV, OGG, M4A, AAC, AIFF, WavPack, Opus
+ * 
+ * @param path - Absolute path to the directory to scan
+ * @returns Array of absolute file paths for found audio files
+ * @throws Error if the path doesn't exist or isn't a directory
+ * 
+ * @example
+ * ```typescript
+ * const files = await scanFolder('C:/Music');
+ * console.log(`Found ${files.length} audio files`);
+ * ```
  */
 export async function scanFolder(path: string): Promise<string[]> {
   return invoke<string[]>('scan_folder', { path });
 }
 
 /**
- * Get metadata for a single audio file
+ * Extract metadata from a single audio file.
+ * 
+ * Uses lofty-rs to read ID3/Vorbis/etc. tags and audio properties.
+ * 
+ * @param path - Absolute path to the audio file
+ * @returns TrackMetadata object with extracted information
+ * @throws Error if the file doesn't exist or can't be read
+ * 
+ * @example
+ * ```typescript
+ * const metadata = await getFileMetadata('/path/to/song.mp3');
+ * console.log(`${metadata.title} by ${metadata.artist}`);
+ * ```
  */
 export async function getFileMetadata(path: string): Promise<TrackMetadata> {
   return invoke<TrackMetadata>('get_file_metadata', { path });
 }
 
 /**
- * Scan multiple folders and extract metadata for all audio files
+ * Scan multiple folders and extract metadata for all audio files.
+ * 
+ * This is a lower-level function that only scans and extracts metadata.
+ * Use `scanAndIndexLibrary` to also save results to the database.
+ * 
+ * Emits 'scan-progress' events during scanning.
+ * 
+ * @param folders - Array of folder paths to scan
+ * @returns ScanResult with tracks, errors, and counts
  */
 export async function scanMusicLibrary(folders: string[]): Promise<ScanResult> {
   return invoke<ScanResult>('scan_music_library', { folders });
 }
 
 /**
- * Listen to scan progress events
- * Returns an unlisten function to stop listening
+ * Subscribe to scan progress events.
+ * 
+ * Progress events are emitted during `scanMusicLibrary` and `scanAndIndexLibrary`.
+ * 
+ * @param callback - Function called for each progress update
+ * @returns Unlisten function to stop receiving events
+ * 
+ * @example
+ * ```typescript
+ * const unlisten = await onScanProgress((progress) => {
+ *   console.log(`${progress.current}/${progress.total}: ${progress.current_file}`);
+ * });
+ * 
+ * // When done:
+ * unlisten();
+ * ```
  */
 export async function onScanProgress(
   callback: (progress: ScanProgress) => void
@@ -61,8 +125,30 @@ export async function onScanProgress(
 }
 
 /**
- * Scan folders and index all tracks into the database
- * Returns summary of what was indexed
+ * Scan folders and index all found tracks into the database.
+ * 
+ * This is the main function for library import. It:
+ * 1. Recursively scans all provided folders for audio files
+ * 2. Extracts metadata using lofty-rs
+ * 3. Upserts each track into the SQLite database
+ * 
+ * Existing tracks (same file_path) are updated with new metadata.
+ * 
+ * @param folders - Array of folder paths to scan
+ * @param onProgress - Optional callback for progress updates
+ * @returns Summary with counts of indexed, updated, and errored tracks
+ * 
+ * @example
+ * ```typescript
+ * const result = await scanAndIndexLibrary(
+ *   ['C:/Music', 'D:/Downloads/Music'],
+ *   (progress) => {
+ *     setProgress(`${progress.current}/${progress.total}`);
+ *   }
+ * );
+ * 
+ * console.log(`Added ${result.indexed}, updated ${result.updated}`);
+ * ```
  */
 export async function scanAndIndexLibrary(
   folders: string[],
@@ -129,7 +215,18 @@ export async function scanAndIndexLibrary(
 }
 
 /**
- * Quick scan to count audio files in folders
+ * Quickly count audio files in folders without extracting metadata.
+ * 
+ * Useful for showing a preview of how many files will be scanned.
+ * 
+ * @param folders - Array of folder paths to count files in
+ * @returns Total number of audio files found
+ * 
+ * @example
+ * ```typescript
+ * const count = await countAudioFiles(['C:/Music']);
+ * console.log(`Found ${count} files to scan`);
+ * ```
  */
 export async function countAudioFiles(folders: string[]): Promise<number> {
   let total = 0;
@@ -145,3 +242,4 @@ export async function countAudioFiles(folders: string[]): Promise<number> {
 
   return total;
 }
+
