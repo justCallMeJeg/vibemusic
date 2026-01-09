@@ -158,4 +158,40 @@ impl DbHelper {
 
         Ok(())
     }
+
+    pub fn get_all_tracks(&self) -> Result<Vec<crate::library::LibraryTrack>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                t.id, 
+                t.title, 
+                ar.name as artist, 
+                al.title as album, 
+                t.duration_ms, 
+                t.file_path, 
+                al.artwork_path 
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN albums al ON t.album_id = al.id
+            ORDER BY t.created_at DESC"
+        )?;
+
+        let track_iter = stmt.query_map([], |row| {
+            Ok(crate::library::LibraryTrack {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                album: row.get(3)?,
+                duration_ms: row.get(4)?,
+                file_path: row.get(5)?,
+                artwork_path: row.get(6)?,
+            })
+        })?;
+
+        let mut tracks = Vec::new();
+        for track in track_iter {
+            tracks.push(track?);
+        }
+
+        Ok(tracks)
+    }
 }

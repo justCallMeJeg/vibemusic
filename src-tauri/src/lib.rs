@@ -4,6 +4,7 @@ mod artwork;
 mod audio;
 mod database;
 mod error;
+mod library;
 mod scanner;
 use audio::{AudioEngine, AudioState};
 use std::sync::Arc;
@@ -51,6 +52,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            library::get_all_tracks,
             scanner::get_file_metadata,
             scanner::scan_folder,
             scanner::scan_music_library,

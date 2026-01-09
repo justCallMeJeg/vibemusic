@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 
 pub mod state;
@@ -15,10 +15,17 @@ const EVENT_PLAYBACK_STATE: &str = "audio-playback-state";
 const EVENT_PLAYBACK_PROGRESS: &str = "audio-playback-progress";
 const EVENT_PLAYBACK_FINISHED: &str = "audio-playback-finished";
 
+struct TimerState {
+    start_time: Option<Instant>,
+    paused_duration: Duration,
+    pause_start: Option<Instant>,
+}
+
 pub struct AudioEngine {
     sink: Arc<Mutex<Sink>>,
     // _stream is leaked to ensure it lives forever
     state: Arc<Mutex<PlaybackState>>,
+    timer: Arc<Mutex<TimerState>>,
     media_controls: Arc<Mutex<MediaControls>>,
 }
 
@@ -66,6 +73,11 @@ impl AudioEngine {
         Self {
             sink: Arc::new(Mutex::new(sink)),
             state: Arc::new(Mutex::new(PlaybackState::default())),
+            timer: Arc::new(Mutex::new(TimerState {
+                start_time: None,
+                paused_duration: Duration::ZERO,
+                pause_start: None,
+            })),
             media_controls: Arc::new(Mutex::new(controls)),
         }
     }
@@ -134,6 +146,12 @@ impl AudioEngine {
         state.duration_ms = total_duration;
         state.position_ms = 0;
 
+        // Reset timer
+        let mut timer = self.timer.lock().unwrap();
+        timer.start_time = Some(Instant::now());
+        timer.paused_duration = Duration::ZERO;
+        timer.pause_start = None;
+
         // Update Media Controls
         let mut controls = self.media_controls.lock().unwrap();
         controls
@@ -175,6 +193,11 @@ impl AudioEngine {
         state.is_paused = true;
         state.is_playing = false;
 
+        let mut timer = self.timer.lock().unwrap();
+        if timer.pause_start.is_none() {
+            timer.pause_start = Some(Instant::now());
+        }
+
         let mut controls = self.media_controls.lock().unwrap();
         controls
             .set_playback(MediaPlayback::Paused {
@@ -190,6 +213,12 @@ impl AudioEngine {
         let mut state = self.state.lock().unwrap();
         state.is_paused = false;
         state.is_playing = true;
+
+        let mut timer = self.timer.lock().unwrap();
+        if let Some(pause_start) = timer.pause_start {
+            timer.paused_duration += pause_start.elapsed();
+            timer.pause_start = None;
+        }
 
         let mut controls = self.media_controls.lock().unwrap();
         controls
@@ -208,6 +237,11 @@ impl AudioEngine {
         state.is_paused = false;
         state.position_ms = 0;
         state.current_file = None;
+
+        let mut timer = self.timer.lock().unwrap();
+        timer.start_time = None;
+        timer.paused_duration = Duration::ZERO;
+        timer.pause_start = None;
 
         let mut controls = self.media_controls.lock().unwrap();
         controls.set_playback(MediaPlayback::Stopped).ok();
@@ -228,6 +262,30 @@ impl AudioEngine {
 
         let mut state = self.state.lock().unwrap();
         state.position_ms = position_ms;
+
+        // Reset start time to act as if we started 'position_ms' ago
+        // start_time = now - position_ms
+        // paused_duration = 0
+        // This is simpler than maintaining offsets
+        let mut timer = self.timer.lock().unwrap();
+        let now = Instant::now();
+        if state.is_paused {
+             // If paused, we want: when we resume, we start from here.
+             // So essentially effective elapsed should be position_ms.
+             // We can just set start_time = now - position_ms and pause_start = now
+             // So when we resume, paused_duration = resume_time - pause_start (which is resume_time - now).
+             // And elapsed = resume_time - start_time - paused_duration 
+             //             = resume_time - (now - pos) - (resume_time - now)
+             //             = resume_time - now + pos - resume_time + now
+             //             = pos. Correct.
+             timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
+             timer.pause_start = Some(now);
+             timer.paused_duration = Duration::ZERO;
+        } else {
+             timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
+             timer.pause_start = None;
+             timer.paused_duration = Duration::ZERO;
+        }
 
         let mut controls = self.media_controls.lock().unwrap();
         if state.is_paused {
@@ -253,25 +311,69 @@ pub struct AudioState(pub Arc<AudioEngine>);
 pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
     thread::spawn(move || loop {
         thread::sleep(Duration::from_millis(250));
+        
+        // Timer update logic
+        // We do this in a block to release locks quickly
+        let (should_emit, current_pos_ms) = {
+             let mut state = engine.state.lock().unwrap();
+             let timer = engine.timer.lock().unwrap();
+
+             if state.is_playing && !state.is_paused {
+                 if let Some(start_time) = timer.start_time {
+                     let elapsed = start_time.elapsed();
+                     let total_paused = timer.paused_duration;
+                     // effective_elapsed = elapsed - total_paused
+                     // careful with underflow if clocks skew or something weird, but usually elapsed > paused
+                     let effective_elapsed = if elapsed >= total_paused { elapsed - total_paused } else { Duration::ZERO };
+                     state.position_ms = effective_elapsed.as_millis() as u64;
+                     
+                     // Cap at duration if known
+                     if state.duration_ms > 0 && state.position_ms > state.duration_ms {
+                         state.position_ms = state.duration_ms;
+                     }
+                     
+                     (true, state.position_ms)
+                 } else {
+                     (false, 0)
+                 }
+             } else {
+                 (false, 0)
+             }
+        };
+
         let is_sink_empty = {
             let sink = engine.sink.lock().unwrap();
             sink.empty()
         };
 
+        // We check state again for sink empty logic
         let mut state = engine.state.lock().unwrap();
-
+        
         if state.is_playing && !state.is_paused {
-            if is_sink_empty {
+             if is_sink_empty {
                 state.is_playing = false;
                 state.position_ms = 0;
                 state.current_file = None;
+
+                // Stop timer
+                let mut timer = engine.timer.lock().unwrap();
+                timer.start_time = None;
+                timer.paused_duration = Duration::ZERO;
+                timer.pause_start = None;
 
                 app.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
                 app.emit(EVENT_PLAYBACK_STATE, &*state).ok();
 
                 let mut controls = engine.media_controls.lock().unwrap();
                 controls.set_playback(MediaPlayback::Stopped).ok();
-            } else {
+            } else if should_emit {
+                // state.position_ms was updated in the block above, need to make sure we emit the updated state
+                // Actually we just locked it again, so we might have overwritten it?
+                // No, we updated it in the first block.
+                // But wait, we re-acquired the lock.
+                // The first block: `let mut state = engine.state.lock().unwrap(); state.position_ms = ...;` -> lock released, state updated.
+                // Then `let mut state = engine.state.lock().unwrap();` -> acquires lock, sees updated state.
+                // So safe.
                 app.emit(EVENT_PLAYBACK_PROGRESS, &*state).ok();
             }
         }

@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   font-family: "Instrument Sans", sans-serif;
 
   --background: oklch(100% 0.0001 271.152deg);
@@ -125,7 +128,25 @@
   }
 }
 
-
 .debug {
   outline: 1px solid red;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
