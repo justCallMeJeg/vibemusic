@@ -324,3 +324,12 @@ pub async fn scan_music_library(
         errors,
     })
 }
+
+/// Check if files exist at the given paths
+#[command]
+pub async fn check_files_exist(paths: Vec<String>) -> Vec<String> {
+    paths
+        .into_iter()
+        .filter(|path| !Path::new(path).exists())
+        .collect()
+}

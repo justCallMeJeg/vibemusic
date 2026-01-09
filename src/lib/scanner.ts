@@ -14,7 +14,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { TrackMetadata, ScanProgress, ScanResult } from '../types/scanner';
-import { upsertTrack } from './database';
+import { upsertTrack, getAllTrackPaths, deleteTrackByFilePath } from './database';
 
 /**
  * Open a native folder picker dialog to select a music folder.
@@ -241,5 +241,42 @@ export async function countAudioFiles(folders: string[]): Promise<number> {
   }
 
   return total;
+}
+
+/**
+ * Check if files exist at the given paths.
+ * @param paths Array of absolute file paths
+ * @returns Array of paths that do not exist
+ */
+export async function checkFilesExist(paths: string[]): Promise<string[]> {
+  return invoke<string[]>('check_files_exist', { paths });
+}
+
+/**
+ * Synchronize the library by removing tracks that no longer exist on disk.
+ * 
+ * @returns Object containing the number of removed tracks
+ */
+export async function syncLibrary(): Promise<{ removed: number }> {
+  // Get all track paths from database
+  const tracks = await getAllTrackPaths();
+  const paths = tracks.map(t => t.file_path);
+  
+  // Check existence in chunks to be safe with IPC
+  const missingPaths: string[] = [];
+  const chunkSize = 500;
+  
+  for (let i = 0; i < paths.length; i += chunkSize) {
+    const chunk = paths.slice(i, i + chunkSize);
+    const missing = await checkFilesExist(chunk);
+    missingPaths.push(...missing);
+  }
+  
+  // Remove missing tracks from database
+  for (const path of missingPaths) {
+    await deleteTrackByFilePath(path);
+  }
+  
+  return { removed: missingPaths.length };
 }
 

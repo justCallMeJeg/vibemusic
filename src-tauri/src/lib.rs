@@ -4,7 +4,6 @@ mod audio;
 mod scanner;
 use audio::{AudioEngine, AudioState};
 use std::sync::Arc;
-use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -34,6 +33,7 @@ pub fn run() {
             scanner::get_file_metadata,
             scanner::scan_folder,
             scanner::scan_music_library,
+            scanner::check_files_exist,
             // Audio commands
             audio::audio_play,
             audio::audio_pause,

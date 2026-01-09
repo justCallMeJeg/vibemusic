@@ -429,6 +429,18 @@ export async function getTracksWithRelations(): Promise<TrackWithRelations[]> {
 }
 
 /**
+ * Get all track IDs and file paths.
+ * 
+ * Used for library synchronization to identify missing files.
+ * 
+ * @returns Array of object with id and file_path
+ */
+export async function getAllTrackPaths(): Promise<{ id: number; file_path: string }[]> {
+  const database = getDatabase();
+  return database.select('SELECT id, file_path FROM tracks');
+}
+
+/**
  * Add a new track to the database.
  * 
  * This function automatically creates artist and album records if they don't exist.
