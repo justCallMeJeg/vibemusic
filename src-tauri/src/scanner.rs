@@ -83,55 +83,58 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
         .unwrap_or("")
         .to_uppercase();
 
-    // Read audio file with lofty
-    let tagged_file = Probe::open(path)
-        .map_err(|e| format!("Failed to open file: {}", e))?
-        .read()
-        .map_err(|e| format!("Failed to read audio file: {}", e))?;
+    // Read audio file with lofty using lenient parsing
+    let probe = Probe::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
 
-    // Get audio properties
-    let properties = tagged_file.properties();
-    let duration_ms = properties.duration().as_millis() as u64;
-    let sample_rate = properties.sample_rate();
-    let bit_rate = properties.audio_bitrate();
-    let channels = properties.channels();
+    // Try to read with default options first, fall back to basic info on error
+    let tagged_file_result = probe.read();
 
-    // Get primary tag (try multiple tag types)
-    let tag = tagged_file
-        .primary_tag()
-        .or_else(|| tagged_file.first_tag());
+    let (duration_ms, sample_rate, bit_rate, channels, tag_info) = match tagged_file_result {
+        Ok(tagged_file) => {
+            // Get audio properties
+            let properties = tagged_file.properties();
+            let duration = properties.duration().as_millis() as u64;
+            let sr = properties.sample_rate();
+            let br = properties.audio_bitrate();
+            let ch = properties.channels();
 
-    // Extract tag information with explicit types
-    let title: Option<String>;
-    let artist: Option<String>;
-    let album: Option<String>;
-    let album_artist: Option<String>;
-    let track_number: Option<u32>;
-    let disc_number: Option<u32>;
-    let year: Option<u32>;
-    let genre: Option<String>;
+            // Get primary tag (try multiple tag types)
+            let tag = tagged_file
+                .primary_tag()
+                .or_else(|| tagged_file.first_tag());
 
-    if let Some(tag) = tag {
-        title = tag.title().map(|s| s.to_string());
-        artist = tag.artist().map(|s| s.to_string());
-        album = tag.album().map(|s| s.to_string());
-        album_artist = tag
-            .get_string(&lofty::tag::ItemKey::AlbumArtist)
-            .map(|s| s.to_string());
-        track_number = tag.track();
-        disc_number = tag.disk();
-        year = tag.year();
-        genre = tag.genre().map(|s| s.to_string());
-    } else {
-        title = None;
-        artist = None;
-        album = None;
-        album_artist = None;
-        track_number = None;
-        disc_number = None;
-        year = None;
-        genre = None;
-    }
+            let tag_data = if let Some(tag) = tag {
+                (
+                    tag.title().map(|s| s.to_string()),
+                    tag.artist().map(|s| s.to_string()),
+                    tag.album().map(|s| s.to_string()),
+                    tag.get_string(&lofty::tag::ItemKey::AlbumArtist)
+                        .map(|s| s.to_string()),
+                    tag.track(),
+                    tag.disk(),
+                    tag.year(),
+                    tag.genre().map(|s| s.to_string()),
+                )
+            } else {
+                (None, None, None, None, None, None, None, None)
+            };
+
+            (duration, sr, br, ch, tag_data)
+        }
+        Err(_) => {
+            // File has corrupted metadata, but we can still index it with filename
+            // Return basic info with no tag data
+            (
+                0,
+                None,
+                None,
+                None,
+                (None, None, None, None, None, None, None, None),
+            )
+        }
+    };
+
+    let (title, artist, album, album_artist, track_number, disc_number, year, genre) = tag_info;
 
     // Use filename as title if no title tag found
     let final_title: Option<String> = title.or_else(|| {
