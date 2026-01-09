@@ -1,11 +1,17 @@
 import { X } from "lucide-react";
 import { Button } from "./button";
-import { useAudio } from "@/context/audio-context";
+import {
+  useAudioStore,
+  useCurrentTrack,
+  useQueue,
+  useQueueOpen,
+} from "@/stores/audio-store";
 import {
   DndContext,
   DragEndEvent,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -19,13 +25,25 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
 export default function QueueMenu() {
-  const { queue, currentTrack, reorderQueue, toggleQueue, isQueueOpen } =
-    useAudio();
+  // Use atomic selectors
+  const currentTrack = useCurrentTrack();
+  const queue = useQueue();
+  const isQueueOpen = useQueueOpen();
+
+  // Get actions directly (stable references)
+  const reorderQueue = useAudioStore((s) => s.reorderQueue);
+  const toggleQueue = useAudioStore((s) => s.toggleQueue);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -48,7 +66,7 @@ export default function QueueMenu() {
   return (
     <div
       id="queue-menu"
-      className="h-full flex flex-col rounded-lg outline outline-gray-850 w-full p-4 bg-neutral-900/50 backdrop-blur-xl"
+      className="h-full flex flex-col rounded-lg outline outline-gray-850 w-full p-4 bg-neutral-900/50 backdrop-blur-xl overflow-hidden"
     >
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Queue</h1>
@@ -57,7 +75,7 @@ export default function QueueMenu() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
         {currentTrack && (
           <div className="mb-6">
             <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
@@ -108,21 +126,8 @@ export default function QueueMenu() {
                   </p>
                 ) : (
                   queue.map((track) => {
-                    // Optional: verify if we want to show dragging for current track again?
-                    // Or just list everything.
-                    // If 'Now Playing' is separate, we might want to exclude it from the sortable list?
-                    // If we include it, it appears twice.
-                    // Let's filter out the current track from the sortable list if it's displayed above?
-                    // But the user might want to drag it elsewhere to "unplay" it or move it down?
-                    // Usually 'Now Playing' is special.
-
                     const isCurrent = currentTrack?.id === track.id;
-                    // If we want to allow reordering everything, we should probably just show one list.
-                    // But the design requested "Now Playing" and "Up Next".
-
-                    // Let's hide the current track from this list to avoid duplication if we show it above.
                     if (isCurrent) return null;
-
                     return <QueueItem key={track.id} track={track} />;
                   })
                 )}

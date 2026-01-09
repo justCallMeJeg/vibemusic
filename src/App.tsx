@@ -4,16 +4,24 @@ import MusicControler from "./components/ui/music-controler";
 import MusicCard from "./components/ui/music-card";
 import { useEffect, useState, useCallback } from "react";
 import { getTracks, Track } from "./lib/api";
-import { useAudio } from "./context/audio-context";
+import { useQueueOpen, useAudioStore } from "./stores/audio-store";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import NavigationMenu from "./components/ui/nagivation-menu";
 import QueueMenu from "./components/ui/queue-menu";
 
 export default function App() {
-  const { isQueueOpen } = useAudio();
+  const isQueueOpen = useQueueOpen();
+  const initListeners = useAudioStore((s) => s.initListeners);
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+
+  // Initialize audio event listeners
+  useEffect(() => {
+    const cleanup = initListeners();
+    return cleanup;
+  }, [initListeners]);
 
   const loadTracks = useCallback(async () => {
     try {
@@ -88,7 +96,7 @@ export default function App() {
                 </div>
               ) : (
                 tracks.map((track) => (
-                  <MusicCard key={track.id} track={track} context={tracks} />
+                  <MusicCard key={track.id} track={track} />
                 ))
               )}
             </div>

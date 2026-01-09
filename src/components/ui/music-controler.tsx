@@ -10,32 +10,44 @@ import {
 } from "lucide-react";
 import { Button } from "./button";
 import { Slider } from "./slider";
-import { useAudio } from "@/context/audio-context";
+import {
+  useAudioStore,
+  useCurrentTrack,
+  usePlayerStatus,
+  useVolume,
+  useRepeat,
+  useShuffle,
+  useQueueOpen,
+  usePosition,
+  useDuration,
+} from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
 export default function MusicControler() {
-  const {
-    currentTrack,
-    status,
-    position,
-    duration,
-    volume,
-    shuffle,
-    repeat,
-    pause,
-    resume,
-    next,
-    previous,
-    seek,
-    setVolume,
-    toggleShuffle,
-    toggleRepeat,
-    toggleQueue,
-    isQueueOpen,
-  } = useAudio();
+  // Use atomic selectors for minimal re-renders
+  const currentTrack = useCurrentTrack();
+  const status = usePlayerStatus();
+  const volume = useVolume();
+  const repeat = useRepeat();
+  const shuffle = useShuffle();
+  const isQueueOpen = useQueueOpen();
+  const position = usePosition();
+  const duration = useDuration();
+
+  // Get actions directly (stable references)
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
+  const next = useAudioStore((s) => s.next);
+  const previous = useAudioStore((s) => s.previous);
+  const seek = useAudioStore((s) => s.seek);
+  const setVolume = useAudioStore((s) => s.setVolume);
+  const toggleShuffle = useAudioStore((s) => s.toggleShuffle);
+  const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
+  const toggleQueue = useAudioStore((s) => s.toggleQueue);
+  const setDraggingSlider = useAudioStore((s) => s.setDraggingSlider);
 
   const isPlaying = status === "playing";
   const [sliderValue, setSliderValue] = useState([0]);
@@ -66,12 +78,14 @@ export default function MusicControler() {
 
   const handleSeekChange = (value: number[]) => {
     setIsDragging(true);
+    setDraggingSlider(true);
     setSliderValue(value);
   };
 
   const handleSeekCommit = (value: number[]) => {
     seek(value[0]);
     setIsDragging(false);
+    setDraggingSlider(false);
   };
 
   const handleVolume = (value: number[]) => {

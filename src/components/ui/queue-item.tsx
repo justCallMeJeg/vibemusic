@@ -2,6 +2,13 @@ import { Track } from "@/lib/api";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "./context-menu";
+import { useAudioStore } from "@/stores/audio-store";
 
 interface QueueItemProps {
   track: Track;
@@ -9,6 +16,7 @@ interface QueueItemProps {
 }
 
 export default function QueueItem({ track, isActive }: QueueItemProps) {
+  const removeFromQueue = useAudioStore((s) => s.removeFromQueue);
   const {
     attributes,
     listeners,
@@ -32,35 +40,44 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-3 p-2 rounded-md group hover:bg-white/5 ${
-        isActive ? "bg-white/10" : ""
-      }`}
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-neutral-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <GripVertical size={16} />
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <p
-          className={`text-sm font-medium truncate ${
-            isActive ? "text-purple-400" : "text-white"
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          ref={setNodeRef}
+          style={style}
+          className={`flex items-center gap-3 p-2 rounded-md group hover:bg-white/5 ${
+            isActive ? "bg-white/10" : ""
           }`}
         >
-          {track.title}
-        </p>
-        <p className="text-xs text-neutral-400 truncate">
-          {track.artist || "Unknown Artist"}
-        </p>
-      </div>
-      <div className="text-xs text-neutral-500 font-mono">
-        {formatDuration(track.duration_ms)}
-      </div>
-    </div>
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-neutral-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <GripVertical size={16} />
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <p
+              className={`text-sm font-medium truncate ${
+                isActive ? "text-purple-400" : "text-white"
+              }`}
+            >
+              {track.title}
+            </p>
+            <p className="text-xs text-neutral-400 truncate">
+              {track.artist || "Unknown Artist"}
+            </p>
+          </div>
+          <div className="text-xs text-neutral-500 font-mono">
+            {formatDuration(track.duration_ms)}
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={() => removeFromQueue(track.id)}>
+          Remove from Queue
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
