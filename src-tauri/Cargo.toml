@@ -34,4 +34,7 @@ raw-window-handle = "0.6"
 thiserror = "2.0.17"
 rayon = "1.10"
 rusqlite = { version = "0.32", features = ["bundled"] }
+image = "0.24"
+sha2 = "0.10"
+base64 = "0.21"
 

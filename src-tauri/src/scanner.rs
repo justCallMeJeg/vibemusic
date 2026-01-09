@@ -1,3 +1,4 @@
+use crate::artwork::extract_and_cache_cover;
 use crate::database::DbHelper;
 /**
  * Music File Scanner Module
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
-use tauri::Manager; // For app.path()sions
+use tauri::Manager;
 use tauri::{command, AppHandle, Emitter};
 use walkdir::WalkDir;
 
@@ -40,6 +41,7 @@ pub struct TrackMetadata {
     pub sample_rate: Option<u32>,
     pub bit_rate: Option<u32>,
     pub channels: Option<u8>,
+    pub artwork_path: Option<String>,
 }
 
 /// Progress event emitted during scanning
@@ -118,7 +120,7 @@ fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
 }
 
 /// Extract metadata from a single audio file
-fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
+fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, String> {
     let file_path = path.to_string_lossy().to_string();
 
     // Get file info
@@ -162,6 +164,12 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                 let artist_str = tag.artist().map(|s| s.to_string());
                 let artists = parse_artists(artist_str.as_deref());
 
+                // Extract artwork
+                let artwork_path = tag
+                    .pictures()
+                    .first()
+                    .and_then(|pic| extract_and_cache_cover(pic, cache_dir));
+
                 (
                     tag.title().map(|s| s.to_string()),
                     artist_str,
@@ -173,9 +181,21 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                     tag.disk(),
                     tag.year(),
                     tag.genre().map(|s| s.to_string()),
+                    artwork_path,
                 )
             } else {
-                (None, None, Vec::new(), None, None, None, None, None, None)
+                (
+                    None,
+                    None,
+                    Vec::new(),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
             };
 
             (duration, sr, br, ch, tag_data)
@@ -188,13 +208,34 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                 None,
                 None,
                 None,
-                (None, None, Vec::new(), None, None, None, None, None, None),
+                (
+                    None,
+                    None,
+                    Vec::new(),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
             )
         }
     };
 
-    let (title, artist, artists, album, album_artist, track_number, disc_number, year, genre) =
-        tag_info;
+    let (
+        title,
+        artist,
+        artists,
+        album,
+        album_artist,
+        track_number,
+        disc_number,
+        year,
+        genre,
+        artwork_path,
+    ) = tag_info;
 
     // Use filename as title if no title tag found
     let final_title: Option<String> = title.or_else(|| {
@@ -221,6 +262,7 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
         sample_rate,
         bit_rate,
         channels,
+        artwork_path,
     })
 }
 
@@ -237,7 +279,12 @@ pub fn get_file_metadata(path: String) -> Result<TrackMetadata, String> {
         return Err("Not a supported audio file".to_string());
     }
 
-    extract_metadata(path)
+    // We pass a dummy path for single file metadata as we don't want to pollute cache for one-offs maybe?
+    // Or we should? For now let's just use temp dir or skip artwork for this simple command
+    // But to match signature we need a path.
+    // Ideally this command should only be used for debugging.
+    let cache_dir = std::env::temp_dir();
+    extract_metadata(path, &cache_dir)
 }
 
 /// Find all audio files in a directory
@@ -293,6 +340,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
     // Get database path
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let db_path = app_data_dir.join("library.db");
+    let cache_dir = app_data_dir.join("covers");
 
     // Spawn DB writer thread
     let db_thread = std::thread::spawn(move || {
@@ -337,8 +385,8 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
             },
         );
 
-        let metadata =
-            extract_metadata(Path::new(file_path)).map_err(|e| format!("{}: {}", file_path, e));
+        let metadata = extract_metadata(Path::new(file_path), &cache_dir)
+            .map_err(|e| format!("{}: {}", file_path, e));
         let _ = tx.send(metadata);
     });
 

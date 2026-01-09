@@ -36,22 +36,38 @@ impl DbHelper {
         title: &str,
         artist_id: Option<i64>,
         year: Option<u32>,
+        artwork_path: Option<&String>,
     ) -> Result<i64> {
         let tx = self.conn.transaction()?;
 
         {
-            let sql = "SELECT id FROM albums WHERE title = ? AND (artist_id = ? OR (artist_id IS NULL AND ? IS NULL))";
+            let sql = "SELECT id, artwork_path FROM albums WHERE title = ? AND (artist_id = ? OR (artist_id IS NULL AND ? IS NULL))";
             let mut stmt = tx.prepare(sql)?;
             let mut rows = stmt.query(params![title, artist_id, artist_id])?;
 
             if let Some(row) = rows.next()? {
-                return row.get(0);
+                let id: i64 = row.get(0)?;
+                let current_artwork: Option<String> = row.get(1)?;
+
+                // If we found new artwork and the album has none, update it
+                if current_artwork.is_none() && artwork_path.is_some() {
+                    drop(row); // Release borrow
+                    drop(rows); // Release borrow
+                    drop(stmt); // Release borrow
+
+                    tx.execute(
+                        "UPDATE albums SET artwork_path = ? WHERE id = ?",
+                        params![artwork_path, id],
+                    )?;
+                }
+
+                return Ok(id);
             }
         }
 
         tx.execute(
-            "INSERT INTO albums (title, artist_id, year) VALUES (?, ?, ?)",
-            params![title, artist_id, year],
+            "INSERT INTO albums (title, artist_id, year, artwork_path) VALUES (?, ?, ?, ?)",
+            params![title, artist_id, year, artwork_path],
         )?;
         let id = tx.last_insert_rowid();
         tx.commit()?;
@@ -67,7 +83,12 @@ impl DbHelper {
         };
 
         let album_id = if let Some(album) = &metadata.album {
-            Some(self.get_or_create_album(album, artist_id, metadata.year)?)
+            Some(self.get_or_create_album(
+                album,
+                artist_id,
+                metadata.year,
+                metadata.artwork_path.as_ref(),
+            )?)
         } else {
             None
         };
