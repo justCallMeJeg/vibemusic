@@ -5,8 +5,10 @@
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
 use lofty::tag::Accessor;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tauri::{command, AppHandle, Emitter};
 use walkdir::WalkDir;
 
@@ -286,22 +288,42 @@ pub async fn scan_music_library(
     let mut errors: Vec<String> = Vec::new();
 
     // Process each file
-    for (index, file_path) in all_files.iter().enumerate() {
-        // Emit progress event
-        let _ = app.emit(
-            "scan-progress",
-            ScanProgress {
-                current: index + 1,
-                total,
-                current_file: file_path.clone(),
-                status: "scanning".to_string(),
-            },
-        );
+    let progress_counter = AtomicUsize::new(0);
 
-        // Extract metadata
-        match extract_metadata(Path::new(file_path)) {
-            Ok(metadata) => tracks.push(metadata),
-            Err(e) => errors.push(format!("{}: {}", file_path, e)),
+    // Process files in parallel
+    // We use par_iter to process files across multiple threads
+    let results: Vec<Result<TrackMetadata, String>> = all_files
+        .par_iter()
+        .map(|file_path| {
+            // Increment progress
+            let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
+
+            // Emit progress event
+            // Note: Since threads race, the progress events might come slightly out of order
+            // on the frontend, but the "current" count will be accurate.
+            let _ = app.emit(
+                "scan-progress",
+                ScanProgress {
+                    current,
+                    total,
+                    current_file: file_path.clone(),
+                    status: "scanning".to_string(),
+                },
+            );
+
+            // Extract metadata
+            match extract_metadata(Path::new(file_path)) {
+                Ok(metadata) => Ok(metadata),
+                Err(e) => Err(format!("{}: {}", file_path, e)),
+            }
+        })
+        .collect();
+
+    // Separate results into tracks and errors
+    for result in results {
+        match result {
+            Ok(track) => tracks.push(track),
+            Err(e) => errors.push(e),
         }
     }
 
