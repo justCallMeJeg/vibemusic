@@ -3,6 +3,7 @@ import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { Button } from "./components/ui/button";
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -15,6 +16,7 @@ function App() {
 
   return (
     <main className="container">
+      <Toaster />
       <h1>Welcome to Tauri + React</h1>
 
       <div className="row">
