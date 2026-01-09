@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Extract and cache cover art from ID3 tags
 /// Returns the absolute path to the cached image
@@ -31,25 +32,62 @@ pub fn extract_and_cache_cover(
 
     // 4. Create cache directory if needed
     if !cache_dir.exists() {
-        if let Err(_) = fs::create_dir_all(cache_dir) {
+        if let Err(e) = fs::create_dir_all(cache_dir) {
+            eprintln!("Failed to create cache dir: {}", e);
             return None;
         }
     }
 
     // 5. Load and resize image
-    if let Ok(img) = image::load_from_memory(data) {
-        // Resize to max 500x500 to save space and load time
-        // preserve_aspect_ratio = true
-        let resized = img.resize(500, 500, image::imageops::FilterType::Lanczos3);
+    let img = match image::load_from_memory(data) {
+        Ok(img) => img,
+        Err(e) => {
+            eprintln!("Failed to decode image data (hash: {}): {}", hash, e);
+            return None;
+        }
+    };
 
-        // 6. Save as optimized JPEG
-        if let Ok(mut file) = fs::File::create(&file_path) {
-            // Write with 80% quality
-            if resized.write_to(&mut file, ImageFormat::Jpeg).is_ok() {
-                return Some(file_path.to_string_lossy().to_string());
+    // Resize to max 500x500 to save space and load time
+    let resized = img.resize(500, 500, image::imageops::FilterType::Lanczos3);
+
+    // 6. Save as optimized JPEG using Atomic Write (Write temp -> Rename)
+    // unique temp name to avoid collisions between threads processing same image
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    
+    // Use thread ID or random mix to ensure uniqueness across threads
+    let temp_name = format!("{}_{}.tmp", hash, timestamp);
+    let temp_path = cache_dir.join(&temp_name);
+
+    if let Ok(mut file) = fs::File::create(&temp_path) {
+        // Write with 80% quality
+        if let Err(e) = resized.write_to(&mut file, ImageFormat::Jpeg) {
+            eprintln!("Failed to write to temp file: {}", e);
+            let _ = fs::remove_file(&temp_path);
+            return None;
+        }
+    } else {
+        eprintln!("Failed to create temp file");
+        return None;
+    }
+
+    // Atomic rename
+    // On Windows, rename fails if target exists. This is fine, checking existence after failure confirms we are good.
+    match fs::rename(&temp_path, &file_path) {
+        Ok(_) => Some(file_path.to_string_lossy().to_string()),
+        Err(_) => {
+            // Clean up temp file
+            let _ = fs::remove_file(&temp_path);
+            
+            // If rename failed, check if target exists (created by another thread)
+            if file_path.exists() {
+                Some(file_path.to_string_lossy().to_string())
+            } else {
+                eprintln!("Failed to rename temp file to final path");
+                None
             }
         }
     }
-
-    None
 }

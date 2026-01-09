@@ -8,6 +8,8 @@
   padding: 0;
   box-sizing: border-box;
   font-family: "Instrument Sans", sans-serif;
+  height: 100%;
+  overflow: hidden;
 
   --background: oklch(100% 0.0001 271.152deg);
   --foreground: oklch(14.5% 0 0deg);
@@ -125,6 +127,9 @@
 
   body {
     @apply bg-background text-foreground;
+
+    height: 100%;
+    overflow: hidden;
   }
 }
 

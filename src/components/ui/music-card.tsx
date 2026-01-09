@@ -3,6 +3,8 @@ import { Track } from "@/lib/api";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useAudio } from "@/context/audio-context";
 
+import placeholderArt from "@/assets/placeholder-art.jpg";
+
 interface MusicCardProps {
   track: Track;
   context?: Track[];
@@ -18,6 +20,10 @@ function MusicCard({ track, context }: MusicCardProps) {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const artworkSrc = track.artwork_path
+    ? convertFileSrc(track.artwork_path)
+    : placeholderArt;
+
   return (
     <div
       onClick={() => play(track, context)}
@@ -29,11 +35,11 @@ function MusicCard({ track, context }: MusicCardProps) {
         <div className="relative">
           <img
             className="aspect-square h-10 rounded-lg object-cover bg-neutral-800"
-            src={
-              track.artwork_path
-                ? convertFileSrc(track.artwork_path)
-                : "src/assets/placeholder-art.jpg"
-            }
+            src={artworkSrc}
+            onError={(e) => {
+              console.error("Failed to load image:", artworkSrc);
+              e.currentTarget.src = placeholderArt;
+            }}
             alt="Album Art"
           />
           {isPlaying && (

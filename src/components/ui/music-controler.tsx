@@ -14,6 +14,8 @@ import { useAudio } from "@/context/audio-context";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
+import placeholderArt from "@/assets/placeholder-art.jpg";
+
 export default function MusicControler() {
   const {
     currentTrack,
@@ -84,7 +86,7 @@ export default function MusicControler() {
               src={
                 currentTrack.artwork_path
                   ? convertFileSrc(currentTrack.artwork_path)
-                  : "src/assets/placeholder-art.jpg"
+                  : placeholderArt
               }
               alt={currentTrack.title}
             />
