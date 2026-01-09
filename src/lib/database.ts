@@ -706,11 +706,22 @@ export async function upsertTrack(input: CreateTrackInput): Promise<{ track: Tra
 // Playlist Operations
 // ============================================
 
+/**
+ * Get all playlists.
+ * 
+ * @returns Array of Playlist objects sorted by name (A-Z)
+ */
 export async function getPlaylists(): Promise<Playlist[]> {
   const database = getDatabase();
   return database.select('SELECT * FROM playlists ORDER BY name ASC');
 }
 
+/**
+ * Get a single playlist by ID.
+ * 
+ * @param id - The playlist's unique identifier
+ * @returns The Playlist object or null if not found
+ */
 export async function getPlaylistById(id: number): Promise<Playlist | null> {
   const database = getDatabase();
   const results = await database.select<Playlist[]>(
@@ -720,6 +731,12 @@ export async function getPlaylistById(id: number): Promise<Playlist | null> {
   return results[0] || null;
 }
 
+/**
+ * Create a new playlist.
+ * 
+ * @param input - The playlist creation data (name and optional description)
+ * @returns The newly created Playlist object
+ */
 export async function createPlaylist(input: CreatePlaylistInput): Promise<Playlist> {
   const database = getDatabase();
 
@@ -736,11 +753,27 @@ export async function createPlaylist(input: CreatePlaylistInput): Promise<Playli
   return created[0];
 }
 
+/**
+ * Delete a playlist by ID.
+ * 
+ * This will also delete all associations in the playlist_tracks table
+ * due to CASCADE delete constraints.
+ * 
+ * @param id - The playlist's unique identifier
+ */
 export async function deletePlaylist(id: number): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM playlists WHERE id = ?', [id]);
 }
 
+/**
+ * Add a track to a playlist.
+ * 
+ * Appends the track to the end of the playlist.
+ * 
+ * @param playlistId - The target playlist ID
+ * @param trackId - The track ID to add
+ */
 export async function addTrackToPlaylist(
   playlistId: number,
   trackId: number
@@ -761,6 +794,12 @@ export async function addTrackToPlaylist(
   );
 }
 
+/**
+ * Remove a track from a playlist.
+ * 
+ * @param playlistId - The target playlist ID
+ * @param trackId - The track ID to remove
+ */
 export async function removeTrackFromPlaylist(
   playlistId: number,
   trackId: number
@@ -772,6 +811,12 @@ export async function removeTrackFromPlaylist(
   );
 }
 
+/**
+ * Get all tracks in a playlist.
+ * 
+ * @param playlistId - The playlist ID
+ * @returns Array of PlaylistTrack objects sorted by position
+ */
 export async function getPlaylistTracks(playlistId: number): Promise<PlaylistTrack[]> {
   const database = getDatabase();
   return database.select(
@@ -784,6 +829,13 @@ export async function getPlaylistTracks(playlistId: number): Promise<PlaylistTra
 // Play History Operations
 // ============================================
 
+/**
+ * Record a track play in history.
+ * 
+ * @param trackId - The played track ID
+ * @param durationMs - How long the track was played (ms)
+ * @param completed - Whether the track was played to completion
+ */
 export async function addPlayHistory(
   trackId: number,
   durationMs?: number,
@@ -796,6 +848,12 @@ export async function addPlayHistory(
   );
 }
 
+/**
+ * Get recently played tracks history.
+ * 
+ * @param limit - Maximum number of history items to return (default: 50)
+ * @returns Array of PlayHistory objects sorted by played_at (newest first)
+ */
 export async function getRecentlyPlayed(limit = 50): Promise<PlayHistory[]> {
   const database = getDatabase();
   return database.select(
@@ -804,6 +862,9 @@ export async function getRecentlyPlayed(limit = 50): Promise<PlayHistory[]> {
   );
 }
 
+/**
+ * Clear the entire play history.
+ */
 export async function clearPlayHistory(): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM play_history');

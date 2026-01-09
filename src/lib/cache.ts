@@ -1,8 +1,15 @@
 /**
- * Simple in-memory cache service
- * Used to reduce database queries for static library data
+ * Simple in-memory cache service.
+ * 
+ * Used to reduce database queries for frequently accessed library data
+ * like lists of artists, albums, and tracks.
+ * 
+ * @module cache
  */
 
+/**
+ * Standard cache keys used across the application.
+ */
 export const CACHE_KEYS = {
   ALL_ARTISTS: 'artists:all',
   ALL_ALBUMS: 'albums:all',
@@ -16,22 +23,31 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+/**
+ * Service to handle in-memory caching of data.
+ */
 class CacheService {
   private cache: Map<string, CacheEntry<any>> = new Map();
   // Optional TTL, currently not strictly enforced as we validate on write
-  private defaultTTL: number = 5 * 60 * 1000; // 5 minutes
+  // private defaultTTL: number = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * Get item from cache
+   * Get an item from the cache.
+   * 
+   * @param key - The cache key to retrieve
+   * @returns The cached data or null if not found
    */
   public get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    return entry.data;
+    return entry.data as T;
   }
 
   /**
-   * Set item in cache
+   * Set an item in the cache.
+   * 
+   * @param key - The cache key to set
+   * @param data - The data to store
    */
   public set<T>(key: string, data: T): void {
     this.cache.set(key, {
@@ -41,14 +57,19 @@ class CacheService {
   }
 
   /**
-   * Invalidate specific key
+   * Invalidate a specific cache key.
+   * 
+   * @param key - The cache key to remove
    */
   public invalidate(key: string): void {
     this.cache.delete(key);
   }
 
   /**
-   * Invalidate all keys (use on library updates)
+   * Invalidate all cache keys.
+   * 
+   * Should be called when the library is updated (add/delete/modify)
+   * to ensure fresh data is fetched next time.
    */
   public clear(): void {
     this.cache.clear();
