@@ -310,7 +310,7 @@ pub struct AudioState(pub Arc<AudioEngine>);
 // Background progress tracker
 pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(250));
+        thread::sleep(Duration::from_millis(100));
         
         // Timer update logic
         // We do this in a block to release locks quickly
