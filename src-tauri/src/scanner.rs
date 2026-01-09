@@ -1,3 +1,4 @@
+use crate::database::DbHelper;
 /**
  * Music File Scanner Module
  * Scans directories for audio files and extracts metadata using lofty-rs
@@ -9,6 +10,8 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc;
+use tauri::Manager; // For app.path()sions
 use tauri::{command, AppHandle, Emitter};
 use walkdir::WalkDir;
 
@@ -49,13 +52,12 @@ pub struct ScanProgress {
 }
 
 /// Result of a folder scan
+/// Now simplified to just return counts, as actual data is in DB
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ScanResult {
+pub struct ScanStats {
     pub scanned_count: usize,
     pub success_count: usize,
     pub error_count: usize,
-    pub tracks: Vec<TrackMetadata>,
-    pub errors: Vec<String>,
 }
 
 /// Check if a file has an audio extension
@@ -269,10 +271,7 @@ pub fn scan_folder(path: String) -> Result<Vec<String>, String> {
 
 /// Scan a music library and extract metadata for all files
 #[command]
-pub async fn scan_music_library(
-    app: AppHandle,
-    folders: Vec<String>,
-) -> Result<ScanResult, String> {
+pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<ScanStats, String> {
     let mut all_files: Vec<String> = Vec::new();
 
     // Collect all audio files from all folders
@@ -284,48 +283,73 @@ pub async fn scan_music_library(
     }
 
     let total = all_files.len();
-    let mut tracks: Vec<TrackMetadata> = Vec::new();
-    let mut errors: Vec<String> = Vec::new();
-
-    // Process each file
     let progress_counter = AtomicUsize::new(0);
 
-    // Process files in parallel
-    // We use par_iter to process files across multiple threads
-    let results: Vec<Result<TrackMetadata, String>> = all_files
-        .par_iter()
-        .map(|file_path| {
-            // Increment progress
-            let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
+    // Create channel for sending metadata to DB thread
+    // We use a sync_channel with a small buffer to provide backpressure
+    // This prevents the scanner from using too much RAM if DB is slow
+    let (tx, rx) = mpsc::sync_channel::<Result<TrackMetadata, String>>(100);
 
-            // Emit progress event
-            // Note: Since threads race, the progress events might come slightly out of order
-            // on the frontend, but the "current" count will be accurate.
-            let _ = app.emit(
-                "scan-progress",
-                ScanProgress {
-                    current,
-                    total,
-                    current_file: file_path.clone(),
-                    status: "scanning".to_string(),
-                },
-            );
+    // Get database path
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let db_path = app_data_dir.join("library.db");
 
-            // Extract metadata
-            match extract_metadata(Path::new(file_path)) {
-                Ok(metadata) => Ok(metadata),
-                Err(e) => Err(format!("{}: {}", file_path, e)),
+    // Spawn DB writer thread
+    let db_thread = std::thread::spawn(move || {
+        let mut db = match DbHelper::new(&db_path) {
+            Ok(db) => db,
+            Err(e) => return Err(format!("Failed to open database: {}", e)),
+        };
+
+        let mut success_count = 0;
+        let mut error_count = 0;
+
+        for result in rx {
+            match result {
+                Ok(metadata) => {
+                    if let Err(e) = db.upsert_track(&metadata) {
+                        eprintln!("Failed to save track: {}", e);
+                        error_count += 1;
+                    } else {
+                        success_count += 1;
+                    }
+                }
+                Err(_) => {
+                    error_count += 1;
+                }
             }
-        })
-        .collect();
-
-    // Separate results into tracks and errors
-    for result in results {
-        match result {
-            Ok(track) => tracks.push(track),
-            Err(e) => errors.push(e),
         }
-    }
+        Ok((success_count, error_count))
+    });
+
+    // Process files in parallel and send to channel
+    all_files.par_iter().for_each(|file_path| {
+        // Increment progress
+        let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
+
+        let _ = app.emit(
+            "scan-progress",
+            ScanProgress {
+                current,
+                total,
+                current_file: file_path.clone(),
+                status: "scanning".to_string(),
+            },
+        );
+
+        let metadata =
+            extract_metadata(Path::new(file_path)).map_err(|e| format!("{}: {}", file_path, e));
+        let _ = tx.send(metadata);
+    });
+
+    // Drop sender to signal end of stream
+    drop(tx);
+
+    // Wait for DB thread
+    let (success_count, error_count) = match db_thread.join() {
+        Ok(res) => res?,
+        Err(_) => return Err("Database thread panicked".to_string()),
+    };
 
     // Emit completion event
     let _ = app.emit(
@@ -338,12 +362,10 @@ pub async fn scan_music_library(
         },
     );
 
-    Ok(ScanResult {
+    Ok(ScanStats {
         scanned_count: total,
-        success_count: tracks.len(),
-        error_count: errors.len(),
-        tracks,
-        errors,
+        success_count,
+        error_count,
     })
 }
 

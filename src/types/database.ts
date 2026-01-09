@@ -53,6 +53,12 @@ export interface Playlist {
   updated_at: string;
 }
 
+export interface ScanResult {
+  scanned_count: number;
+  success_count: number;
+  error_count: number;
+}
+
 export interface PlaylistTrack {
   id: number;
   playlist_id: number;
