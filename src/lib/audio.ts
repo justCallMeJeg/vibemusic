@@ -5,8 +5,26 @@ import type { PlaybackState } from '../types/audio';
 const EVENT_PLAYBACK_STATE = 'audio-playback-state';
 const EVENT_PLAYBACK_PROGRESS = 'audio-playback-progress';
 
-export async function playFile(path: string): Promise<void> {
-  await invoke('audio_play', { path });
+export interface PlayOptions {
+  path: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  cover?: string;
+}
+
+export async function playFile(options: PlayOptions | string): Promise<void> {
+  if (typeof options === 'string') {
+    await invoke('audio_play', { path: options, title: null, artist: null, album: null, cover: null });
+  } else {
+    await invoke('audio_play', { 
+      path: options.path,
+      title: options.title || null,
+      artist: options.artist || null,
+      album: options.album || null,
+      cover: options.cover || null
+    });
+  }
 }
 
 export async function pause(): Promise<void> {

@@ -4,6 +4,7 @@ mod audio;
 mod scanner;
 use audio::{AudioEngine, AudioState};
 use std::sync::Arc;
+use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -12,18 +13,23 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialize audio engine
-    let engine = Arc::new(AudioEngine::new());
-    let state = AudioState(engine.clone());
-
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(state)
         .setup(move |app| {
+            // Initialize audio engine with app handle
+            let engine = Arc::new(AudioEngine::new(app.handle()));
+            let state = AudioState(engine.clone());
+
+            // Manage state manually since we are in setup
+            app.manage(state);
+
+            // Initialize media events
+            engine.init_media_events(app.handle().clone());
+
             // Start background progress tracking
             audio::start_progress_tracking(app.handle().clone(), engine);
             Ok(())

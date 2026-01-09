@@ -74,8 +74,9 @@ export interface PlayHistory {
 // ============================================
 
 export interface TrackWithRelations extends Track {
-  artist?: Artist;
-  album?: Album;
+  artist_name?: string;
+  album_title?: string;
+  album_artwork_path?: string;
 }
 
 export interface AlbumWithRelations extends Album {

@@ -1,10 +1,10 @@
 import { listen } from '@tauri-apps/api/event';
 import { playFile } from './audio';
-import type { Track } from '../types/database';
+import type { TrackWithRelations } from '../types/database';
 import type { RepeatMode } from '../types/audio';
 
 type QueueState = {
-  queue: Track[];
+  queue: TrackWithRelations[];
   currentIndex: number;
   repeatMode: RepeatMode;
   isShuffled: boolean;
@@ -13,8 +13,8 @@ type QueueState = {
 type QueueListener = (state: QueueState) => void;
 
 class QueueService {
-  private queue: Track[] = [];
-  private originalQueue: Track[] = []; // Preserves order before shuffle
+  private queue: TrackWithRelations[] = [];
+  private originalQueue: TrackWithRelations[] = []; // Preserves order before shuffle
   private currentIndex: number = -1;
   private repeatMode: RepeatMode = 'off';
   private isShuffled: boolean = false;
@@ -68,7 +68,7 @@ class QueueService {
    * Play a specific track (replacing queue or just playing from existing?)
    * For now: Play a track from a list (e.g. clicking an album)
    */
-  public async playTrackList(tracks: Track[], startIndex: number) {
+  public async playTrackList(tracks: TrackWithRelations[], startIndex: number) {
     this.isShuffled = false;
     this.originalQueue = [...tracks];
     this.queue = [...tracks];
@@ -81,7 +81,7 @@ class QueueService {
   /**
    * Add tracks to end of queue
    */
-  public add(tracks: Track[]) {
+  public add(tracks: TrackWithRelations[]) {
     this.originalQueue.push(...tracks);
     this.queue.push(...tracks);
     this.notify();
@@ -93,7 +93,14 @@ class QueueService {
   private async playCurrent() {
     if (this.currentIndex >= 0 && this.currentIndex < this.queue.length) {
       const track = this.queue[this.currentIndex];
-      await playFile(track.file_path);
+      // Pass metadata for SMTC
+      await playFile({
+        path: track.file_path,
+        title: track.title,
+        artist: track.artist_name,
+        album: track.album_title,
+      cover: track.album_artwork_path
+      });
     }
   }
 
