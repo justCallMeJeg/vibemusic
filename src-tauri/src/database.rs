@@ -9,6 +9,21 @@ pub struct DbHelper {
 impl DbHelper {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let conn = Connection::open(path)?;
+
+        // Robustness check: Ensure schema exists
+        // This handles race conditions where this thread might create the DB file 
+        // before the main plugin runs migrations, or if path resolution differs.
+        let table_exists: bool = conn.query_row(
+            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='artists'",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0) > 0;
+
+        if !table_exists {
+            eprintln!("Database tables missing. Applying initial schema to ensure robustness...");
+            conn.execute_batch(include_str!("../migrations/001_initial_schema.sql"))?;
+        }
+
         Ok(Self { conn })
     }
 

@@ -340,6 +340,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
     // Get database path
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let db_path = app_data_dir.join("library.db");
+    eprintln!("Scanner using database at: {:?}", db_path);
     let cache_dir = app_data_dir.join("covers");
 
     // Spawn DB writer thread
