@@ -21,6 +21,7 @@ export {
   getTrackByFilePath,
   getTracksWithRelations,
   addTrack,
+  upsertTrack,
   deleteTrack,
   deleteTrackByFilePath,
   getTrackCount,

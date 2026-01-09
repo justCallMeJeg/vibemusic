@@ -7,7 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { TrackMetadata, ScanProgress, ScanResult } from '../types/scanner';
-import { addTrack } from './database';
+import { upsertTrack } from './database';
 
 /**
  * Open a folder picker dialog to select a music folder
@@ -69,7 +69,7 @@ export async function scanAndIndexLibrary(
   onProgress?: (progress: ScanProgress) => void
 ): Promise<{
   indexed: number;
-  skipped: number;
+  updated: number;
   errors: number;
 }> {
   let unlisten: UnlistenFn | null = null;
@@ -84,13 +84,13 @@ export async function scanAndIndexLibrary(
     const result = await scanMusicLibrary(folders);
 
     let indexed = 0;
-    let skipped = 0;
+    let updated = 0;
     let errors = 0;
 
     // Index each track into the database
     for (const track of result.tracks) {
       try {
-        await addTrack({
+        const { isNew } = await upsertTrack({
           title: track.title || track.file_name,
           artist_name: track.artist || undefined,
           album_title: track.album || undefined,
@@ -107,20 +107,19 @@ export async function scanAndIndexLibrary(
           genre: track.genre || undefined,
           year: track.year || undefined,
         });
-        indexed++;
-      } catch (error) {
-        // Track might already exist (duplicate file path)
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        if (errorMsg.includes('UNIQUE constraint')) {
-          skipped++;
+
+        if (isNew) {
+          indexed++;
         } else {
-          errors++;
-          console.error(`Failed to index ${track.file_path}:`, error);
+          updated++;
         }
+      } catch (error) {
+        errors++;
+        console.error(`Failed to index ${track.file_path}:`, error);
       }
     }
 
-    return { indexed, skipped, errors };
+    return { indexed, updated, errors };
   } finally {
     // Clean up listener
     if (unlisten) {

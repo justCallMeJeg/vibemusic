@@ -13,6 +13,7 @@ export interface TrackMetadata {
   file_format: string;
   title: string | null;
   artist: string | null;
+  artists: string[];
   album: string | null;
   album_artist: string | null;
   track_number: number | null;

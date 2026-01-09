@@ -24,6 +24,7 @@ pub struct TrackMetadata {
     pub file_format: String,
     pub title: Option<String>,
     pub artist: Option<String>,
+    pub artists: Vec<String>,
     pub album: Option<String>,
     pub album_artist: Option<String>,
     pub track_number: Option<u32>,
@@ -61,6 +62,55 @@ fn is_audio_file(path: &Path) -> bool {
         .and_then(|ext| ext.to_str())
         .map(|ext| AUDIO_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
         .unwrap_or(false)
+}
+
+/// Parse an artist string into individual artists
+/// Handles common separators: ";", "/", ",", " feat. ", " ft. ", " featuring ", " & ", " x ", " X "
+fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
+    match artist_str {
+        None => Vec::new(),
+        Some(s) => {
+            // Replace common "featuring" variations with a standard separator
+            let normalized = s
+                .replace(" featuring ", ";")
+                .replace(" Featuring ", ";")
+                .replace(" feat. ", ";")
+                .replace(" Feat. ", ";")
+                .replace(" ft. ", ";")
+                .replace(" Ft. ", ";")
+                .replace(" ft ", ";")
+                .replace(" x ", ";")
+                .replace(" X ", ";");
+
+            // Split by common separators: semicolon, slash, ampersand
+            // Note: We're careful with comma as it might be part of "LastName, FirstName" format
+            let mut artists: Vec<String> = Vec::new();
+
+            for part in normalized.split(';') {
+                let part = part.trim();
+                if !part.is_empty() {
+                    // Further split by " & " and " / "
+                    for subpart in part.split(" & ") {
+                        let subpart = subpart.trim();
+                        if !subpart.is_empty() {
+                            for final_part in subpart.split(" / ") {
+                                let final_part = final_part.trim();
+                                if !final_part.is_empty() {
+                                    artists.push(final_part.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate while preserving order
+            let mut seen = std::collections::HashSet::new();
+            artists.retain(|x| seen.insert(x.clone()));
+
+            artists
+        }
+    }
 }
 
 /// Extract metadata from a single audio file
@@ -104,9 +154,14 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                 .or_else(|| tagged_file.first_tag());
 
             let tag_data = if let Some(tag) = tag {
+                // Get artist string and parse into individual artists
+                let artist_str = tag.artist().map(|s| s.to_string());
+                let artists = parse_artists(artist_str.as_deref());
+
                 (
                     tag.title().map(|s| s.to_string()),
-                    tag.artist().map(|s| s.to_string()),
+                    artist_str,
+                    artists,
                     tag.album().map(|s| s.to_string()),
                     tag.get_string(&lofty::tag::ItemKey::AlbumArtist)
                         .map(|s| s.to_string()),
@@ -116,7 +171,7 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                     tag.genre().map(|s| s.to_string()),
                 )
             } else {
-                (None, None, None, None, None, None, None, None)
+                (None, None, Vec::new(), None, None, None, None, None, None)
             };
 
             (duration, sr, br, ch, tag_data)
@@ -129,12 +184,13 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
                 None,
                 None,
                 None,
-                (None, None, None, None, None, None, None, None),
+                (None, None, Vec::new(), None, None, None, None, None, None),
             )
         }
     };
 
-    let (title, artist, album, album_artist, track_number, disc_number, year, genre) = tag_info;
+    let (title, artist, artists, album, album_artist, track_number, disc_number, year, genre) =
+        tag_info;
 
     // Use filename as title if no title tag found
     let final_title: Option<String> = title.or_else(|| {
@@ -150,6 +206,7 @@ fn extract_metadata(path: &Path) -> Result<TrackMetadata, String> {
         file_format,
         title: final_title,
         artist,
+        artists,
         album,
         album_artist,
         track_number,

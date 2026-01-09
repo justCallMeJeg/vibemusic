@@ -383,6 +383,112 @@ export async function getTrackCount(): Promise<number> {
   return result[0]?.count || 0;
 }
 
+/**
+ * Insert or update a track based on file_path (upsert)
+ * Returns { track, isNew } where isNew indicates if this was an insert
+ */
+export async function upsertTrack(input: CreateTrackInput): Promise<{ track: Track; isNew: boolean }> {
+  const database = getDatabase();
+
+  // Check if track already exists
+  const existing = await getTrackByFilePath(input.file_path);
+
+  let artistId: number | null = null;
+  let albumId: number | null = null;
+
+  // Get or create artist
+  if (input.artist_name) {
+    const artist = await getOrCreateArtist(input.artist_name);
+    artistId = artist.id;
+  }
+
+  // Get or create album
+  if (input.album_title) {
+    const album = await getOrCreateAlbum(input.album_title, artistId, input.year);
+    albumId = album.id;
+  }
+
+  if (existing) {
+    // Update existing track
+    await database.execute(
+      `UPDATE tracks SET
+        title = ?,
+        artist_id = ?,
+        album_id = ?,
+        album_artist = ?,
+        track_number = ?,
+        disc_number = ?,
+        duration_ms = ?,
+        file_size = ?,
+        file_format = ?,
+        sample_rate = ?,
+        bit_rate = ?,
+        channels = ?,
+        genre = ?,
+        year = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE file_path = ?`,
+      [
+        input.title,
+        artistId,
+        albumId,
+        input.album_artist || null,
+        input.track_number || null,
+        input.disc_number || 1,
+        input.duration_ms,
+        input.file_size || null,
+        input.file_format || null,
+        input.sample_rate || null,
+        input.bit_rate || null,
+        input.channels || null,
+        input.genre || null,
+        input.year || null,
+        input.file_path,
+      ]
+    );
+
+    const updated = await getTrackByFilePath(input.file_path);
+    if (!updated) {
+      throw new Error('Failed to update track');
+    }
+
+    return { track: updated, isNew: false };
+  } else {
+    // Insert new track
+    await database.execute(
+      `INSERT INTO tracks (
+        title, artist_id, album_id, album_artist, track_number, disc_number,
+        duration_ms, file_path, file_size, file_format, sample_rate, bit_rate,
+        channels, genre, year
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        input.title,
+        artistId,
+        albumId,
+        input.album_artist || null,
+        input.track_number || null,
+        input.disc_number || 1,
+        input.duration_ms,
+        input.file_path,
+        input.file_size || null,
+        input.file_format || null,
+        input.sample_rate || null,
+        input.bit_rate || null,
+        input.channels || null,
+        input.genre || null,
+        input.year || null,
+      ]
+    );
+
+    const created = await getTrackByFilePath(input.file_path);
+    if (!created) {
+      throw new Error('Failed to create track');
+    }
+
+    return { track: created, isNew: true };
+  }
+}
+
 // ============================================
 // Playlist Operations
 // ============================================
