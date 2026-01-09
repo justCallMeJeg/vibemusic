@@ -21,6 +21,7 @@ interface PlaybackState {
   volume: number;
   shuffle: boolean;
   repeat: "off" | "all" | "one";
+  isQueueOpen: boolean;
 }
 
 interface AudioPlaybackStatePayload {
@@ -46,6 +47,8 @@ interface AudioContextType extends PlaybackState {
   setVolume: (volume: number) => Promise<void>;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  toggleQueue: () => void;
+  reorderQueue: (newQueue: Track[]) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -61,6 +64,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     volume: 1.0,
     shuffle: false,
     repeat: "off",
+    isQueueOpen: false,
   });
 
   const isDraggingSlider = useRef(false);
@@ -257,6 +261,23 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       return { ...prev, repeat: next };
     });
 
+  const toggleQueue = () =>
+    setState((prev) => ({ ...prev, isQueueOpen: !prev.isQueueOpen }));
+
+  const reorderQueue = (newQueue: Track[]) => {
+    setState((prev) => {
+      // Find new index of current track
+      const currentTrackId = prev.currentTrack?.id;
+      const newIndex = newQueue.findIndex((t) => t.id === currentTrackId);
+
+      return {
+        ...prev,
+        queue: newQueue,
+        currentIndex: newIndex !== -1 ? newIndex : prev.currentIndex,
+      };
+    });
+  };
+
   return (
     <AudioContext.Provider
       value={{
@@ -271,6 +292,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         setVolume,
         toggleShuffle,
         toggleRepeat,
+        toggleQueue,
+        reorderQueue,
       }}
     >
       {children}

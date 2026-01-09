@@ -33,6 +33,8 @@ export default function MusicControler() {
     setVolume,
     toggleShuffle,
     toggleRepeat,
+    toggleQueue,
+    isQueueOpen,
   } = useAudio();
 
   const isPlaying = status === "playing";
@@ -82,7 +84,7 @@ export default function MusicControler() {
         {currentTrack ? (
           <>
             <img
-              className="aspect-square h-14 rounded-lg object-cover bg-neutral-800"
+              className="aspect-square h-24 rounded-lg object-cover bg-neutral-800"
               src={
                 currentTrack.artwork_path
                   ? convertFileSrc(currentTrack.artwork_path)
@@ -101,7 +103,7 @@ export default function MusicControler() {
           </>
         ) : (
           <>
-            <div className="aspect-square h-14 rounded-lg bg-gray-800" />
+            <div className="aspect-square h-24 rounded-lg bg-gray-800" />
             <div className="flex flex-col gap-1 w-24">
               <div className="h-4 bg-gray-800 rounded w-full" />
               <div className="h-3 bg-gray-800 rounded w-2/3" />
@@ -111,10 +113,10 @@ export default function MusicControler() {
       </div>
       <div
         id="controls"
-        className="flex flex-col items-center justify-center gap-2"
+        className=" flex flex-col items-center justify-center gap-2"
       >
         {/* Controls */}
-        <div className="flex items-center gap-2">
+        <div className=" flex items-center gap-2">
           <Button
             variant="ghost"
             onClick={toggleShuffle}
@@ -146,7 +148,7 @@ export default function MusicControler() {
           </Button>
         </div>
         {/* Seeker */}
-        <div className="flex items-center gap-4 w-full">
+        <div className=" flex items-center gap-4 w-full">
           <p className="text-white text-xs font-normal w-10 text-right">
             {formatDuration(sliderValue[0])}
           </p>
@@ -162,7 +164,7 @@ export default function MusicControler() {
           </p>
         </div>
       </div>
-      <div id="actions" className="flex items-center gap-2 justify-end">
+      <div id="actions" className=" flex items-center gap-2 justify-end">
         {/* Volume */}
         <div className="flex items-center gap-2 w-32">
           <Button variant="ghost">
@@ -176,7 +178,12 @@ export default function MusicControler() {
           />
         </div>
         {/* Mute */}
-        <Button variant="ghost">
+        <Button
+          id="queue-menu-button"
+          variant="ghost"
+          onClick={toggleQueue}
+          className={isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""}
+        >
           <Logs size={20} />
         </Button>
       </div>

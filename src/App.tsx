@@ -4,11 +4,14 @@ import MusicControler from "./components/ui/music-controler";
 import MusicCard from "./components/ui/music-card";
 import { useEffect, useState, useCallback } from "react";
 import { getTracks, Track } from "./lib/api";
-import { AudioProvider } from "./context/audio-context";
+import { useAudio } from "./context/audio-context";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
+import NavigationMenu from "./components/ui/nagivation-menu";
+import QueueMenu from "./components/ui/queue-menu";
 
 export default function App() {
+  const { isQueueOpen } = useAudio();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -47,27 +50,29 @@ export default function App() {
   };
 
   return (
-    <AudioProvider>
-      <main
-        id="app"
-        className="selection:bg-white/10 dark h-dvh w-dvw p-6 overflow-hidden flex flex-col"
-      >
-        <div className="flex flex-1 gap-6 min-h-0 debug">
-          {/* Sidebar */}
-          <div className="flex flex-col debug gap-6 w-16 shrink-0 h-full">
-            <div
-              id="folder_input"
-              onClick={handleFolderImport}
-              className={`aspect-square w-full rounded-lg bg-white/5 hover:outline hover:outline-gray-850 transition-all cursor-pointer ${
-                isScanning ? "animate-pulse border-blue-500 border" : ""
-              }`}
-              title="Import Music Folder"
-            />
-            <div className="flex-1 w-full rounded-lg bg-white/5 hover:outline hover:outline-gray-850 transition-all" />
+    <main
+      id="app"
+      className="selection:bg-white/10 dark h-dvh w-dvw p-6 overflow-hidden flex flex-col gap-4"
+    >
+      <div className="flex flex-1 gap-6 min-h-0">
+        {/* Sidebar */}
+        <div className="flex flex-col gap-12 w-16 shrink-0 h-full">
+          <div
+            id="folder_input"
+            onClick={handleFolderImport}
+            className={`aspect-square w-full rounded-lg bg-white/5 hover:outline hover:outline-gray-850 transition-all cursor-pointer ${
+              isScanning ? "animate-pulse border-blue-500 border" : ""
+            }`}
+            title="Import Music Folder"
+          />
+          <div className="flex justify-center h-full">
+            <NavigationMenu />
           </div>
+        </div>
 
-          {/* Main Content */}
-          <div className="flex flex-1 flex-col min-h-0 debug">
+        {/* Main Content */}
+        <div className="flex-1 min-h-0 flex gap-4">
+          <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
             <h1 className="text-3xl font-bold ml-1">Songs</h1>
 
             {/* Song List */}
@@ -88,11 +93,18 @@ export default function App() {
               )}
             </div>
           </div>
+          <div
+            className={`shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
+              isQueueOpen ? "w-96 p-1" : "w-0 p-0"
+            }`}
+          >
+            <QueueMenu />
+          </div>
         </div>
+      </div>
 
-        {/* Music Controler */}
-        <MusicControler />
-      </main>
-    </AudioProvider>
+      {/* Music Controler */}
+      <MusicControler />
+    </main>
   );
 }
