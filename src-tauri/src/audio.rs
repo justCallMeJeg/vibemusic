@@ -105,7 +105,7 @@ impl AudioEngine {
         title: Option<String>,
         artist: Option<String>,
         album: Option<String>,
-        cover: Option<String>,
+        _cover: Option<String>,
     ) -> Result<(), String> {
         let file = File::open(&path).map_err(|e| e.to_string())?;
         let reader = BufReader::new(file);
@@ -278,6 +278,10 @@ pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
     });
 }
 
+use crate::error::AppError;
+
+// ... (existing imports)
+
 // --- Tauri Commands ---
 
 #[tauri::command]
@@ -289,51 +293,54 @@ pub fn audio_play(
     artist: Option<String>,
     album: Option<String>,
     _cover: Option<String>,
-) -> Result<(), String> {
-    state.0.play(path, title, artist, album, _cover)?;
+) -> Result<(), AppError> {
+    state
+        .0
+        .play(path, title, artist, album, _cover)
+        .map_err(AppError::Audio)?;
 
     let s = state.0.state.lock().unwrap();
     app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_pause(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), String> {
+pub fn audio_pause(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
     state.0.pause();
     let s = state.0.state.lock().unwrap();
     app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_resume(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), String> {
+pub fn audio_resume(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
     state.0.resume();
     let s = state.0.state.lock().unwrap();
     app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_stop(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), String> {
+pub fn audio_stop(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
     state.0.stop();
     let s = state.0.state.lock().unwrap();
     app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_seek(state: tauri::State<AudioState>, position_ms: u64) -> Result<(), String> {
+pub fn audio_seek(state: tauri::State<AudioState>, position_ms: u64) -> Result<(), AppError> {
     state.0.seek(position_ms);
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_set_volume(state: tauri::State<AudioState>, volume: f32) -> Result<(), String> {
+pub fn audio_set_volume(state: tauri::State<AudioState>, volume: f32) -> Result<(), AppError> {
     state.0.set_volume(volume);
     Ok(())
 }

@@ -31,4 +31,5 @@ tauri-plugin-fs = "2.4.5"
 rodio = { version = "0.19", default-features = false, features = ["symphonia-all"] }
 souvlaki = "0.7"
 raw-window-handle = "0.6"
+thiserror = "2.0.17"
 

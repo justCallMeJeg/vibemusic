@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { PlaybackState } from '../types/audio';
+import { errorService } from './error';
 
 const EVENT_PLAYBACK_STATE = 'audio-playback-state';
 const EVENT_PLAYBACK_PROGRESS = 'audio-playback-progress';
@@ -14,25 +15,37 @@ export interface PlayOptions {
 }
 
 export async function playFile(options: PlayOptions | string): Promise<void> {
-  if (typeof options === 'string') {
-    await invoke('audio_play', { path: options, title: null, artist: null, album: null, cover: null });
-  } else {
-    await invoke('audio_play', { 
-      path: options.path,
-      title: options.title || null,
-      artist: options.artist || null,
-      album: options.album || null,
-      cover: options.cover || null
-    });
+  try {
+    if (typeof options === 'string') {
+      await invoke('audio_play', { path: options, title: null, artist: null, album: null, _cover: null });
+    } else {
+      await invoke('audio_play', { 
+        path: options.path,
+        title: options.title || null,
+        artist: options.artist || null,
+        album: options.album || null,
+        _cover: options.cover || null
+      });
+    }
+  } catch (err) {
+    errorService.notify(err, 'Failed to play file');
   }
 }
 
 export async function pause(): Promise<void> {
-  await invoke('audio_pause');
+  try {
+    await invoke('audio_pause');
+  } catch (err) {
+    errorService.notify(err, 'Failed to pause playback');
+  }
 }
 
 export async function resume(): Promise<void> {
-  await invoke('audio_resume');
+  try {
+    await invoke('audio_resume');
+  } catch (err) {
+    errorService.notify(err, 'Failed to resume playback');
+  }
 }
 
 export async function stop(): Promise<void> {
