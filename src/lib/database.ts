@@ -21,6 +21,7 @@ import type {
   CreateTrackInput,
   CreatePlaylistInput,
 } from '../types/database';
+import { cacheService, CACHE_KEYS } from './cache';
 
 /** Database instance singleton */
 let db: Database | null = null;
@@ -221,8 +222,13 @@ async function applyInitialSchema(database: Database): Promise<void> {
  * ```
  */
 export async function getArtists(): Promise<Artist[]> {
+  const cached = cacheService.get<Artist[]>(CACHE_KEYS.ALL_ARTISTS);
+  if (cached) return cached;
+
   const database = getDatabase();
-  return database.select('SELECT * FROM artists ORDER BY name ASC');
+  const artists = await database.select<Artist[]>('SELECT * FROM artists ORDER BY name ASC');
+  cacheService.set(CACHE_KEYS.ALL_ARTISTS, artists);
+  return artists;
 }
 
 /**
@@ -297,8 +303,13 @@ export async function getOrCreateArtist(name: string): Promise<Artist> {
  * @returns Array of Album objects sorted by title (A-Z)
  */
 export async function getAlbums(): Promise<Album[]> {
+  const cached = cacheService.get<Album[]>(CACHE_KEYS.ALL_ALBUMS);
+  if (cached) return cached;
+
   const database = getDatabase();
-  return database.select('SELECT * FROM albums ORDER BY title ASC');
+  const albums = await database.select<Album[]>('SELECT * FROM albums ORDER BY title ASC');
+  cacheService.set(CACHE_KEYS.ALL_ALBUMS, albums);
+  return albums;
 }
 
 /**
@@ -368,8 +379,13 @@ export async function getOrCreateAlbum(
  * @returns Array of Track objects sorted by title (A-Z)
  */
 export async function getTracks(): Promise<Track[]> {
+  const cached = cacheService.get<Track[]>(CACHE_KEYS.ALL_TRACKS);
+  if (cached) return cached;
+
   const database = getDatabase();
-  return database.select('SELECT * FROM tracks ORDER BY title ASC');
+  const tracks = await database.select<Track[]>('SELECT * FROM tracks ORDER BY title ASC');
+  cacheService.set(CACHE_KEYS.ALL_TRACKS, tracks);
+  return tracks;
 }
 
 /**
@@ -414,8 +430,11 @@ export async function getTrackByFilePath(filePath: string): Promise<Track | null
  * @returns Array of TrackWithRelations objects
  */
 export async function getTracksWithRelations(): Promise<TrackWithRelations[]> {
+  const cached = cacheService.get<TrackWithRelations[]>(CACHE_KEYS.TRACKS_WITH_RELATIONS);
+  if (cached) return cached;
+
   const database = getDatabase();
-  return database.select(`
+  const tracks = await database.select<TrackWithRelations[]>(`
     SELECT
       t.*,
       a.name as artist_name,
@@ -426,6 +445,8 @@ export async function getTracksWithRelations(): Promise<TrackWithRelations[]> {
     LEFT JOIN albums al ON t.album_id = al.id
     ORDER BY t.title ASC
   `);
+  cacheService.set(CACHE_KEYS.TRACKS_WITH_RELATIONS, tracks);
+  return tracks;
 }
 
 /**
@@ -510,6 +531,7 @@ export async function addTrack(input: CreateTrackInput): Promise<Track> {
     throw new Error('Failed to create track');
   }
 
+  cacheService.clear(); // Invalidate on write
   return created;
 }
 
@@ -524,6 +546,7 @@ export async function addTrack(input: CreateTrackInput): Promise<Track> {
 export async function deleteTrack(id: number): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM tracks WHERE id = ?', [id]);
+  cacheService.clear(); // Invalidate on delete
 }
 
 /**
@@ -536,6 +559,7 @@ export async function deleteTrack(id: number): Promise<void> {
 export async function deleteTrackByFilePath(filePath: string): Promise<void> {
   const database = getDatabase();
   await database.execute('DELETE FROM tracks WHERE file_path = ?', [filePath]);
+  cacheService.clear(); // Invalidate on delete
 }
 
 /**
@@ -639,6 +663,7 @@ export async function upsertTrack(input: CreateTrackInput): Promise<{ track: Tra
       throw new Error('Failed to update track');
     }
 
+    cacheService.clear(); // Invalidate on update
     return { track: updated, isNew: false };
   } else {
     // Insert new track
@@ -672,6 +697,7 @@ export async function upsertTrack(input: CreateTrackInput): Promise<{ track: Tra
       throw new Error('Failed to create track');
     }
 
+    cacheService.clear(); // Invalidate on insert
     return { track: created, isNew: true };
   }
 }
