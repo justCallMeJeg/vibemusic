@@ -11,10 +11,13 @@ export type DetailView =
 interface NavigationState {
   currentPage: Page;
   detailView: DetailView;
+  isSearchOpen: boolean;
 }
 
 interface NavigationActions {
   setPage: (page: Page) => void;
+  setSearchOpen: (open: boolean) => void;
+  toggleSearch: () => void;
   openAlbumDetail: (albumId: number) => void;
   openPlaylistDetail: (playlistId: number) => void;
   goBack: () => void;
@@ -27,9 +30,12 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
   // Initial State
   currentPage: "songs",
   detailView: null,
+  isSearchOpen: false,
 
   // Actions
   setPage: (page) => set({ currentPage: page, detailView: null }),
+  setSearchOpen: (open) => set({ isSearchOpen: open }),
+  toggleSearch: () => set((state) => ({ isSearchOpen: !state.isSearchOpen })),
 
   openAlbumDetail: (albumId) =>
     set({ currentPage: "albums", detailView: { type: "album", id: albumId } }),

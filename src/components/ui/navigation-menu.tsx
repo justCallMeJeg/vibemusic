@@ -16,6 +16,8 @@ import {
 export default function NavigationMenu() {
   const currentPage = useCurrentPage();
   const setPage = useNavigationStore((s) => s.setPage);
+  const toggleSearch = useNavigationStore((s) => s.toggleSearch);
+  const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
 
   const navItems: { icon: React.ReactNode; page: Page | null }[] = [
     { icon: <TvMinimal />, page: null }, // Home/Overview - not implemented yet
@@ -41,12 +43,15 @@ export default function NavigationMenu() {
               key={index}
               size="icon-lg"
               variant="ghost"
-              onClick={() => item.page && setPage(item.page)}
-              disabled={isDisabled}
+              onClick={() => {
+                if (item.page) setPage(item.page);
+                else if (index === 1) toggleSearch(); // Search index
+              }}
+              disabled={item.page === null && index !== 1} // Enable search button
               className={
-                isActive
+                isActive || (index === 1 && isSearchOpen)
                   ? "text-white"
-                  : isDisabled
+                  : isDisabled && index !== 1
                   ? "text-gray-600 cursor-not-allowed"
                   : "text-gray-500 hover:text-white"
               }

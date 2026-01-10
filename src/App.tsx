@@ -6,6 +6,7 @@ import { useQueueOpen, useAudioStore } from "./stores/audio-store";
 import NavigationMenu from "./components/ui/navigation-menu";
 import QueueMenu from "./components/ui/queue-menu";
 import MainContent from "./components/main-content";
+import { GlobalSearch } from "./components/ui/global-search";
 
 export default function App() {
   const isQueueOpen = useQueueOpen();
@@ -52,6 +53,7 @@ export default function App() {
 
       {/* Music Controller */}
       <MusicController />
+      <GlobalSearch />
     </main>
   );
 }
