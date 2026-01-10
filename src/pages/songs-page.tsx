@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { getTracks, Track } from "@/lib/api";
 import MusicListItem from "@/components/ui/music-list";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,9 @@ import { ArrowUpDown, Search, Filter } from "lucide-react";
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
 
+// Item height for virtualization (matches MusicListItem padding + content)
+const ITEM_HEIGHT = 56;
+
 export default function SongsPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,10 +28,12 @@ export default function SongsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("date_added");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  // Ref for the scrollable container
+  const parentRef = useRef<HTMLDivElement>(null);
+
   const loadTracks = async () => {
     try {
       const data = await getTracks();
-      // Initially sort by date added desc (newest first)
       setTracks(data);
     } catch (error) {
       console.error("Failed to load tracks:", error);
@@ -75,7 +81,7 @@ export default function SongsPage() {
           break;
         case "date_added":
         default:
-          valA = a.id; // Use ID as proxy for date added since created_at is not on Track
+          valA = a.id;
           valB = b.id;
           break;
       }
@@ -88,6 +94,14 @@ export default function SongsPage() {
 
     return result;
   }, [tracks, searchQuery, sortKey, sortDirection]);
+
+  // Virtualizer for efficient list rendering
+  const virtualizer = useVirtualizer({
+    count: displayedTracks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 5, // Render 5 extra items above/below viewport
+  });
 
   if (isLoading) {
     return (
@@ -164,7 +178,10 @@ export default function SongsPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar">
+      <div
+        ref={parentRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar"
+      >
         {displayedTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             {searchQuery ? (
@@ -185,16 +202,31 @@ export default function SongsPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-1 pb-24">
-            {" "}
-            {/* Added padding bottom for scrolling past player */}
-            {displayedTracks.map((track) => (
-              <MusicListItem
-                key={track.id}
-                track={track}
-                context={displayedTracks}
-              />
-            ))}
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize() + 96}px`, // +96px for bottom padding (scroll past player)
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const track = displayedTracks[virtualItem.index];
+              return (
+                <div
+                  key={track.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <MusicListItem track={track} context={displayedTracks} />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

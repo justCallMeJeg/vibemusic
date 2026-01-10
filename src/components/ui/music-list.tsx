@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Clock, Play } from "lucide-react";
 import { Track } from "@/lib/api";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -16,28 +17,32 @@ import {
   ContextMenuSubTrigger,
 } from "./context-menu";
 import { usePlaylistStore } from "@/stores/playlist-store";
-import { useEffect } from "react";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
+
+// Pure function - hoisted outside component to avoid recreation
+const formatDuration = (ms: number) => {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
 
 interface MusicListItemProps {
   track: Track;
   context?: Track[];
 }
 
-export default function MusicListItem({ track, context }: MusicListItemProps) {
+const MusicListItem = memo(function MusicListItem({
+  track,
+  context,
+}: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
 
-  // Playlist store
-  const { playlists, addToPlaylist, fetchPlaylists } = usePlaylistStore();
-
-  // Fetch playlists on mount (lazy-ish, only if empty?)
-  // Better: fetch once globally, but here we trigger it to be safe
-  useEffect(() => {
-    if (playlists.length === 0) fetchPlaylists();
-  }, [fetchPlaylists, playlists.length]);
+  // Playlist store - playlists fetched once in App.tsx
+  const playlists = usePlaylistStore((s) => s.playlists);
+  const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
 
   // Get actions directly from store (stable references)
   const play = useAudioStore((s) => s.play);
@@ -45,12 +50,6 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
   const playNext = useAudioStore((s) => s.playNext);
 
   const isPlaying = currentTrack?.id === track.id && status === "playing";
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
 
   const artworkSrc = track.artwork_path
     ? convertFileSrc(track.artwork_path)
@@ -72,7 +71,6 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
                 src={artworkSrc}
                 loading="lazy"
                 onError={(e) => {
-                  console.error("Failed to load image:", artworkSrc);
                   e.currentTarget.src = placeholderArt;
                 }}
                 alt="Album Art"
@@ -135,4 +133,6 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
       </ContextMenuContent>
     </ContextMenu>
   );
-}
+});
+
+export default MusicListItem;

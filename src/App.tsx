@@ -3,6 +3,7 @@ import "./styles/globals.css";
 import MusicController from "./components/ui/music-controller";
 import { useEffect, useState } from "react";
 import { useAudioStore } from "./stores/audio-store";
+import { usePlaylistStore } from "./stores/playlist-store";
 import NavigationMenu from "./components/ui/navigation-menu";
 import QueueMenu from "./components/ui/queue-menu";
 import MainContent from "./components/main-content";
@@ -22,6 +23,12 @@ export default function App() {
     const cleanup = initListeners();
     return cleanup;
   }, [initListeners]);
+
+  // Load playlists once on app startup (centralized fetch)
+  const fetchPlaylists = usePlaylistStore((s) => s.fetchPlaylists);
+  useEffect(() => {
+    fetchPlaylists();
+  }, [fetchPlaylists]);
 
   // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
