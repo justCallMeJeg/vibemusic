@@ -157,7 +157,7 @@ export default function AlbumDetailPage() {
       </div>
 
       {/* Track list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scroll-mask-y">
         {tracks.length === 0 ? (
           <div className="text-gray-500 text-center p-8">
             No tracks in this album

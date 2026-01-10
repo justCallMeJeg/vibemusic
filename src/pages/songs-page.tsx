@@ -180,7 +180,7 @@ export default function SongsPage() {
 
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar scroll-mask-y"
       >
         {displayedTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">

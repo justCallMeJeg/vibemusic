@@ -218,7 +218,7 @@ export default function PlaylistsPage() {
         </Dialog>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2">
+      <div className="flex-1 overflow-y-auto px-2 scroll-mask-y">
         {isLoading ? (
           <div className="text-gray-500 text-center py-8">Loading...</div>
         ) : playlists.length === 0 ? (

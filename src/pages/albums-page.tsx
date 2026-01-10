@@ -111,7 +111,7 @@ export default function AlbumsPage() {
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
       <h1 className="mt-8 mb-4 text-3xl font-bold ml-1">Albums</h1>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scroll-mask-y">
         {albums.length === 0 ? (
           <div className="text-gray-500 text-center p-8">
             No albums found. Import some music to see albums here.

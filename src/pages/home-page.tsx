@@ -94,7 +94,7 @@ export default function HomePage() {
         </h1>
         <p className="text-gray-400 mt-1">Here's some music for you today.</p>
       </div>
-      <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 space-y-8 custom-scrollbar">
+      <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 space-y-8 custom-scrollbar scroll-mask-y">
         {/* Albums Section */}
         {albums.length > 0 && (
           <section className="space-y-4">
