@@ -25,6 +25,7 @@ export interface Playlist {
   id: number;
   name: string;
   description: string | null;
+  artwork_path: string | null;
   track_count: number;
   created_at: string;
 }
@@ -50,6 +51,20 @@ export async function createPlaylist(
   description?: string
 ): Promise<Playlist> {
   return await invoke("create_playlist", { name, description });
+}
+
+export async function updatePlaylist(
+  id: number,
+  name: string,
+  description?: string,
+  artwork_path?: string
+): Promise<void> {
+  return await invoke("update_playlist", {
+    id,
+    name,
+    description,
+    artworkPath: artwork_path,
+  });
 }
 
 export async function deletePlaylist(id: number): Promise<void> {

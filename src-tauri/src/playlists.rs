@@ -8,6 +8,7 @@ pub struct Playlist {
     pub id: i64,
     pub name: String,
     pub description: Option<String>,
+    pub artwork_path: Option<String>,
     pub track_count: i64,
     pub created_at: String,
 }
@@ -42,6 +43,21 @@ pub fn delete_playlist(app: AppHandle, id: i64) -> Result<(), String> {
     let db = DbHelper::new(&db_path).map_err(|e| e.to_string())?;
     
     db.delete_playlist(id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn update_playlist(
+    app: AppHandle,
+    id: i64,
+    name: String,
+    description: Option<String>,
+    artwork_path: Option<String>,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let db_path = app_data_dir.join("library.db");
+    let db = DbHelper::new(&db_path).map_err(|e| e.to_string())?;
+    
+    db.update_playlist(id, name, description, artwork_path).map_err(|e| e.to_string())
 }
 
 #[command]

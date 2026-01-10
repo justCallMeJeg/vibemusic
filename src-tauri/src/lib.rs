@@ -24,12 +24,20 @@ pub fn run() {
             tauri_plugin_sql::Builder::default()
                 .add_migrations(
                     "sqlite:library.db",
-                    vec![tauri_plugin_sql::Migration {
-                        version: 1,
-                        description: "initial_schema",
-                        sql: include_str!("../migrations/001_initial_schema.sql"),
-                        kind: tauri_plugin_sql::MigrationKind::Up,
-                    }],
+                    vec![
+                        tauri_plugin_sql::Migration {
+                            version: 1,
+                            description: "initial_schema",
+                            sql: include_str!("../migrations/001_initial_schema.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                        tauri_plugin_sql::Migration {
+                            version: 2,
+                            description: "add_playlist_artwork",
+                            sql: include_str!("../migrations/002_add_playlist_artwork.sql"),
+                            kind: tauri_plugin_sql::MigrationKind::Up,
+                        },
+                    ],
                 )
                 .build(),
         )
@@ -79,6 +87,7 @@ pub fn run() {
             // Playlist commands
             playlists::create_playlist,
             playlists::delete_playlist,
+            playlists::update_playlist,
             playlists::get_playlists,
             playlists::get_playlist_tracks,
             playlists::add_track_to_playlist,

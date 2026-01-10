@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { Button } from "@/components/ui/button";
-import { Plus, ListMusic, Play, Shuffle, Trash2 } from "lucide-react";
+import { Plus, ListMusic, Play, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { useAudioStore } from "@/stores/audio-store";
@@ -26,6 +27,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { Pencil } from "lucide-react";
 
 export default function PlaylistsPage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
@@ -49,6 +52,7 @@ export default function PlaylistsPage() {
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(
     null
   );
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -236,8 +240,19 @@ export default function PlaylistsPage() {
                     className="flex flex-col rounded-lg p-3 hover:bg-white/5 cursor-pointer transition-colors group gap-3"
                   >
                     {/* Playlist Cover Placeholder */}
-                    <div className="aspect-square w-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 rounded-md flex items-center justify-center text-white/50 text-4xl font-bold select-none group-hover:scale-[1.02] transition-transform">
-                      {playlist.name.slice(0, 2).toUpperCase()}
+                    <div className="aspect-square w-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 rounded-md flex items-center justify-center text-white/50 text-4xl font-bold select-none group-hover:scale-[1.02] transition-transform overflow-hidden">
+                      {playlist.artwork_path ? (
+                        <img
+                          src={convertFileSrc(playlist.artwork_path)}
+                          alt={playlist.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        playlist.name.slice(0, 2).toUpperCase()
+                      )}
                     </div>
 
                     <div className="min-w-0">
@@ -262,11 +277,6 @@ export default function PlaylistsPage() {
                   >
                     <Play className="mr-2 h-4 w-4" /> Play
                   </ContextMenuItem>
-                  <ContextMenuItem
-                    onSelect={() => handlePlayPlaylist(playlist.id, true)}
-                  >
-                    <Shuffle className="mr-2 h-4 w-4" /> Shuffle
-                  </ContextMenuItem>
                   <ContextMenuItem onSelect={() => handlePlayNext(playlist.id)}>
                     <ListMusic className="mr-2 h-4 w-4" /> Play Next
                   </ContextMenuItem>
@@ -276,6 +286,11 @@ export default function PlaylistsPage() {
                     <Plus className="mr-2 h-4 w-4" /> Add to Queue
                   </ContextMenuItem>
                   <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onSelect={() => setEditingPlaylist(playlist)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                  </ContextMenuItem>
                   <ContextMenuItem
                     className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
                     onSelect={() => {
@@ -291,6 +306,14 @@ export default function PlaylistsPage() {
           </div>
         )}
       </div>
+
+      {editingPlaylist && (
+        <PlaylistEditDialog
+          playlist={editingPlaylist}
+          open={!!editingPlaylist}
+          onOpenChange={(open) => !open && setEditingPlaylist(null)}
+        />
+      )}
     </div>
   );
 }

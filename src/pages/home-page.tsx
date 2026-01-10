@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   getAlbums,
-  getPlaylists,
   getTracks,
   Album,
-  Playlist,
   Track,
   getAlbumTracks,
   getPlaylistTracks,
@@ -22,10 +20,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { usePlaylistStore } from "@/stores/playlist-store";
+import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { Pencil } from "lucide-react";
+import { Playlist } from "@/lib/api";
 
 export default function HomePage() {
   const [albums, setAlbums] = useState<Album[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  /* const [playlists, setPlaylists] = useState<Playlist[]>([]); */
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,17 +36,30 @@ export default function HomePage() {
   const setPage = useNavigationStore((s) => s.setPage);
   const play = useAudioStore((s) => s.play);
 
+  /* Use store for playlists to ensure updates (like edits) are reflected immediately */
+  const { playlists, fetchPlaylists } = usePlaylistStore();
+
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+
+  useEffect(() => {
+    fetchPlaylists();
+  }, [fetchPlaylists]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [albumsData, playlistsData, tracksData] = await Promise.all([
-          getAlbums(),
-          getPlaylists(),
-          getTracks(),
+        const [albumsData, tracksData] = await Promise.all([
+          getAlbums().catch((e) => {
+            console.error("Failed to fetch albums:", e);
+            return [];
+          }),
+          getTracks().catch((e) => {
+            console.error("Failed to fetch tracks:", e);
+            return [];
+          }),
         ]);
 
         setAlbums(albumsData);
-        setPlaylists(playlistsData);
         // Optimization: Limit rendering to 20 items
         setTracks(tracksData.slice(0, 20));
       } catch (error) {
@@ -194,9 +209,20 @@ export default function HomePage() {
                       className="w-40 shrink-0 group cursor-pointer space-y-3"
                     >
                       <div className="aspect-square w-full rounded-xl bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center relative overflow-hidden">
-                        <span className="text-4xl font-bold text-white/50 select-none">
-                          {playlist.name.slice(0, 2).toUpperCase()}
-                        </span>
+                        {playlist.artwork_path ? (
+                          <img
+                            src={convertFileSrc(playlist.artwork_path)}
+                            alt={playlist.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <span className="text-4xl font-bold text-white/50 select-none">
+                            {playlist.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <button
                             className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
@@ -231,6 +257,11 @@ export default function HomePage() {
                       onSelect={() => handlePlayPlaylist(playlist.id)}
                     >
                       <Play className="mr-2 h-4 w-4" /> Play
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onSelect={() => setEditingPlaylist(playlist)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" /> Edit
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -277,6 +308,14 @@ export default function HomePage() {
             </div>
           )}
       </div>
+
+      {editingPlaylist && (
+        <PlaylistEditDialog
+          playlist={editingPlaylist}
+          open={!!editingPlaylist}
+          onOpenChange={(open) => !open && setEditingPlaylist(null)}
+        />
+      )}
     </div>
   );
 }

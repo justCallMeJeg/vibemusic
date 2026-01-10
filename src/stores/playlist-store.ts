@@ -14,6 +14,12 @@ interface PlaylistState {
   // Actions
   fetchPlaylists: () => Promise<void>;
   createPlaylist: (name: string, description?: string) => Promise<boolean>;
+  updatePlaylist: (
+    id: number,
+    name: string,
+    description?: string,
+    artworkPath?: string
+  ) => Promise<boolean>;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
 }
 
@@ -40,6 +46,26 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
     } catch (error) {
       console.error("Failed to create playlist:", error);
       toast.error("Failed to create playlist");
+      return false;
+    }
+  },
+
+  updatePlaylist: async (id, name, description, artworkPath) => {
+    try {
+      // Import strictly to avoid errors? No, relying on auto-import or existing import.
+      // Need to make sure updatePlaylist is imported from lib/api at top of file.
+      // Since I assume it's not, I should probably check imports.
+      // I'll assume I can add it to import list in next step or now?
+      // Let's add the import first in a separate replace/chunk if possible.
+      // multi_replace is safer.
+
+      const { updatePlaylist } = await import("@/lib/api");
+      await updatePlaylist(id, name, description, artworkPath);
+      await get().fetchPlaylists();
+      return true;
+    } catch (error) {
+      console.error("Failed to update playlist:", error);
+      toast.error("Failed to update playlist");
       return false;
     }
   },

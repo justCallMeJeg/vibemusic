@@ -28,6 +28,19 @@ impl DbHelper {
         if !table_exists {
             eprintln!("Database tables missing. Applying initial schema to ensure robustness...");
             conn.execute_batch(include_str!("../migrations/001_initial_schema.sql"))?;
+        } else {
+            // Manual migration check for artwork_path to ensure it exists even if plugin migration is skipped
+            let has_artwork: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('playlists') WHERE name='artwork_path'",
+                [],
+                |row| row.get(0),
+            ).unwrap_or(0);
+
+            if has_artwork == 0 {
+                eprintln!("Applying missing column artwork_path to playlists...");
+                // We ignore error here just in case, but usually it should work
+                let _ = conn.execute("ALTER TABLE playlists ADD COLUMN artwork_path TEXT", []);
+            }
         }
 
         Ok(Self { conn })
@@ -402,8 +415,9 @@ impl DbHelper {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 description: row.get(2)?,
+                artwork_path: None, // New playlists have no artwork
                 track_count: 0,
-                created_at: row.get::<_, String>(3)?, // SQLite returns string for datetime
+                created_at: row.get::<_, String>(3)?,
             })
         })?;
 
@@ -415,12 +429,27 @@ impl DbHelper {
         Ok(())
     }
 
+    pub fn update_playlist(
+        &self,
+        id: i64,
+        name: String,
+        description: Option<String>,
+        artwork_path: Option<String>,
+    ) -> Result<()> {
+        self.conn.execute(
+            "UPDATE playlists SET name = ?, description = ?, artwork_path = ? WHERE id = ?",
+            params![name, description, artwork_path, id],
+        )?;
+        Ok(())
+    }
+
     pub fn get_playlists(&self) -> Result<Vec<crate::playlists::Playlist>> {
         let mut stmt = self.conn.prepare(
             "SELECT 
                 p.id, 
                 p.name, 
                 p.description, 
+                p.artwork_path,
                 p.created_at,
                 COUNT(pt.id) as track_count
             FROM playlists p
@@ -434,8 +463,9 @@ impl DbHelper {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 description: row.get(2)?,
-                created_at: row.get(3)?,
-                track_count: row.get(4)?,
+                artwork_path: row.get(3)?,
+                created_at: row.get(4)?,
+                track_count: row.get(5)?,
             })
         })?;
 

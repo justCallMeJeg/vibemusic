@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { ChevronLeft, Play, Shuffle, Trash2 } from "lucide-react";
+import { ChevronLeft, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import { formatDistanceToNow } from "date-fns";
@@ -25,6 +25,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { usePlaylistStore } from "@/stores/playlist-store";
+import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { Pencil } from "lucide-react";
 
 export default function PlaylistDetailPage() {
   const detailView = useDetailView();
@@ -36,7 +39,9 @@ export default function PlaylistDetailPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const playlistId = detailView?.type === "playlist" ? detailView.id : null;
 
@@ -53,7 +58,9 @@ export default function PlaylistDetailPage() {
       ]);
 
       const found = allPlaylists.find((p) => p.id === playlistId);
-      setPlaylist(found || null);
+      console.log("Loaded Playlist Data:", found);
+      if (found) setPlaylist(found);
+      setImageError(false); // Reset error on new data
       setTracks(tracksData);
     } catch (error) {
       console.error("Failed to load playlist:", error);
@@ -70,13 +77,6 @@ export default function PlaylistDetailPage() {
   const handlePlay = () => {
     if (tracks.length > 0) {
       play(tracks[0], tracks);
-    }
-  };
-
-  const handleShuffle = () => {
-    if (tracks.length > 0) {
-      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-      play(shuffled[0], shuffled);
     }
   };
 
@@ -162,8 +162,23 @@ export default function PlaylistDetailPage() {
 
       {/* Album info header */}
       <div className="flex gap-6 mb-6 px-2">
-        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-white/50 text-6xl font-bold select-none shrink-0">
-          {playlist.name.slice(0, 2).toUpperCase()}
+        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-white/50 text-6xl font-bold select-none shrink-0 overflow-hidden">
+          {playlist.artwork_path && !imageError ? (
+            <img
+              src={convertFileSrc(playlist.artwork_path)}
+              alt={playlist.name}
+              className="w-full h-full object-cover"
+              onError={(_e) => {
+                console.error(
+                  "Failed to load playlist cover:",
+                  playlist.artwork_path
+                );
+                setImageError(true);
+              }}
+            />
+          ) : (
+            playlist.name.slice(0, 2).toUpperCase()
+          )}
         </div>
 
         <div className="flex flex-col justify-center min-w-0">
@@ -200,10 +215,10 @@ export default function PlaylistDetailPage() {
             <Button
               variant="outline"
               size="icon-lg"
-              onClick={handleShuffle}
-              title="Shuffle"
+              onClick={() => setIsEditOpen(true)}
+              title="Edit Playlist"
             >
-              <Shuffle size={20} />
+              <Pencil size={20} />
             </Button>
 
             <Dialog
@@ -242,6 +257,15 @@ export default function PlaylistDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            <PlaylistEditDialog
+              playlist={playlist}
+              open={isEditOpen}
+              onOpenChange={(open) => {
+                setIsEditOpen(open);
+                if (!open) loadData(); // Reload data when dialog closes to update specific playlist details
+              }}
+            />
           </div>
         </div>
       </div>
