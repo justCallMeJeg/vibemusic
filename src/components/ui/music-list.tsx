@@ -15,12 +15,12 @@ import {
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
-interface MusicCardProps {
+interface MusicListItemProps {
   track: Track;
   context?: Track[];
 }
 
-function MusicCard({ track, context }: MusicCardProps) {
+export default function MusicListItem({ track, context }: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
@@ -47,14 +47,14 @@ function MusicCard({ track, context }: MusicCardProps) {
       <ContextMenuTrigger>
         <div
           onClick={() => play(track, context)}
-          className={`flex flex-col w-min h-min rounded-lg px-4 py-2 hover:outline hover:outline-gray-850 hover:bg-white/3 cursor-pointer group transition-colors ${
+          className={`flex w-full h-min rounded-lg px-4 py-2 hover:outline hover:outline-gray-850 hover:bg-white/3 cursor-pointer group transition-colors ${
             isPlaying ? "bg-white/10 outline outline-gray-800" : ""
           }`}
         >
-          <div className="flex flex-col h-min w-min gap-4">
+          <div className="flex h-min w-full gap-4">
             <div className="relative">
               <img
-                className="aspect-square h-40 rounded-lg object-cover bg-neutral-800"
+                className="aspect-square h-10 rounded-lg object-cover bg-neutral-800"
                 src={artworkSrc}
                 onError={(e) => {
                   console.error("Failed to load image:", artworkSrc);
@@ -69,8 +69,8 @@ function MusicCard({ track, context }: MusicCardProps) {
               )}
             </div>
 
-            <div className="flex w-min items-center justify-between">
-              <div className="flex flex-col h-min w-min">
+            <div className="flex w-full items-center justify-between">
+              <div className="flex flex-col h-min w-full">
                 <p className="text-white text-base font-bold line-clamp-1">
                   {track.title}
                 </p>
@@ -102,5 +102,3 @@ function MusicCard({ track, context }: MusicCardProps) {
     </ContextMenu>
   );
 }
-
-export default MusicCard;

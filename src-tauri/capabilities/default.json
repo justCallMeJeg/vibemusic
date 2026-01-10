@@ -12,6 +12,10 @@
     "store:default",
     "dialog:default",
     "fs:default",
-    "fs:allow-read"
+    "fs:allow-read",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$APPDATA/**"]
+    }
   ]
 }
