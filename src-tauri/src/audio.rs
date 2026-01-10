@@ -36,6 +36,11 @@ pub struct PlaybackState {
     pub volume: f32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioDevice {
+    pub name: String,
+}
+
 impl Default for PlaybackState {
     fn default() -> Self {
         Self {
@@ -63,6 +68,7 @@ enum AudioCommand {
     Stop,
     Seek(u64),
     SetVolume(f32),
+    SetDevice(String),
 }
 
 /// Main audio engine - public API
@@ -193,6 +199,12 @@ impl AudioEngine {
         self.command_tx.send(AudioCommand::SetVolume(volume)).ok();
     }
 
+    pub fn set_device(&self, device_name: String) {
+        self.command_tx
+            .send(AudioCommand::SetDevice(device_name))
+            .ok();
+    }
+
     pub fn get_state(&self) -> PlaybackState {
         self.state.lock().unwrap().clone()
     }
@@ -218,6 +230,7 @@ struct AudioWorker {
     // Device config
     device_sample_rate: u32,
     device_channels: u16,
+    selected_device_name: Option<String>,
 
     // Track info
     current_file_path: Option<String>,
@@ -261,6 +274,7 @@ impl AudioWorker {
             ffmpeg_process: None,
             device_sample_rate: config.sample_rate().0,
             device_channels: config.channels(),
+            selected_device_name: None,
             current_file_path: None,
             current_title: String::new(),
             current_artist: String::new(),
@@ -309,6 +323,10 @@ impl AudioWorker {
             AudioCommand::SetVolume(vol) => {
                 self.volume.store(f32::to_bits(vol) as u64, Ordering::Relaxed);
                 self.state.lock().unwrap().volume = vol;
+            }
+            AudioCommand::SetDevice(name) => {
+                self.selected_device_name = Some(name);
+                self.handle_device_change();
             }
         }
     }
@@ -385,7 +403,19 @@ impl AudioWorker {
 
     fn recreate_cpal_stream(&mut self, _sample_rate: u32, _channels: u16) {
         let host = cpal::default_host();
-        let device = host.default_output_device().expect("No output device");
+        
+        // Try to find selected device, otherwise default
+        let device = if let Some(ref name) = self.selected_device_name {
+            host.output_devices()
+                .ok()
+                .and_then(|mut devices| {
+                    devices.find(|d| d.name().map(|n| n == *name).unwrap_or(false))
+                })
+                .or_else(|| host.default_output_device())
+                .expect("No output device found")
+        } else {
+            host.default_output_device().expect("No output device found")
+        };
 
         // Always use device default config - FFmpeg will resample to match
         let config: StreamConfig = device.default_output_config().unwrap().into();
@@ -701,6 +731,24 @@ pub fn audio_seek(state: tauri::State<AudioState>, position_ms: u64) -> Result<(
 #[tauri::command]
 pub fn audio_set_volume(state: tauri::State<AudioState>, volume: f32) -> Result<(), AppError> {
     state.0.set_volume(volume);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn audio_get_devices() -> Result<Vec<AudioDevice>, AppError> {
+    let host = cpal::default_host();
+    let devices = host
+        .output_devices()
+        .map_err(|e| AppError::Audio(e.to_string()))?
+        .filter_map(|d| d.name().ok())
+        .map(|name| AudioDevice { name })
+        .collect();
+    Ok(devices)
+}
+
+#[tauri::command]
+pub fn audio_set_device(state: tauri::State<AudioState>, device_name: String) -> Result<(), AppError> {
+    state.0.set_device(device_name);
     Ok(())
 }
 

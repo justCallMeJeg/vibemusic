@@ -5,6 +5,7 @@ import AlbumDetailPage from "@/pages/album-detail-page";
 import PlaylistsPage from "@/pages/playlists-page";
 import PlaylistDetailPage from "@/pages/playlist-detail-page";
 import HomePage from "@/pages/home-page";
+import SettingsPage from "@/pages/settings-page";
 
 export default function MainContent() {
   const currentPage = useCurrentPage();
@@ -31,11 +32,7 @@ export default function MainContent() {
     case "playlists":
       return <PlaylistsPage />;
     case "settings":
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500">Settings - Coming Soon</div>
-        </div>
-      );
+      return <SettingsPage />;
     default:
       return <SongsPage />;
   }

@@ -14,6 +14,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useSettingsStore } from "@/stores/settings-store";
 
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
@@ -21,6 +22,13 @@ export default function App() {
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
+
+  const { theme, dynamicGradient, loadSettings } = useSettingsStore();
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   // Update gradient when track changes
   useEffect(() => {
@@ -77,13 +85,15 @@ export default function App() {
   return (
     <main
       id="app"
-      className="selection:bg-white/10 dark h-dvh w-dvw px-6 overflow-hidden flex flex-col gap-4 relative"
+      className={`selection:bg-white/10 h-dvh w-dvw px-6 overflow-hidden flex flex-col gap-4 relative ${
+        theme === "dark" || theme === "system" ? "dark" : ""
+      }`}
     >
       {/* Background Gradient */}
       <div
         className="fixed top-0 left-0 right-0 h-96 pointer-events-none transition-colors duration-1000 ease-in-out z-0 opacity-25"
         style={{
-          backgroundColor: gradientColor,
+          backgroundColor: dynamicGradient ? gradientColor : "transparent",
           maskImage: "linear-gradient(to bottom, black, transparent)",
           WebkitMaskImage: "linear-gradient(to bottom, black, transparent)",
         }}

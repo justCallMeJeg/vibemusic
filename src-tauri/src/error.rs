@@ -8,8 +8,8 @@ pub enum AppError {
     Database(String), // We convert sql error to string to avoid complex serialization traits
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    // #[error("Audio error: {0}")]
-    // Audio(String),
+    #[error("Audio error: {0}")]
+    Audio(String),
     #[error("Media Control error: {0}")]
     #[allow(dead_code)]
     MediaControl(String),
