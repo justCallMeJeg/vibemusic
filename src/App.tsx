@@ -122,10 +122,10 @@ export default function App() {
 
       {/* Music Controller */}
       <div
-        className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 ${
+        className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
           currentTrack
             ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0 pointer-events-none"
+            : "translate-y-full opacity-0"
         }`}
       >
         <MusicController />

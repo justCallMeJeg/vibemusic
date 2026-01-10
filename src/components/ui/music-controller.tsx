@@ -10,6 +10,8 @@ import {
   Volume1,
   Volume2,
   VolumeX,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Button } from "./button";
 import { Slider } from "./slider";
@@ -56,6 +58,7 @@ export default function MusicControler() {
   const isPlaying = status === "playing";
   const [sliderValue, setSliderValue] = useState([0]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
 
   // Sync slider with audio position when not dragging
   useEffect(() => {
@@ -96,8 +99,105 @@ export default function MusicControler() {
     setVolume(value[0]);
   };
 
+  if (isCompact) {
+    return (
+      <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-94 ml-auto h-auto flex flex-col items-center gap-4 p-3 pr-4 transition-all duration-500 pointer-events-auto">
+        <div id="track" className="flex items-center gap-3 w-full">
+          {currentTrack ? (
+            <img
+              className="aspect-square h-12 rounded-md object-cover bg-neutral-800"
+              src={
+                currentTrack.artwork_path
+                  ? convertFileSrc(currentTrack.artwork_path)
+                  : placeholderArt
+              }
+              alt={currentTrack.title}
+            />
+          ) : (
+            <div className="aspect-square h-12 rounded-md bg-gray-800" />
+          )}
+
+          <div className="flex flex-col w-full">
+            <p className="text-white text-sm font-bold line-clamp-1">
+              {currentTrack?.title || ""}
+            </p>
+            <p className="text-gray-400 text-xs font-normal line-clamp-1">
+              {currentTrack?.artist || "Unknown Artist"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center w-full">
+          <div className="flex items-center gap-1 w-full justify-between">
+            <Button
+              variant="ghost"
+              onClick={toggleShuffle}
+              className={shuffle ? "text-purple-500 hover:text-purple-400" : ""}
+            >
+              <Shuffle size={20} />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => previous()}>
+              <SkipBack size={18} />
+            </Button>
+            <Button
+              size={"icon"}
+              variant="ghost"
+              onClick={handlePlayPause}
+              className="h-9 w-9"
+            >
+              {isPlaying ? (
+                <Pause className="fill-white h-5 w-5" />
+              ) : (
+                <Play className="fill-white ml-0.5 h-5 w-5" />
+              )}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => next()}>
+              <SkipForward size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={toggleRepeat}
+              className={
+                repeat !== "off" ? "text-purple-500 hover:text-purple-400" : ""
+              }
+            >
+              {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
+            </Button>
+          </div>
+
+          <div className="h-8 w-px bg-white/10 mx-1" />
+
+          <Button variant="ghost" size="icon" onClick={toggleMute}>
+            {volume === 0 ? (
+              <VolumeX size={18} className="text-gray-400" />
+            ) : (
+              <Volume2 size={18} />
+            )}
+          </Button>
+          <Button
+            id="queue-menu-button"
+            variant="ghost"
+            onClick={toggleQueue}
+            className={
+              isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""
+            }
+          >
+            <Logs size={20} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCompact(false)}
+            className="ml-2 text-gray-400 hover:text-white"
+          >
+            <Maximize2 size={18} />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-full h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4">
+    <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-full ml-auto h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4 transition-all duration-500 pointer-events-auto">
       <div id="track" className="flex items-center gap-4">
         {currentTrack ? (
           <>
@@ -209,6 +309,15 @@ export default function MusicControler() {
           className={isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""}
         >
           <Logs size={20} />
+        </Button>
+
+        {/* Compact Mode Toggle */}
+        <Button
+          variant="ghost"
+          onClick={() => setIsCompact(true)}
+          className="text-gray-400 hover:text-white"
+        >
+          <Minimize2 size={20} />
         </Button>
       </div>
     </div>
