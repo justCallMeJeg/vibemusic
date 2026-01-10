@@ -14,6 +14,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "@/stores/settings-store";
 
 export default function App() {
@@ -25,10 +26,43 @@ export default function App() {
 
   const { theme, dynamicGradient, loadSettings } = useSettingsStore();
 
-  // Load settings on mount
+  // Load settings on mount and handle startup behaviors
   useEffect(() => {
-    loadSettings();
+    loadSettings().then(() => {
+      const settings = useSettingsStore.getState();
+
+      // Scan on Startup
+      if (settings.scanOnStartup && settings.libraryPaths.length > 0) {
+        console.log("Auto-scanning library...");
+        invoke("scan_music_library", { folders: settings.libraryPaths });
+      }
+
+      // Autoplay
+      if (settings.autoplay) {
+        const audioState = useAudioStore.getState();
+        if (audioState.currentTrack) {
+          console.log("Auto-playing...");
+          audioState.play(audioState.currentTrack);
+        }
+      }
+    });
   }, [loadSettings]);
+
+  // Handle Close-to-Tray
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    const unlistenPromise = appWindow.onCloseRequested(async (event) => {
+      const { closeToTray } = useSettingsStore.getState();
+      if (closeToTray) {
+        event.preventDefault();
+        await appWindow.hide();
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   // Update gradient when track changes
   useEffect(() => {

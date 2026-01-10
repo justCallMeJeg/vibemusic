@@ -19,18 +19,33 @@ interface SettingsState {
   selectedDevice: string | null;
   audioDevices: { name: string }[];
   isLoading: boolean;
-  crossfadeDuration: number; // New: crossfade duration in seconds
+  crossfadeDuration: number; // Audio
+
+  // Behavior
+  closeToTray: boolean;
+  scanOnStartup: boolean;
+  autoplay: boolean;
 }
 
 interface SettingsActions {
-  setTheme: (theme: "dark" | "light" | "system") => Promise<void>;
-  setDynamicGradient: (enabled: boolean) => Promise<void>;
+  setTheme: (theme: "dark" | "light" | "system") => void;
+  setDynamicGradient: (enabled: boolean) => void;
+
+  // Library Actions
   addLibraryPath: (path: string) => Promise<void>;
   removeLibraryPath: (path: string) => Promise<void>;
-  setAudioDevice: (device: string) => Promise<void>;
+
+  // Audio Actions
+  setAudioDevice: (deviceName: string) => void;
   refreshAudioDevices: () => Promise<void>;
+  setCrossfadeDuration: (duration: number) => void;
+
+  // Behavior Actions
+  setCloseToTray: (enabled: boolean) => void;
+  setScanOnStartup: (enabled: boolean) => void;
+  setAutoplay: (enabled: boolean) => void;
+
   loadSettings: () => Promise<void>;
-  setCrossfadeDuration: (duration: number) => Promise<void>; // New: action to set crossfade duration
 }
 
 export const useSettingsStore = create<SettingsState & SettingsActions>(
@@ -41,10 +56,19 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     selectedDevice: null,
     audioDevices: [],
     isLoading: true,
-    crossfadeDuration: 0, // Default to 0 seconds (no crossfade)
+    crossfadeDuration: 0,
+    closeToTray: false,
+    scanOnStartup: false,
+    autoplay: false,
 
     setTheme: async (theme) => {
       set({ theme });
+      if (theme === "system") {
+        document.documentElement.classList.remove("dark", "light");
+      } else {
+        document.documentElement.classList.remove("dark", "light");
+        document.documentElement.classList.add(theme);
+      }
       const store = await getStore();
       await store.set("theme", theme);
       await store.save();
@@ -58,9 +82,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     addLibraryPath: async (path) => {
-      const paths = get().libraryPaths;
-      if (!paths.includes(path)) {
-        const newPaths = [...paths, path];
+      const { libraryPaths } = get();
+      if (!libraryPaths.includes(path)) {
+        const newPaths = [...libraryPaths, path];
         set({ libraryPaths: newPaths });
         const store = await getStore();
         await store.set("libraryPaths", newPaths);
@@ -68,79 +92,103 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       }
     },
 
-    setAudioDevice: async (device) => {
-      set({ selectedDevice: device });
-      const store = await getStore();
-      await store.set("selectedDevice", device);
-      await store.save();
-      // Apply setting immediately
-      await invoke("audio_set_device", { deviceName: device });
-    },
-
-    refreshAudioDevices: async () => {
-      try {
-        const devices = await invoke<{ name: string }[]>("audio_get_devices");
-        set({ audioDevices: devices });
-      } catch (error) {
-        console.error("Failed to get audio devices:", error);
-      }
-    },
-
     removeLibraryPath: async (path) => {
-      const newPaths = get().libraryPaths.filter((p) => p !== path);
+      const { libraryPaths } = get();
+      const newPaths = libraryPaths.filter((p) => p !== path);
       set({ libraryPaths: newPaths });
       const store = await getStore();
       await store.set("libraryPaths", newPaths);
       await store.save();
     },
 
+    setAudioDevice: async (device) => {
+      set({ selectedDevice: device });
+      await invoke("audio_set_device", { deviceName: device });
+      const store = await getStore();
+      await store.set("selectedDevice", device);
+      await store.save();
+    },
+
+    refreshAudioDevices: async () => {
+      try {
+        const devices = await invoke<{ name: string }[]>("audio_get_devices");
+        set({ audioDevices: devices });
+      } catch (e) {
+        console.error("Failed to refresh devices:", e);
+      }
+    },
+
     setCrossfadeDuration: async (duration) => {
       set({ crossfadeDuration: duration });
+      await invoke("audio_set_crossfade", { durationSecs: duration });
       const store = await getStore();
       await store.set("crossfadeDuration", duration);
       await store.save();
-      // Apply setting immediately
-      await invoke("audio_set_crossfade", { durationSecs: duration });
+    },
+
+    setCloseToTray: async (enabled) => {
+      set({ closeToTray: enabled });
+      const store = await getStore();
+      await store.set("closeToTray", enabled);
+      await store.save();
+    },
+
+    setScanOnStartup: async (enabled) => {
+      set({ scanOnStartup: enabled });
+      const store = await getStore();
+      await store.set("scanOnStartup", enabled);
+      await store.save();
+    },
+
+    setAutoplay: async (enabled) => {
+      set({ autoplay: enabled });
+      const store = await getStore();
+      await store.set("autoplay", enabled);
+      await store.save();
     },
 
     loadSettings: async () => {
-      set({ isLoading: true });
       try {
         const store = await getStore();
         const theme = await store.get<"dark" | "light" | "system">("theme");
         const dynamicGradient = await store.get<boolean>("dynamicGradient");
         const libraryPaths = await store.get<string[]>("libraryPaths");
         const selectedDevice = await store.get<string>("selectedDevice");
-        const crossfadeDuration = await store.get<number>("crossfadeDuration"); // New: load crossfade duration
+        const crossfadeDuration = await store.get<number>("crossfadeDuration");
 
-        // Initial device fetch
-        const devices = await invoke<{ name: string }[]>("audio_get_devices");
+        const closeToTray = await store.get<boolean>("closeToTray");
+        const scanOnStartup = await store.get<boolean>("scanOnStartup");
+        const autoplay = await store.get<boolean>("autoplay");
 
-        // Apply saved device if exists
+        if (theme) {
+          set({ theme });
+          if (theme !== "system") {
+            document.documentElement.classList.add(theme);
+          }
+        }
+        if (typeof dynamicGradient === "boolean") set({ dynamicGradient });
+        if (libraryPaths) set({ libraryPaths });
         if (selectedDevice) {
+          set({ selectedDevice });
           await invoke("audio_set_device", { deviceName: selectedDevice });
         }
-
-        // New: Apply saved crossfade duration if exists
-        if (crossfadeDuration !== null) {
+        if (typeof crossfadeDuration === "number") {
+          set({ crossfadeDuration });
           await invoke("audio_set_crossfade", {
             durationSecs: crossfadeDuration,
           });
         }
 
-        set({
-          theme: theme || "dark",
-          dynamicGradient:
-            dynamicGradient !== null ? (dynamicGradient as boolean) : true,
-          libraryPaths: libraryPaths || [],
-          selectedDevice: selectedDevice || null,
-          audioDevices: devices || [],
-          crossfadeDuration:
-            crossfadeDuration !== null ? (crossfadeDuration as number) : 0, // New: set crossfade duration
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error("Failed to load settings:", error);
+        if (typeof closeToTray === "boolean") set({ closeToTray });
+        if (typeof scanOnStartup === "boolean") set({ scanOnStartup });
+        if (typeof autoplay === "boolean") set({ autoplay });
+
+        set({ isLoading: false });
+
+        // Initial device fetch
+        get().refreshAudioDevices();
+      } catch (e) {
+        console.error("Failed to load settings:", e);
         set({ isLoading: false });
       }
     },
