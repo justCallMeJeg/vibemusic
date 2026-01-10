@@ -1,8 +1,7 @@
 use image::ImageFormat;
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Extract and cache cover art from ID3 tags

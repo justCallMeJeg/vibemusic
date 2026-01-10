@@ -1,22 +1,21 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
 import MusicController from "./components/ui/music-controller";
-import { useEffect, useState, useCallback } from "react";
-import { useQueueOpen, useAudioStore } from "./stores/audio-store";
+import { useEffect, useState } from "react";
+import { useAudioStore } from "./stores/audio-store";
 import NavigationMenu from "./components/ui/navigation-menu";
 import QueueMenu from "./components/ui/queue-menu";
 import MainContent from "./components/main-content";
 import { GlobalSearch } from "./components/ui/global-search";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-import { getTracks, Track } from "@/lib/api";
+// import type { Track } from "@/lib/api";
 
 export default function App() {
-  const isQueueOpen = useQueueOpen();
+  const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const [isScanning, setIsScanning] = useState(false);
-  const [tracks, setTracks] = useState<Track[]>([]);
 
   // Initialize audio event listeners
   useEffect(() => {
@@ -34,19 +33,6 @@ export default function App() {
     }
   }, [isQueueOpen, queue.length, toggleQueue]);
 
-  const loadTracks = useCallback(async () => {
-    try {
-      const data = await getTracks();
-      setTracks(data);
-    } catch (error) {
-      console.error("Failed to load tracks:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTracks();
-  }, [loadTracks]);
-
   const handleFolderImport = async () => {
     try {
       const selected = await open({
@@ -58,7 +44,7 @@ export default function App() {
         setIsScanning(true);
         console.log("Scanning folder:", selected);
         await invoke("scan_music_library", { folders: [selected] });
-        await loadTracks();
+        // Optional: trigger a global event or store action to refresh views
       }
     } catch (error) {
       console.error("Failed to import folder:", error);

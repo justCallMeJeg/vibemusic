@@ -56,7 +56,7 @@ enum AudioCommand {
         title: String,
         artist: String,
         album: String,
-        cover: Option<String>,
+        _cover: Option<String>,
     },
     Pause,
     Resume,
@@ -168,7 +168,7 @@ impl AudioEngine {
                 title,
                 artist,
                 album,
-                cover,
+                _cover: cover,
             })
             .ok();
     }
@@ -298,7 +298,7 @@ impl AudioWorker {
                 title,
                 artist,
                 album,
-                cover: _,
+                _cover: _,
             } => {
                 self.play_file(&path, &title, &artist, &album);
             }

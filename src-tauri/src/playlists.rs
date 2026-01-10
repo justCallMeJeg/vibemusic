@@ -1,5 +1,5 @@
 use crate::database::DbHelper;
-use crate::error::AppError;
+// use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use tauri::{command, AppHandle, Manager};
 
@@ -12,14 +12,14 @@ pub struct Playlist {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PlaylistTrack {
-    pub id: i64,
-    pub playlist_id: i64,
-    pub track_id: i64,
-    pub position: i64,
-    pub added_at: String,
-}
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct PlaylistTrack {
+//     pub id: i64,
+//     pub playlist_id: i64,
+//     pub track_id: i64,
+//     pub position: i64,
+//     pub added_at: String,
+// }
 
 // Commands will be implemented after updating DbHelper
 #[command]

@@ -67,7 +67,6 @@ impl DbHelper {
                 let should_update = current_artwork.is_none() && artwork_path.is_some();
                 
                 // Explicitly drop borrows to free tx for use
-                drop(row); 
                 drop(rows); 
                 drop(stmt);
 
@@ -202,7 +201,7 @@ impl DbHelper {
         Ok(())
     }
 
-    pub fn get_conn(&self) -> &Connection {
+    pub fn _get_conn(&self) -> &Connection {
         &self.conn
     }
 

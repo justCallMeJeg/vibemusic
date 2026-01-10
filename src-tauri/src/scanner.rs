@@ -544,7 +544,6 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
         }
 
         // 3. Delete missing tracks in a single transaction
-        let mut deleted_count = 0;
         let tx = db.get_conn_mut().transaction().map_err(|e| e.to_string())?;
         
         // Split huge deletions into chunks to avoid too many host variables if we used IN (?)
@@ -553,7 +552,7 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
         // Inside a transaction, that's fast.
         
         DbHelper::delete_tracks(&tx, &missing_ids).map_err(|e| e.to_string())?;
-        deleted_count = missing_ids.len();
+        let deleted_count = missing_ids.len();
         
         tx.commit().map_err(|e| e.to_string())?;
 

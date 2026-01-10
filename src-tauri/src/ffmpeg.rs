@@ -190,7 +190,7 @@ impl FFmpegProcess {
     }
 
     /// Check if the process is still running
-    pub fn is_running(&mut self) -> bool {
+    pub fn _is_running(&mut self) -> bool {
         matches!(self.child.try_wait(), Ok(None))
     }
 }

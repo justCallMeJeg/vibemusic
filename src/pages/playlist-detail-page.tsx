@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   getPlaylistTracks,
   deletePlaylist,
@@ -40,7 +40,7 @@ export default function PlaylistDetailPage() {
 
   const playlistId = detailView?.type === "playlist" ? detailView.id : null;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!playlistId) return;
     setIsLoading(true);
     try {
@@ -61,11 +61,11 @@ export default function PlaylistDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [playlistId]);
 
   useEffect(() => {
     loadData();
-  }, [playlistId]);
+  }, [loadData]);
 
   const handlePlay = () => {
     if (tracks.length > 0) {
@@ -162,8 +162,7 @@ export default function PlaylistDetailPage() {
 
       {/* Album info header */}
       <div className="flex gap-6 mb-6 px-2">
-        {/* Placeholder Cover */}
-        <div className="w-40 h-40 rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-white/50 text-6xl font-bold select-none shrink-0">
+        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-white/50 text-6xl font-bold select-none shrink-0">
           {playlist.name.slice(0, 2).toUpperCase()}
         </div>
 
