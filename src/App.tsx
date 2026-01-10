@@ -12,11 +12,25 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 // import type { Track } from "@/lib/api";
 
+import { getDominantColor } from "./lib/color-utils";
+import { convertFileSrc } from "@tauri-apps/api/core";
+
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const [isScanning, setIsScanning] = useState(false);
+  const [gradientColor, setGradientColor] = useState<string>("transparent");
+
+  // Update gradient when track changes
+  useEffect(() => {
+    if (currentTrack?.artwork_path) {
+      const src = convertFileSrc(currentTrack.artwork_path);
+      getDominantColor(src).then((color) => setGradientColor(color));
+    } else {
+      setGradientColor("transparent");
+    }
+  }, [currentTrack]);
 
   // Initialize audio event listeners
   useEffect(() => {
@@ -63,9 +77,19 @@ export default function App() {
   return (
     <main
       id="app"
-      className="selection:bg-white/10 dark h-dvh w-dvw px-6 overflow-hidden flex flex-col gap-4"
+      className="selection:bg-white/10 dark h-dvh w-dvw px-6 overflow-hidden flex flex-col gap-4 relative"
     >
-      <div className="flex flex-1 gap-6 min-h-0 relative">
+      {/* Background Gradient */}
+      <div
+        className="fixed top-0 left-0 right-0 h-96 pointer-events-none transition-colors duration-1000 ease-in-out z-0 opacity-25"
+        style={{
+          backgroundColor: gradientColor,
+          maskImage: "linear-gradient(to bottom, black, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, black, transparent)",
+        }}
+      />
+
+      <div className="flex flex-1 gap-6 min-h-0 relative z-10">
         {/* Sidebar */}
         <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
           <div
