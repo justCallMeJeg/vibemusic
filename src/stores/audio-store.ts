@@ -425,10 +425,45 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         handleNext();
       });
 
+      // Media Control Events
+      const unlistenMediaPlay = listen("media-play", () => {
+        get().resume();
+      });
+
+      const unlistenMediaPause = listen("media-pause", () => {
+        get().pause();
+      });
+
+      const unlistenMediaToggle = listen("media-toggle", () => {
+        const s = get();
+        if (s.status === "playing") s.pause();
+        else s.resume();
+      });
+
+      const unlistenMediaNext = listen("media-next", () => {
+        get().next();
+      });
+
+      const unlistenMediaPrev = listen("media-prev", () => {
+        get().previous();
+      });
+
+      const unlistenMediaStop = listen("media-stop", () => {
+        get().stop();
+      });
+
       return () => {
         unlistenState.then((f) => f());
         unlistenProgress.then((f) => f());
         unlistenFinished.then((f) => f());
+
+        unlistenMediaPlay.then((f) => f());
+        unlistenMediaPause.then((f) => f());
+        unlistenMediaToggle.then((f) => f());
+        unlistenMediaNext.then((f) => f());
+        unlistenMediaPrev.then((f) => f());
+        unlistenMediaStop.then((f) => f());
+
         set({ _listenersInitialized: false });
       };
     },
