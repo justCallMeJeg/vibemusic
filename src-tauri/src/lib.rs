@@ -4,6 +4,7 @@ mod artwork;
 mod audio;
 mod database;
 mod error;
+mod ffmpeg;
 mod library;
 mod scanner;
 use audio::{AudioEngine, AudioState};
@@ -37,7 +38,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
             // Initialize audio engine with app handle
-            let engine = Arc::new(AudioEngine::new(app.handle()));
+            let engine = Arc::new(AudioEngine::new(app.handle().clone()));
             let state = AudioState(engine.clone());
 
             // Manage state manually since we are in setup

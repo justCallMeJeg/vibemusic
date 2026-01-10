@@ -1,43 +1,79 @@
-use rodio::{Decoder, OutputStream, Sink, Source};
+//! Audio Engine using FFmpeg (decoding) + CPAL (output)
+//!
+//! Architecture:
+//! - AudioEngine: Public API, sends commands to AudioThread
+//! - AudioThread: Spawns FFmpeg subprocess, reads PCM from pipe, pushes to ringbuf
+//! - CPAL Callback: Pops from ringbuf, writes to output
+
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{Stream, StreamConfig};
+use ringbuf::{traits::{Consumer, Observer, Producer, Split}, HeapRb};
+use serde::Serialize;
 use souvlaki::{MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig};
-use std::fs::File;
-use std::io::BufReader;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
-pub mod state;
-use state::PlaybackState;
+use crate::ffmpeg::{self, FFmpegProcess};
 
 // Event names
 const EVENT_PLAYBACK_STATE: &str = "audio-playback-state";
 const EVENT_PLAYBACK_PROGRESS: &str = "audio-playback-progress";
 const EVENT_PLAYBACK_FINISHED: &str = "audio-playback-finished";
+const EVENT_PLAYBACK_ERROR: &str = "audio-playback-error";
 
-struct TimerState {
-    start_time: Option<Instant>,
-    paused_duration: Duration,
-    pause_start: Option<Instant>,
+/// Playback state shared between threads
+#[derive(Debug, Clone, Serialize)]
+pub struct PlaybackState {
+    pub is_playing: bool,
+    pub is_paused: bool,
+    pub current_file: Option<String>,
+    pub position_ms: u64,
+    pub duration_ms: u64,
+    pub volume: f32,
 }
 
+impl Default for PlaybackState {
+    fn default() -> Self {
+        Self {
+            is_playing: false,
+            is_paused: false,
+            current_file: None,
+            position_ms: 0,
+            duration_ms: 0,
+            volume: 1.0,
+        }
+    }
+}
+
+/// Commands sent to the audio thread
+enum AudioCommand {
+    Play {
+        path: String,
+        title: String,
+        artist: String,
+        album: String,
+        cover: Option<String>,
+    },
+    Pause,
+    Resume,
+    Stop,
+    Seek(u64),
+    SetVolume(f32),
+}
+
+/// Main audio engine - public API
 pub struct AudioEngine {
-    sink: Arc<Mutex<Sink>>,
-    // _stream is leaked to ensure it lives forever
+    command_tx: Sender<AudioCommand>,
     state: Arc<Mutex<PlaybackState>>,
-    timer: Arc<Mutex<TimerState>>,
     media_controls: Arc<Mutex<MediaControls>>,
 }
 
 impl AudioEngine {
-    pub fn new(handle: &AppHandle) -> Self {
-        let (stream, stream_handle) = OutputStream::try_default().unwrap();
-        // Leak the stream to keep it alive globally without storing it in the struct
-        // This avoids Send/Sync trait issues with OutputStream
-        Box::leak(Box::new(stream));
-
-        let sink = Sink::try_new(&stream_handle).unwrap();
-
+    pub fn new(handle: AppHandle) -> Self {
         // Initialize Media Controls
         #[cfg(target_os = "windows")]
         let hwnd = {
@@ -49,7 +85,6 @@ impl AudioEngine {
                 .get_webview_window("main")
                 .expect("Main window not found");
 
-            // Get raw window handle for souvlaki
             match window.window_handle().unwrap().as_raw() {
                 RawWindowHandle::Win32(handle) => Some(handle.hwnd.get() as *mut std::ffi::c_void),
                 _ => None,
@@ -65,27 +100,35 @@ impl AudioEngine {
             hwnd,
         };
 
-        let mut controls = MediaControls::new(config).expect("Failed to initialize media controls");
-
-        // Set initial state
+        let mut controls =
+            MediaControls::new(config).expect("Failed to initialize media controls");
         controls.set_playback(MediaPlayback::Stopped).ok();
 
+        let (tx, rx) = mpsc::channel();
+        let state = Arc::new(Mutex::new(PlaybackState::default()));
+        let controls = Arc::new(Mutex::new(controls));
+
+        let state_clone = state.clone();
+        let controls_clone = controls.clone();
+        let handle_clone = handle.clone();
+
+        // Spawn audio thread
+        thread::spawn(move || {
+            let mut worker = AudioWorker::new(rx, state_clone, controls_clone, handle_clone);
+            worker.run();
+        });
+
         Self {
-            sink: Arc::new(Mutex::new(sink)),
-            state: Arc::new(Mutex::new(PlaybackState::default())),
-            timer: Arc::new(Mutex::new(TimerState {
-                start_time: None,
-                paused_duration: Duration::ZERO,
-                pause_start: None,
-            })),
-            media_controls: Arc::new(Mutex::new(controls)),
+            command_tx: tx,
+            state,
+            media_controls: controls,
         }
     }
 
     pub fn init_media_events(&self, handle: AppHandle) {
         let controls = self.media_controls.clone();
-
         let mut controls_guard = controls.lock().unwrap();
+
         controls_guard
             .attach(move |event| match event {
                 souvlaki::MediaControlEvent::Play => {
@@ -114,291 +157,490 @@ impl AudioEngine {
     pub fn play(
         &self,
         path: String,
-        title: Option<String>,
-        artist: Option<String>,
-        album: Option<String>,
-        _cover: Option<String>,
-    ) -> Result<(), String> {
-        let file = File::open(&path).map_err(|e| e.to_string())?;
-        let reader = BufReader::new(file);
-        let source = Decoder::new(reader).map_err(|e| e.to_string())?;
-
-        // Extract duration if available
-        let total_duration = source
-            .total_duration()
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
-
-        let sink = self.sink.lock().unwrap();
-
-        if !sink.empty() {
-            sink.clear();
-        }
-
-        sink.append(source);
-        sink.play();
-
-        // Update state
-        let mut state = self.state.lock().unwrap();
-        state.is_playing = true;
-        state.is_paused = false;
-        state.current_file = Some(path);
-        state.duration_ms = total_duration;
-        state.position_ms = 0;
-
-        // Reset timer
-        let mut timer = self.timer.lock().unwrap();
-        timer.start_time = Some(Instant::now());
-        timer.paused_duration = Duration::ZERO;
-        timer.pause_start = None;
-
-        // Update Media Controls
-        let mut controls = self.media_controls.lock().unwrap();
-        controls
-            .set_metadata(MediaMetadata {
-                title: Some(
-                    title
-                        .unwrap_or_else(|| "Unknown Title".to_string())
-                        .as_str(),
-                ),
-                artist: Some(
-                    artist
-                        .unwrap_or_else(|| "Unknown Artist".to_string())
-                        .as_str(),
-                ),
-                album: Some(
-                    album
-                        .unwrap_or_else(|| "Unknown Album".to_string())
-                        .as_str(),
-                ),
-                duration: Some(Duration::from_millis(total_duration)),
-                cover_url: None, // TODO: Handle cover
+        title: String,
+        artist: String,
+        album: String,
+        cover: Option<String>,
+    ) {
+        self.command_tx
+            .send(AudioCommand::Play {
+                path,
+                title,
+                artist,
+                album,
+                cover,
             })
             .ok();
-
-        controls
-            .set_playback(MediaPlayback::Playing {
-                progress: Some(MediaPosition(Duration::from_millis(0))),
-            })
-            .ok();
-
-        Ok(())
     }
 
     pub fn pause(&self) {
-        let sink = self.sink.lock().unwrap();
-        sink.pause();
-
-        let mut state = self.state.lock().unwrap();
-        state.is_paused = true;
-        state.is_playing = false;
-
-        let mut timer = self.timer.lock().unwrap();
-        if timer.pause_start.is_none() {
-            timer.pause_start = Some(Instant::now());
-        }
-
-        let mut controls = self.media_controls.lock().unwrap();
-        controls
-            .set_playback(MediaPlayback::Paused {
-                progress: Some(MediaPosition(Duration::from_millis(state.position_ms))),
-            })
-            .ok();
+        self.command_tx.send(AudioCommand::Pause).ok();
     }
 
     pub fn resume(&self) {
-        let sink = self.sink.lock().unwrap();
-        sink.play();
-
-        let mut state = self.state.lock().unwrap();
-        state.is_paused = false;
-        state.is_playing = true;
-
-        let mut timer = self.timer.lock().unwrap();
-        if let Some(pause_start) = timer.pause_start {
-            timer.paused_duration += pause_start.elapsed();
-            timer.pause_start = None;
-        }
-
-        let mut controls = self.media_controls.lock().unwrap();
-        controls
-            .set_playback(MediaPlayback::Playing {
-                progress: Some(MediaPosition(Duration::from_millis(state.position_ms))),
-            })
-            .ok();
+        self.command_tx.send(AudioCommand::Resume).ok();
     }
 
     pub fn stop(&self) {
-        let sink = self.sink.lock().unwrap();
-        sink.stop();
-
-        let mut state = self.state.lock().unwrap();
-        state.is_playing = false;
-        state.is_paused = false;
-        state.position_ms = 0;
-        state.current_file = None;
-
-        let mut timer = self.timer.lock().unwrap();
-        timer.start_time = None;
-        timer.paused_duration = Duration::ZERO;
-        timer.pause_start = None;
-
-        let mut controls = self.media_controls.lock().unwrap();
-        controls.set_playback(MediaPlayback::Stopped).ok();
-    }
-
-    pub fn set_volume(&self, volume: f32) {
-        let sink = self.sink.lock().unwrap();
-        sink.set_volume(volume);
-
-        let mut state = self.state.lock().unwrap();
-        state.volume = volume;
+        self.command_tx.send(AudioCommand::Stop).ok();
     }
 
     pub fn seek(&self, position_ms: u64) {
-        let sink = self.sink.lock().unwrap();
-        let pos = Duration::from_millis(position_ms);
-        if let Err(e) = sink.try_seek(pos) {
-            eprintln!("[WARN] Native seek failed: {}. Attempting threaded fallback...", e);
-            drop(sink); // Release lock before heavy work
+        self.command_tx.send(AudioCommand::Seek(position_ms)).ok();
+    }
 
-            // Clone Arcs for thread
-            let sink_arc = self.sink.clone();
-            let state_arc = self.state.clone();
-            let timer_arc = self.timer.clone();
-            let controls_arc = self.media_controls.clone();
-            
-            // Get path cleanly
-            let path_opt = {
-                let state = state_arc.lock().unwrap();
-                state.current_file.clone()
-            };
+    pub fn set_volume(&self, volume: f32) {
+        self.command_tx.send(AudioCommand::SetVolume(volume)).ok();
+    }
 
-            if let Some(path) = path_opt {
-                thread::spawn(move || {
-                    match File::open(&path) {
-                        Ok(file) => {
-                            let reader = BufReader::new(file);
-                            match Decoder::new(reader) {
-                                Ok(source) => {
-                                    // Heavy CPU operation: decoding until position
-                                    let source = source.skip_duration(pos);
-                                    
-                                    // Critical section: Update Sink
-                                    {
-                                        let sink = sink_arc.lock().unwrap();
-                                        sink.clear(); 
-                                        sink.append(source);
-                                        sink.play();
-                                    }
+    pub fn get_state(&self) -> PlaybackState {
+        self.state.lock().unwrap().clone()
+    }
+}
 
-                                    // Update State & Timer
-                                    {
-                                        let mut state = state_arc.lock().unwrap();
-                                        state.position_ms = position_ms;
-                                    }
-                                    
-                                    {
-                                        let mut timer = timer_arc.lock().unwrap();
-                                        let now = Instant::now();
-                                        // Update timer reference points
-                                        // Assume playing (since we called sink.play())
-                                        // Even if we were paused, a seek usually implies "go here". 
-                                        // But if we want to stay paused, we'd need to check state.is_paused.
-                                        // However, sink.append(source) usually starts if sink is active?
-                                        // sink.play() force starts it.
-                                        // Let's check previous state? complex.
-                                        // For now, let's assume seek -> play is acceptable, 
-                                        // OR we should check is_paused state.
-                                        
-                                        // Helper to safely check paused
-                                        let is_paused = {
-                                            state_arc.lock().unwrap().is_paused
-                                        };
+/// Audio worker thread - handles decoding and playback
+struct AudioWorker {
+    receiver: Receiver<AudioCommand>,
+    state: Arc<Mutex<PlaybackState>>,
+    media_controls: Arc<Mutex<MediaControls>>,
+    app_handle: AppHandle,
 
-                                        if is_paused {
-                                            timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
-                                            timer.pause_start = Some(now);
-                                            timer.paused_duration = Duration::ZERO;
-                                            
-                                            // Ensure sink matches paused state?
-                                            let sink = sink_arc.lock().unwrap();
-                                            sink.pause();
-                                        } else {
-                                            timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
-                                            timer.pause_start = None;
-                                            timer.paused_duration = Duration::ZERO;
-                                        }
-                                    }
+    // Playback resources
+    _current_stream: Option<Stream>,
+    producer: Option<ringbuf::HeapProd<f32>>,
+    volume: Arc<AtomicU64>,
+    is_playing: Arc<AtomicBool>,
+    device_error: Arc<AtomicBool>,
 
-                                    // Update Controls
-                                    {
-                                        let mut controls = controls_arc.lock().unwrap();
-                                        let is_paused = { state_arc.lock().unwrap().is_paused };
-                                        if is_paused {
-                                            controls.set_playback(MediaPlayback::Paused {
-                                                progress: Some(MediaPosition(pos)),
-                                            }).ok();
-                                        } else {
-                                            controls.set_playback(MediaPlayback::Playing {
-                                                progress: Some(MediaPosition(pos)),
-                                            }).ok();
-                                        }
-                                    }
+    // FFmpeg process
+    ffmpeg_process: Option<FFmpegProcess>,
 
-                                    eprintln!("[INFO] Threaded fallback seek successful");
-                                },
-                                Err(e) => eprintln!("[ERROR] Failed to decode for seek fallback: {}", e)
-                            }
-                        },
-                        Err(e) => eprintln!("[ERROR] Failed to open file for seek fallback: {}", e)
+    // Device config
+    device_sample_rate: u32,
+    device_channels: u16,
+
+    // Track info
+    current_file_path: Option<String>,
+    current_title: String,
+    current_artist: String,
+    current_album: String,
+    duration_ms: u64,
+    current_position_ms: u64,
+
+    // Position tracking
+    samples_played: u64,
+
+    // Read buffer
+    read_buffer: Vec<f32>,
+}
+
+impl AudioWorker {
+    fn new(
+        receiver: Receiver<AudioCommand>,
+        state: Arc<Mutex<PlaybackState>>,
+        media_controls: Arc<Mutex<MediaControls>>,
+        app_handle: AppHandle,
+    ) -> Self {
+        // Initial setup - default device
+        let host = cpal::default_host();
+        let device = host
+            .default_output_device()
+            .expect("No output device found");
+        let config = device.default_output_config().expect("No default config");
+
+        Self {
+            receiver,
+            state,
+            media_controls,
+            app_handle,
+            _current_stream: None,
+            producer: None,
+            volume: Arc::new(AtomicU64::new(f32::to_bits(1.0) as u64)),
+            is_playing: Arc::new(AtomicBool::new(false)),
+            device_error: Arc::new(AtomicBool::new(false)),
+            ffmpeg_process: None,
+            device_sample_rate: config.sample_rate().0,
+            device_channels: config.channels(),
+            current_file_path: None,
+            current_title: String::new(),
+            current_artist: String::new(),
+            current_album: String::new(),
+            duration_ms: 0,
+            current_position_ms: 0,
+            samples_played: 0,
+            read_buffer: vec![0.0f32; 8192], // 8K sample buffer
+        }
+    }
+
+    fn run(&mut self) {
+        loop {
+            match self.receiver.recv_timeout(Duration::from_millis(5)) {
+                Ok(cmd) => self.handle_command(cmd),
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    // Check for device errors and reinit if needed
+                    if self.device_error.load(Ordering::Relaxed) {
+                        self.handle_device_change();
                     }
-                });
+                    if self.is_playing.load(Ordering::Relaxed) {
+                        self.decode_and_push();
+                    }
+                    self.emit_progress();
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
-            // Return immediately - UI unblocked
+        }
+    }
+
+    fn handle_command(&mut self, cmd: AudioCommand) {
+        match cmd {
+            AudioCommand::Play {
+                path,
+                title,
+                artist,
+                album,
+                cover: _,
+            } => {
+                self.play_file(&path, &title, &artist, &album);
+            }
+            AudioCommand::Pause => self.pause(),
+            AudioCommand::Resume => self.resume(),
+            AudioCommand::Stop => self.stop(),
+            AudioCommand::Seek(pos) => self.seek(pos),
+            AudioCommand::SetVolume(vol) => {
+                self.volume.store(f32::to_bits(vol) as u64, Ordering::Relaxed);
+                self.state.lock().unwrap().volume = vol;
+            }
+        }
+    }
+
+    fn play_file(&mut self, path: &str, title: &str, artist: &str, album: &str) {
+        // Stop any current playback
+        self.stop();
+
+        // Probe file for metadata
+        let metadata = match ffmpeg::probe_file(path) {
+            Ok(m) => m,
+            Err(e) => {
+                let msg = format!("Failed to probe file: {}", e);
+                eprintln!("{}", msg);
+                self.app_handle.emit(EVENT_PLAYBACK_ERROR, msg).ok();
+                return;
+            }
+        };
+
+        self.duration_ms = metadata.duration_ms;
+
+        // Setup CPAL stream with file's sample rate
+        self.recreate_cpal_stream(metadata.sample_rate, metadata.channels);
+
+        // Spawn FFmpeg process
+        match FFmpegProcess::spawn(path, self.device_sample_rate, self.device_channels) {
+            Ok(process) => {
+                self.ffmpeg_process = Some(process);
+            }
+            Err(e) => {
+                let msg = format!("Failed to spawn FFmpeg: {}", e);
+                eprintln!("{}", msg);
+                self.app_handle.emit(EVENT_PLAYBACK_ERROR, msg).ok();
+                return;
+            }
+        }
+
+        // Store track info
+        self.current_file_path = Some(path.to_string());
+        self.current_title = title.to_string();
+        self.current_artist = artist.to_string();
+        self.current_album = album.to_string();
+        self.current_position_ms = 0;
+        self.samples_played = 0;
+
+        // Update state
+        {
+            let mut s = self.state.lock().unwrap();
+            s.is_playing = true;
+            s.is_paused = false;
+            s.current_file = Some(path.to_string());
+            s.duration_ms = self.duration_ms;
+            s.position_ms = 0;
+        }
+
+        // Update media controls
+        if let Ok(mut c) = self.media_controls.lock() {
+            c.set_metadata(MediaMetadata {
+                title: Some(title),
+                artist: Some(artist),
+                album: Some(album),
+                duration: Some(Duration::from_millis(self.duration_ms)),
+                cover_url: None,
+            })
+            .ok();
+            c.set_playback(MediaPlayback::Playing {
+                progress: Some(MediaPosition(Duration::ZERO)),
+            })
+            .ok();
+        }
+
+        self.emit_state();
+    }
+
+    fn recreate_cpal_stream(&mut self, _sample_rate: u32, _channels: u16) {
+        let host = cpal::default_host();
+        let device = host.default_output_device().expect("No output device");
+
+        // Always use device default config - FFmpeg will resample to match
+        let config: StreamConfig = device.default_output_config().unwrap().into();
+
+        self.device_sample_rate = config.sample_rate.0;
+        self.device_channels = config.channels;
+
+        // Setup Ringbuf (1 second buffer)
+        let buffer_size = self.device_sample_rate as usize * self.device_channels as usize;
+        let rb = HeapRb::<f32>::new(buffer_size);
+        let (producer, consumer) = rb.split();
+        self.producer = Some(producer);
+
+        // Setup Stream
+        let volume = self.volume.clone();
+        let is_playing = self.is_playing.clone();
+        let device_error = self.device_error.clone();
+        let mut consumer = consumer;
+        let channels = self.device_channels as usize;
+
+        let stream = device
+            .build_output_stream(
+                &config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    if !is_playing.load(Ordering::Relaxed) {
+                        data.fill(0.0);
+                        return;
+                    }
+
+                    let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
+                    for frame in data.chunks_mut(channels) {
+                        for sample in frame.iter_mut() {
+                            if let Some(s) = consumer.try_pop() {
+                                *sample = s * vol;
+                            } else {
+                                *sample = 0.0;
+                            }
+                        }
+                    }
+                },
+                move |err| {
+                    eprintln!("CPAL Error: {}", err);
+                    device_error.store(true, Ordering::Relaxed);
+                },
+                None,
+            )
+            .expect("Failed to build CPAL stream");
+
+        stream.play().expect("Failed to play CPAL stream");
+        self._current_stream = Some(stream);
+        self.is_playing.store(true, Ordering::Relaxed);
+    }
+
+    fn decode_and_push(&mut self) {
+        let Some(ref mut ffmpeg) = self.ffmpeg_process else {
             return;
+        };
+        let Some(ref mut producer) = self.producer else {
+            return;
+        };
+
+        // Keep filling buffer until it's adequately full or we run out of data
+        // Target: keep buffer at least 50% full
+        let capacity = producer.capacity().get();
+        let target_fill = capacity / 2;
+        
+        loop {
+            let occupied = capacity - producer.vacant_len();
+            if occupied >= target_fill {
+                break; // Buffer is full enough
+            }
+            
+            if producer.vacant_len() < self.read_buffer.len() {
+                break; // Not enough space for a full read
+            }
+
+            // Read from FFmpeg
+            match ffmpeg.read_samples(&mut self.read_buffer) {
+                Ok(0) => {
+                    // EOF - track finished
+                    self.handle_end_of_track();
+                    return;
+                }
+                Ok(samples_read) => {
+                    // Push to ringbuf
+                    producer.push_slice(&self.read_buffer[..samples_read]);
+
+                    // Update position tracking
+                    self.samples_played += samples_read as u64;
+                    let samples_per_ms =
+                        (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                    if samples_per_ms > 0 {
+                        self.current_position_ms = self.samples_played / samples_per_ms;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("FFmpeg read error: {}", e);
+                    self.handle_end_of_track();
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Handle device change by reinitializing the audio stream
+    fn handle_device_change(&mut self) {
+        self.device_error.store(false, Ordering::Relaxed);
+        
+        // If we're currently playing, reinitialize the stream
+        if self.current_file_path.is_some() {
+            eprintln!("Device changed, reinitializing audio stream...");
+            
+            // Drop current stream
+            self._current_stream = None;
+            self.producer = None;
+            
+            // Recreate stream with new default device
+            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
+            
+            // If we have FFmpeg running, let it continue feeding the new buffer
+            // The buffer will refill automatically in the next decode_and_push cycle
+        }
+    }
+
+    fn handle_end_of_track(&mut self) {
+        self.stop();
+        self.app_handle.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
+    }
+
+    fn pause(&mut self) {
+        self.is_playing.store(false, Ordering::Relaxed);
+        {
+            let mut s = self.state.lock().unwrap();
+            s.is_paused = true;
+            s.is_playing = false;
+        }
+        self.update_media_controls();
+        self.emit_state();
+    }
+
+    fn resume(&mut self) {
+        self.is_playing.store(true, Ordering::Relaxed);
+        {
+            let mut s = self.state.lock().unwrap();
+            s.is_paused = false;
+            s.is_playing = true;
+        }
+        self.update_media_controls();
+        self.emit_state();
+    }
+
+    fn stop(&mut self) {
+        self.is_playing.store(false, Ordering::Relaxed);
+
+        // Kill FFmpeg process
+        if let Some(mut ffmpeg) = self.ffmpeg_process.take() {
+            ffmpeg.kill();
         }
 
-        let mut state = self.state.lock().unwrap();
-        state.position_ms = position_ms;
+        self._current_stream = None;
+        self.producer = None;
 
-        // Reset start time to act as if we started 'position_ms' ago
-        // start_time = now - position_ms
-        // paused_duration = 0
-        // This is simpler than maintaining offsets
-        let mut timer = self.timer.lock().unwrap();
-        let now = Instant::now();
-        if state.is_paused {
-             // If paused, we want: when we resume, we start from here.
-             // So essentially effective elapsed should be position_ms.
-             // We can just set start_time = now - position_ms and pause_start = now
-             // So when we resume, paused_duration = resume_time - pause_start (which is resume_time - now).
-             // And elapsed = resume_time - start_time - paused_duration 
-             //             = resume_time - (now - pos) - (resume_time - now)
-             //             = resume_time - now + pos - resume_time + now
-             //             = pos. Correct.
-             timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
-             timer.pause_start = Some(now);
-             timer.paused_duration = Duration::ZERO;
-        } else {
-             timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
-             timer.pause_start = None;
-             timer.paused_duration = Duration::ZERO;
+        self.current_file_path = None;
+        self.current_position_ms = 0;
+        self.duration_ms = 0;
+        self.samples_played = 0;
+
+        {
+            let mut s = self.state.lock().unwrap();
+            s.is_playing = false;
+            s.is_paused = false;
+            s.position_ms = 0;
+            s.current_file = None;
         }
 
-        let mut controls = self.media_controls.lock().unwrap();
-        if state.is_paused {
-            controls
-                .set_playback(MediaPlayback::Paused {
-                    progress: Some(MediaPosition(pos)),
+        if let Ok(mut c) = self.media_controls.lock() {
+            c.set_playback(MediaPlayback::Stopped).ok();
+        }
+
+        self.emit_state();
+    }
+
+    fn seek(&mut self, pos_ms: u64) {
+        let Some(path) = self.current_file_path.clone() else {
+            return;
+        };
+
+        // Kill current FFmpeg process
+        if let Some(mut ffmpeg) = self.ffmpeg_process.take() {
+            ffmpeg.kill();
+        }
+
+        // Clear the ringbuf by dropping the producer (stream will get silence)
+        self.producer = None;
+        self._current_stream = None;
+
+        // Respawn FFmpeg at the new position
+        match FFmpegProcess::spawn_at(
+            &path,
+            self.device_sample_rate,
+            self.device_channels,
+            Some(pos_ms),
+        ) {
+            Ok(process) => {
+                self.ffmpeg_process = Some(process);
+
+                // Recreate CPAL stream
+                self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
+
+                // Update position
+                self.current_position_ms = pos_ms;
+                self.samples_played =
+                    pos_ms * (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+
+                {
+                    let mut s = self.state.lock().unwrap();
+                    s.position_ms = pos_ms;
+                }
+
+                self.update_media_controls();
+            }
+            Err(e) => {
+                eprintln!("Seek failed: {}", e);
+            }
+        }
+    }
+
+    fn emit_progress(&self) {
+        let mut s = self.state.lock().unwrap();
+        if s.is_playing && !s.is_paused {
+            s.position_ms = self.current_position_ms;
+            self.app_handle.emit(EVENT_PLAYBACK_PROGRESS, &*s).ok();
+        }
+    }
+
+    fn emit_state(&self) {
+        let s = self.state.lock().unwrap();
+        self.app_handle.emit(EVENT_PLAYBACK_STATE, &*s).ok();
+    }
+
+    fn update_media_controls(&self) {
+        if let Ok(mut c) = self.media_controls.lock() {
+            let s = self.state.lock().unwrap();
+            let pos = MediaPosition(Duration::from_millis(s.position_ms));
+            if s.is_paused {
+                c.set_playback(MediaPlayback::Paused {
+                    progress: Some(pos),
                 })
                 .ok();
-        } else {
-            controls
-                .set_playback(MediaPlayback::Playing {
-                    progress: Some(MediaPosition(pos)),
+            } else if s.is_playing {
+                c.set_playback(MediaPlayback::Playing {
+                    progress: Some(pos),
                 })
                 .ok();
+            }
         }
     }
 }
@@ -406,131 +648,47 @@ impl AudioEngine {
 // Global state wrapper
 pub struct AudioState(pub Arc<AudioEngine>);
 
-// Background progress tracker
-pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
-    thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(100));
-        
-        // Timer update logic
-        // We do this in a block to release locks quickly
-        let (should_emit, _current_pos_ms) = {
-             let mut state = engine.state.lock().unwrap();
-             let timer = engine.timer.lock().unwrap();
-
-             if state.is_playing && !state.is_paused {
-                 if let Some(start_time) = timer.start_time {
-                     let elapsed = start_time.elapsed();
-                     let total_paused = timer.paused_duration;
-                     // effective_elapsed = elapsed - total_paused
-                     // careful with underflow if clocks skew or something weird, but usually elapsed > paused
-                     let effective_elapsed = if elapsed >= total_paused { elapsed - total_paused } else { Duration::ZERO };
-                     state.position_ms = effective_elapsed.as_millis() as u64;
-                     
-                     // Cap at duration if known
-                     if state.duration_ms > 0 && state.position_ms > state.duration_ms {
-                         state.position_ms = state.duration_ms;
-                     }
-                     
-                     (true, state.position_ms)
-                 } else {
-                     (false, 0)
-                 }
-             } else {
-                 (false, 0)
-             }
-        };
-
-        let is_sink_empty = {
-            let sink = engine.sink.lock().unwrap();
-            sink.empty()
-        };
-
-        // We check state again for sink empty logic
-        let mut state = engine.state.lock().unwrap();
-        
-        if state.is_playing && !state.is_paused {
-             if is_sink_empty {
-                state.is_playing = false;
-                state.position_ms = 0;
-                state.current_file = None;
-
-                // Stop timer
-                let mut timer = engine.timer.lock().unwrap();
-                timer.start_time = None;
-                timer.paused_duration = Duration::ZERO;
-                timer.pause_start = None;
-
-                app.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
-                app.emit(EVENT_PLAYBACK_STATE, &*state).ok();
-
-                let mut controls = engine.media_controls.lock().unwrap();
-                controls.set_playback(MediaPlayback::Stopped).ok();
-            } else if should_emit {
-                // state.position_ms was updated in the block above, need to make sure we emit the updated state
-                // Actually we just locked it again, so we might have overwritten it?
-                // No, we updated it in the first block.
-                // But wait, we re-acquired the lock.
-                // The first block: `let mut state = engine.state.lock().unwrap(); state.position_ms = ...;` -> lock released, state updated.
-                // Then `let mut state = engine.state.lock().unwrap();` -> acquires lock, sees updated state.
-                // So safe.
-                app.emit(EVENT_PLAYBACK_PROGRESS, &*state).ok();
-            }
-        }
-    });
-}
+// No-op for compatibility
+pub fn start_progress_tracking(_app: AppHandle, _engine: Arc<AudioEngine>) {}
 
 use crate::error::AppError;
-
-// ... (existing imports)
 
 // --- Tauri Commands ---
 
 #[tauri::command]
 pub fn audio_play(
     state: tauri::State<AudioState>,
-    app: AppHandle,
     path: String,
     title: Option<String>,
     artist: Option<String>,
     album: Option<String>,
-    _cover: Option<String>,
+    cover: Option<String>,
 ) -> Result<(), AppError> {
-    state
-        .0
-        .play(path, title, artist, album, _cover)
-        .map_err(AppError::Audio)?;
-
-    let s = state.0.state.lock().unwrap();
-    app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
-
+    state.0.play(
+        path,
+        title.unwrap_or("Unknown".into()),
+        artist.unwrap_or("Unknown".into()),
+        album.unwrap_or("Unknown".into()),
+        cover,
+    );
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_pause(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
+pub fn audio_pause(state: tauri::State<AudioState>) -> Result<(), AppError> {
     state.0.pause();
-    let s = state.0.state.lock().unwrap();
-    app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_resume(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
+pub fn audio_resume(state: tauri::State<AudioState>) -> Result<(), AppError> {
     state.0.resume();
-    let s = state.0.state.lock().unwrap();
-    app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_stop(state: tauri::State<AudioState>, app: AppHandle) -> Result<(), AppError> {
+pub fn audio_stop(state: tauri::State<AudioState>) -> Result<(), AppError> {
     state.0.stop();
-    let s = state.0.state.lock().unwrap();
-    app.emit(EVENT_PLAYBACK_STATE, &*s)
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
     Ok(())
 }
 
@@ -548,6 +706,5 @@ pub fn audio_set_volume(state: tauri::State<AudioState>, volume: f32) -> Result<
 
 #[tauri::command]
 pub fn audio_get_state(state: tauri::State<AudioState>) -> PlaybackState {
-    let s = state.0.state.lock().unwrap();
-    s.clone()
+    state.0.get_state()
 }
