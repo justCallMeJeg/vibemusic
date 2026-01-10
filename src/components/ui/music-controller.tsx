@@ -3,10 +3,13 @@ import {
   Pause,
   Play,
   Repeat,
+  Repeat1,
   Shuffle,
   SkipBack,
   SkipForward,
+  Volume1,
   Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "./button";
 import { Slider } from "./slider";
@@ -44,6 +47,7 @@ export default function MusicControler() {
   const previous = useAudioStore((s) => s.previous);
   const seek = useAudioStore((s) => s.seek);
   const setVolume = useAudioStore((s) => s.setVolume);
+  const toggleMute = useAudioStore((s) => s.toggleMute);
   const toggleShuffle = useAudioStore((s) => s.toggleShuffle);
   const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
@@ -158,7 +162,7 @@ export default function MusicControler() {
               repeat !== "off" ? "text-purple-500 hover:text-purple-400" : ""
             }
           >
-            <Repeat size={20} />
+            {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
           </Button>
         </div>
         {/* Seeker */}
@@ -181,8 +185,14 @@ export default function MusicControler() {
       <div id="actions" className=" flex items-center gap-2 justify-end">
         {/* Volume */}
         <div className="flex items-center gap-2 w-32">
-          <Button variant="ghost">
-            <Volume2 size={20} />
+          <Button variant="ghost" onClick={toggleMute}>
+            {volume === 0 ? (
+              <VolumeX size={20} className="text-gray-400" />
+            ) : volume < 0.5 ? (
+              <Volume1 size={20} />
+            ) : (
+              <Volume2 size={20} />
+            )}
           </Button>
           <Slider
             value={[volume]}
@@ -191,7 +201,7 @@ export default function MusicControler() {
             onValueChange={handleVolume}
           />
         </div>
-        {/* Mute */}
+        {/* Queue Menu Toggle */}
         <Button
           id="queue-menu-button"
           variant="ghost"

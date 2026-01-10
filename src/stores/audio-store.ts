@@ -38,6 +38,7 @@ interface AudioState {
   duration: number;
 
   // Internal
+  _previousVolume: number;
   _isDraggingSlider: boolean;
   _listenersInitialized: boolean;
   _lastProgressUpdate: number; // For throttling
@@ -54,6 +55,7 @@ interface AudioActions {
   previous: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
+  toggleMute: () => void;
 
   // Queue Actions
   toggleQueue: () => void;
@@ -187,6 +189,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     isQueueOpen: false,
     position: 0,
     duration: 0,
+    _previousVolume: 1.0,
     _isDraggingSlider: false,
     _listenersInitialized: false,
     _lastProgressUpdate: 0,
@@ -259,8 +262,27 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       await invoke("audio_seek", { positionMs });
     },
 
+    toggleMute: async () => {
+      const state = get();
+      if (state.volume > 0) {
+        // Mute
+        set({ _previousVolume: state.volume, volume: 0 });
+        await invoke("audio_set_volume", { volume: 0 });
+      } else {
+        // Unmute - restore previous volume, default to 1.0 if invalid
+        const vol = state._previousVolume > 0 ? state._previousVolume : 1.0;
+        set({ volume: vol });
+        await invoke("audio_set_volume", { volume: vol });
+      }
+    },
+
     setVolume: async (volume) => {
-      set({ volume });
+      // If user manually sets volume > 0, update previous volume tracking
+      if (volume > 0) {
+        set({ volume, _previousVolume: volume });
+      } else {
+        set({ volume });
+      }
       await invoke("audio_set_volume", { volume });
     },
 
@@ -436,6 +458,7 @@ export const getPlayerActions = () => {
     previous: s.previous,
     seek: s.seek,
     setVolume: s.setVolume,
+    toggleMute: s.toggleMute,
   };
 };
 

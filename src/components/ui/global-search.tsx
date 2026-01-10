@@ -41,7 +41,6 @@ export function GlobalSearch() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedValue, setSelectedValue] = useState("");
 
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
@@ -60,6 +59,13 @@ export function GlobalSearch() {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [isSearchOpen, setSearchOpen]);
+
+  // Clear query when opening
+  useEffect(() => {
+    if (isSearchOpen) {
+      setSearchQuery("");
+    }
+  }, [isSearchOpen]);
 
   // Pre-fetch data on mount to avoid lag when opening
   useEffect(() => {
@@ -322,7 +328,7 @@ export function GlobalSearch() {
     <CommandDialog
       open={isSearchOpen}
       onOpenChange={setSearchOpen}
-      commandProps={{ onValueChange: (v) => setSelectedValue(v || "") }}
+      commandProps={{}}
     >
       <CommandInput
         placeholder="Search tracks, albums, or playlists..."
