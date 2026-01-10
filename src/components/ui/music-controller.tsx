@@ -93,7 +93,7 @@ export default function MusicControler() {
   };
 
   return (
-    <div className="rounded-lg outline outline-gray-850 w-full h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4">
+    <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-full h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4">
       <div id="track" className="flex items-center gap-4">
         {currentTrack ? (
           <>

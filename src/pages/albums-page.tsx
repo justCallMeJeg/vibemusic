@@ -109,7 +109,7 @@ export default function AlbumsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <h1 className="text-3xl font-bold ml-1 mb-4">Albums</h1>
+      <h1 className="mt-8 mb-4 text-3xl font-bold ml-1">Albums</h1>
 
       <div className="flex-1 overflow-y-auto">
         {albums.length === 0 ? (

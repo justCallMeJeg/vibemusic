@@ -141,7 +141,7 @@ export default function PlaylistsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6 px-2">
+      <div className="mt-8 flex items-center justify-between mb-6 px-2">
         <h1 className="text-3xl font-bold">Playlists</h1>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

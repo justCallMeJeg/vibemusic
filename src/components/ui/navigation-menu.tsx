@@ -1,5 +1,6 @@
 import {
   Disc,
+  Import,
   ListMusic,
   Music,
   Search,
@@ -13,15 +14,23 @@ import {
   type Page,
 } from "@/stores/navigation-store";
 
-export default function NavigationMenu() {
+interface NavigationMenuProps {
+  onImport?: () => void;
+  isScanning?: boolean;
+}
+
+export default function NavigationMenu({
+  onImport,
+  isScanning,
+}: NavigationMenuProps) {
   const currentPage = useCurrentPage();
   const setPage = useNavigationStore((s) => s.setPage);
   const toggleSearch = useNavigationStore((s) => s.toggleSearch);
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
 
   const navItems: { icon: React.ReactNode; page: Page | null }[] = [
-    { icon: <TvMinimal />, page: "home" }, // Home/Overview
-    { icon: <Search />, page: null }, // Search - not implemented yet
+    { icon: <TvMinimal />, page: "home" },
+    { icon: <Search />, page: null },
     { icon: <Music />, page: "songs" },
     { icon: <Disc />, page: "albums" },
     { icon: <ListMusic />, page: "playlists" },
@@ -29,38 +38,52 @@ export default function NavigationMenu() {
   ];
 
   return (
-    <div
-      id="navigation-menu"
-      className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4 overflow-hidden"
-    >
-      <div className="flex flex-col gap-2 shrink-0">
-        {navItems.map((item, index) => {
-          const isActive = item.page !== null && currentPage === item.page;
-          const isDisabled = item.page === null;
+    <aside id="navigation-menu" className="w-full flex flex-col gap-4">
+      <div className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4">
+        <div className="flex flex-col gap-2 shrink-0">
+          {navItems.map((item, index) => {
+            const isActive = item.page !== null && currentPage === item.page;
+            const isDisabled = item.page === null;
 
-          return (
-            <Button
-              key={index}
-              size="icon-lg"
-              variant="ghost"
-              onClick={() => {
-                if (item.page) setPage(item.page);
-                else if (index === 1) toggleSearch(); // Search index
-              }}
-              disabled={item.page === null && index !== 1} // Enable search button
-              className={
-                isActive || (index === 1 && isSearchOpen)
-                  ? "text-white"
-                  : isDisabled && index !== 1
-                  ? "text-gray-600 cursor-not-allowed"
-                  : "text-gray-500 hover:text-white"
-              }
-            >
-              {item.icon}
-            </Button>
-          );
-        })}
+            return (
+              <Button
+                key={index}
+                size="icon-lg"
+                variant="ghost"
+                onClick={() => {
+                  if (item.page) setPage(item.page);
+                  else if (index === 1) toggleSearch(); // Search index
+                }}
+                disabled={item.page === null && index !== 1} // Enable search button
+                className={
+                  isActive || (index === 1 && isSearchOpen)
+                    ? "text-white"
+                    : isDisabled && index !== 1
+                    ? "text-gray-600 cursor-not-allowed"
+                    : "text-gray-500 hover:text-white"
+                }
+              >
+                {item.icon}
+              </Button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+      <div
+        className={`items-center h-min w-full flex flex-col rounded-lg outline outline-gray-850 py-3 ${
+          isScanning ? "animate-pulse border border-blue-400" : ""
+        }`}
+      >
+        <Button
+          size="icon-lg"
+          variant="ghost"
+          onClick={onImport}
+          disabled={isScanning}
+          className="text-gray-500 hover:text-white"
+        >
+          <Import />
+        </Button>
+      </div>
+    </aside>
   );
 }

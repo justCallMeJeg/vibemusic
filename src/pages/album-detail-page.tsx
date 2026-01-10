@@ -93,7 +93,7 @@ export default function AlbumDetailPage() {
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
       {/* Header with back button */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mt-8 flex items-center gap-2 mb-4">
         <Button
           variant="ghost"
           size="icon"

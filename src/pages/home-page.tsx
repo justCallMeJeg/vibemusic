@@ -87,15 +87,14 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 space-y-8 custom-scrollbar">
-        {/* Header */}
-        <div className="mt-8 mb-4">
-          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Welcome Back
-          </h1>
-          <p className="text-gray-400 mt-1">Here's some music for you today.</p>
-        </div>
-
+      {/* Header */}
+      <div className="mt-8 mb-4">
+        <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          Welcome Back
+        </h1>
+        <p className="text-gray-400 mt-1">Here's some music for you today.</p>
+      </div>
+      <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 space-y-8 custom-scrollbar">
         {/* Albums Section */}
         {albums.length > 0 && (
           <section className="space-y-4">
