@@ -29,31 +29,33 @@ export default function NavigationMenu() {
   return (
     <div
       id="navigation-menu"
-      className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4"
+      className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4 overflow-hidden"
     >
-      {navItems.map((item, index) => {
-        const isActive = item.page !== null && currentPage === item.page;
-        const isDisabled = item.page === null;
+      <div className="flex flex-col gap-2 shrink-0">
+        {navItems.map((item, index) => {
+          const isActive = item.page !== null && currentPage === item.page;
+          const isDisabled = item.page === null;
 
-        return (
-          <Button
-            key={index}
-            size="icon-lg"
-            variant="ghost"
-            onClick={() => item.page && setPage(item.page)}
-            disabled={isDisabled}
-            className={
-              isActive
-                ? "text-white"
-                : isDisabled
-                ? "text-gray-600 cursor-not-allowed"
-                : "text-gray-500 hover:text-white"
-            }
-          >
-            {item.icon}
-          </Button>
-        );
-      })}
+          return (
+            <Button
+              key={index}
+              size="icon-lg"
+              variant="ghost"
+              onClick={() => item.page && setPage(item.page)}
+              disabled={isDisabled}
+              className={
+                isActive
+                  ? "text-white"
+                  : isDisabled
+                  ? "text-gray-600 cursor-not-allowed"
+                  : "text-gray-500 hover:text-white"
+              }
+            >
+              {item.icon}
+            </Button>
+          );
+        })}
+      </div>
     </div>
   );
 }

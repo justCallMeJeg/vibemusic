@@ -65,7 +65,7 @@ export default function SongsPage({ onTracksLoaded }: SongsPageProps) {
 
       <div
         id="song-list"
-        className="flex flex-col flex-1 overflow-y-auto gap-1"
+        className="flex flex-col flex-1 overflow-y-auto gap-1 p-1"
       >
         {tracks.length === 0 ? (
           <div className="text-gray-500 text-center p-8">

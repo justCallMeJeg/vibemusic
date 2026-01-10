@@ -43,7 +43,7 @@ const ContextMenuSubContent = React.forwardRef<
   <ContextMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-md border border-white/10 bg-neutral-900 p-1 text-white shadow-md animate-in slide-in-from-left-1",
+      "z-50 min-w-[8rem] overflow-hidden rounded-md border border-neutral-800 bg-neutral-950 p-1 text-neutral-50 shadow-md animate-in slide-in-from-left-1",
       className
     )}
     {...props}
@@ -59,7 +59,7 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border border-white/10 bg-neutral-900/95 backdrop-blur-xl p-1 text-white shadow-md animate-in fade-in-80 zoom-in-95",
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border border-neutral-800 bg-neutral-950 p-1 text-neutral-50 shadow-md animate-in fade-in-80 zoom-in-95",
         className
       )}
       {...props}

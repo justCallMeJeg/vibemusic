@@ -2,6 +2,8 @@ import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
 import SongsPage from "@/pages/songs-page";
 import AlbumsPage from "@/pages/albums-page";
 import AlbumDetailPage from "@/pages/album-detail-page";
+import PlaylistsPage from "@/pages/playlists-page";
+import PlaylistDetailPage from "@/pages/playlist-detail-page";
 
 export default function MainContent() {
   const currentPage = useCurrentPage();
@@ -12,7 +14,9 @@ export default function MainContent() {
     if (detailView.type === "album") {
       return <AlbumDetailPage />;
     }
-    // Future: playlist detail, etc.
+    if (detailView.type === "playlist") {
+      return <PlaylistDetailPage />;
+    }
   }
 
   // Handle main pages
@@ -22,11 +26,7 @@ export default function MainContent() {
     case "albums":
       return <AlbumsPage />;
     case "playlists":
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-gray-500">Playlists - Coming Soon</div>
-        </div>
-      );
+      return <PlaylistsPage />;
     case "settings":
       return (
         <div className="flex-1 flex items-center justify-center">

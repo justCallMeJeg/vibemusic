@@ -11,7 +11,12 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
 } from "./context-menu";
+import { usePlaylistStore } from "@/stores/playlist-store";
+import { useEffect } from "react";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
@@ -24,6 +29,15 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
+
+  // Playlist store
+  const { playlists, addToPlaylist, fetchPlaylists } = usePlaylistStore();
+
+  // Fetch playlists on mount (lazy-ish, only if empty?)
+  // Better: fetch once globally, but here we trigger it to be safe
+  useEffect(() => {
+    if (playlists.length === 0) fetchPlaylists();
+  }, [fetchPlaylists, playlists.length]);
 
   // Get actions directly from store (stable references)
   const play = useAudioStore((s) => s.play);
@@ -98,6 +112,25 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
         <ContextMenuItem onSelect={() => addToQueue(track)}>
           Add to Queue
         </ContextMenuItem>
+
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>Add to Playlist</ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48">
+            {playlists.map((playlist) => (
+              <ContextMenuItem
+                key={playlist.id}
+                onSelect={() => addToPlaylist(playlist.id, track.id)}
+              >
+                {playlist.name}
+              </ContextMenuItem>
+            ))}
+            {playlists.length === 0 && (
+              <div className="px-2 py-1 text-xs text-gray-500">
+                No playlists
+              </div>
+            )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
       </ContextMenuContent>
     </ContextMenu>
   );

@@ -21,6 +21,14 @@ export interface Album {
   total_duration_ms: number;
 }
 
+export interface Playlist {
+  id: number;
+  name: string;
+  description: string | null;
+  track_count: number;
+  created_at: string;
+}
+
 export async function getTracks(): Promise<Track[]> {
   return await invoke("get_all_tracks");
 }
@@ -35,4 +43,37 @@ export async function getAlbumById(id: number): Promise<Album | null> {
 
 export async function getAlbumTracks(albumId: number): Promise<Track[]> {
   return await invoke("get_album_tracks", { albumId });
+}
+
+export async function createPlaylist(
+  name: string,
+  description?: string
+): Promise<Playlist> {
+  return await invoke("create_playlist", { name, description });
+}
+
+export async function deletePlaylist(id: number): Promise<void> {
+  return await invoke("delete_playlist", { id });
+}
+
+export async function getPlaylists(): Promise<Playlist[]> {
+  return await invoke("get_playlists");
+}
+
+export async function getPlaylistTracks(id: number): Promise<Track[]> {
+  return await invoke("get_playlist_tracks", { id });
+}
+
+export async function addTrackToPlaylist(
+  playlistId: number,
+  trackId: number
+): Promise<void> {
+  return await invoke("add_track_to_playlist", { playlistId, trackId });
+}
+
+export async function removeTrackFromPlaylist(
+  playlistId: number,
+  trackId: number
+): Promise<void> {
+  return await invoke("remove_track_from_playlist", { playlistId, trackId });
 }

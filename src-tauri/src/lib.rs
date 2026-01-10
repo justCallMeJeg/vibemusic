@@ -7,6 +7,7 @@ mod error;
 mod ffmpeg;
 mod library;
 mod scanner;
+mod playlists;
 use audio::{AudioEngine, AudioState};
 use std::sync::Arc;
 use tauri::Manager;
@@ -69,7 +70,15 @@ pub fn run() {
             audio::audio_stop,
             audio::audio_seek,
             audio::audio_set_volume,
-            audio::audio_get_state
+            audio::audio_set_volume,
+            audio::audio_get_state,
+            // Playlist commands
+            playlists::create_playlist,
+            playlists::delete_playlist,
+            playlists::get_playlists,
+            playlists::get_playlist_tracks,
+            playlists::add_track_to_playlist,
+            playlists::remove_track_from_playlist
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

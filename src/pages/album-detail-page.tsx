@@ -102,7 +102,9 @@ export default function AlbumDetailPage() {
         >
           <ChevronLeft size={24} />
         </Button>
-        <h1 className="text-3xl font-bold">Albums</h1>
+        <span className="text-sm font-medium text-gray-400">
+          Back to Albums
+        </span>
       </div>
 
       {/* Album info header */}
@@ -161,10 +163,13 @@ export default function AlbumDetailPage() {
             No tracks in this album
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 p-1">
             {tracks.map((track, index) => (
-              <div key={track.id} className="flex items-center gap-2">
-                <span className="text-gray-600 text-xs w-6 text-center shrink-0">
+              <div
+                key={track.id}
+                className="group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors"
+              >
+                <span className="text-gray-600 text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-white transition-colors">
                   {index + 1}
                 </span>
                 <div className="flex-1 min-w-0">
