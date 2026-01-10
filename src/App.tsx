@@ -11,6 +11,7 @@ import { GlobalSearch } from "./components/ui/global-search";
 export default function App() {
   const isQueueOpen = useQueueOpen();
   const initListeners = useAudioStore((s) => s.initListeners);
+  const currentTrack = useAudioStore((s) => s.currentTrack);
 
   // Initialize audio event listeners
   useEffect(() => {
@@ -37,12 +38,12 @@ export default function App() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 min-h-0 flex gap-4">
+        <div className="flex-1 min-w-0 min-h-0 flex gap-4">
           <MainContent />
 
           {/* Queue Menu */}
           <div
-            className={`shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out ${
+            className={`shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
               isQueueOpen ? "w-96 p-1" : "w-0 p-0"
             }`}
           >
@@ -52,7 +53,15 @@ export default function App() {
       </div>
 
       {/* Music Controller */}
-      <MusicController />
+      <div
+        className={`p-1 shrink-0 overflow-hidden transition-all duration-300 ease-in-out z-50 ${
+          currentTrack
+            ? "h-min opacity-100 translate-y-0"
+            : "h-0 opacity-0 translate-y-full"
+        }`}
+      >
+        <MusicController />
+      </div>
       <GlobalSearch />
     </main>
   );

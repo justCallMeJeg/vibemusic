@@ -20,7 +20,7 @@ export default function NavigationMenu() {
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
 
   const navItems: { icon: React.ReactNode; page: Page | null }[] = [
-    { icon: <TvMinimal />, page: null }, // Home/Overview - not implemented yet
+    { icon: <TvMinimal />, page: "home" }, // Home/Overview
     { icon: <Search />, page: null }, // Search - not implemented yet
     { icon: <Music />, page: "songs" },
     { icon: <Disc />, page: "albums" },

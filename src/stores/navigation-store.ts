@@ -1,7 +1,8 @@
 import { create } from "zustand";
 
 // --- Types ---
-export type Page = "songs" | "albums" | "playlists" | "settings";
+// --- Types ---
+export type Page = "home" | "songs" | "albums" | "playlists" | "settings";
 
 export type DetailView =
   | { type: "album"; id: number }
@@ -28,7 +29,7 @@ type NavigationStore = NavigationState & NavigationActions;
 // --- Store Implementation ---
 export const useNavigationStore = create<NavigationStore>((set) => ({
   // Initial State
-  currentPage: "songs",
+  currentPage: "home",
   detailView: null,
   isSearchOpen: false,
 

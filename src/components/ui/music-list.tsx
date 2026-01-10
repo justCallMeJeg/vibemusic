@@ -70,6 +70,7 @@ export default function MusicListItem({ track, context }: MusicListItemProps) {
               <img
                 className="aspect-square h-10 rounded-lg object-cover bg-neutral-800"
                 src={artworkSrc}
+                loading="lazy"
                 onError={(e) => {
                   console.error("Failed to load image:", artworkSrc);
                   e.currentTarget.src = placeholderArt;

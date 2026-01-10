@@ -4,6 +4,7 @@ import AlbumsPage from "@/pages/albums-page";
 import AlbumDetailPage from "@/pages/album-detail-page";
 import PlaylistsPage from "@/pages/playlists-page";
 import PlaylistDetailPage from "@/pages/playlist-detail-page";
+import HomePage from "@/pages/home-page";
 
 export default function MainContent() {
   const currentPage = useCurrentPage();
@@ -21,6 +22,8 @@ export default function MainContent() {
 
   // Handle main pages
   switch (currentPage) {
+    case "home":
+      return <HomePage />;
     case "songs":
       return <SongsPage />;
     case "albums":
