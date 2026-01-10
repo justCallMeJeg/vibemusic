@@ -1,13 +1,13 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
-import MusicControler from "./components/ui/music-controler";
+import MusicController from "./components/ui/music-controller";
 import MusicCard from "./components/ui/music-card";
 import { useEffect, useState, useCallback } from "react";
 import { getTracks, Track } from "./lib/api";
 import { useQueueOpen, useAudioStore } from "./stores/audio-store";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-import NavigationMenu from "./components/ui/nagivation-menu";
+import NavigationMenu from "./components/ui/navigation-menu";
 import QueueMenu from "./components/ui/queue-menu";
 
 export default function App() {
@@ -111,8 +111,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* Music Controler */}
-      <MusicControler />
+      {/* Music Controller */}
+      <MusicController />
     </main>
   );
 }

@@ -424,9 +424,10 @@ export const useShuffle = () => useAudioStore((s) => s.shuffle);
 export const usePosition = () => useAudioStore((s) => s.position);
 export const useDuration = () => useAudioStore((s) => s.duration);
 
-// Actions (stable references)
-export const usePlayerActions = () =>
-  useAudioStore((s) => ({
+// Actions (static getters - never cause re-renders)
+export const getPlayerActions = () => {
+  const s = useAudioStore.getState();
+  return {
     play: s.play,
     pause: s.pause,
     resume: s.resume,
@@ -435,10 +436,12 @@ export const usePlayerActions = () =>
     previous: s.previous,
     seek: s.seek,
     setVolume: s.setVolume,
-  }));
+  };
+};
 
-export const useQueueActions = () =>
-  useAudioStore((s) => ({
+export const getQueueActions = () => {
+  const s = useAudioStore.getState();
+  return {
     addToQueue: s.addToQueue,
     playNext: s.playNext,
     removeFromQueue: s.removeFromQueue,
@@ -446,10 +449,13 @@ export const useQueueActions = () =>
     toggleQueue: s.toggleQueue,
     toggleShuffle: s.toggleShuffle,
     toggleRepeat: s.toggleRepeat,
-  }));
+  };
+};
 
-export const useProgressActions = () =>
-  useAudioStore((s) => ({
+export const getProgressActions = () => {
+  const s = useAudioStore.getState();
+  return {
     setPosition: s.setPosition,
     setDraggingSlider: s.setDraggingSlider,
-  }));
+  };
+};
