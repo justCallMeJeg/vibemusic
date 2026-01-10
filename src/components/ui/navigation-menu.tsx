@@ -19,6 +19,8 @@ interface NavigationMenuProps {
   isScanning?: boolean;
 }
 
+import { useSettingsStore } from "@/stores/settings-store";
+
 export default function NavigationMenu({
   onImport,
   isScanning,
@@ -27,46 +29,47 @@ export default function NavigationMenu({
   const setPage = useNavigationStore((s) => s.setPage);
   const toggleSearch = useNavigationStore((s) => s.toggleSearch);
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
+  const { sidebarItems } = useSettingsStore();
 
-  const navItems: { icon: React.ReactNode; page: Page | null }[] = [
-    { icon: <TvMinimal />, page: "home" },
-    { icon: <Search />, page: null },
-    { icon: <Music />, page: "songs" },
-    { icon: <Disc />, page: "albums" },
-    { icon: <ListMusic />, page: "playlists" },
-    { icon: <Settings />, page: "settings" },
-  ];
+  const iconMap: Record<string, React.ReactNode> = {
+    home: <TvMinimal />,
+    search: <Search />,
+    songs: <Music />,
+    albums: <Disc />,
+    playlists: <ListMusic />,
+    settings: <Settings />,
+  };
 
   return (
     <aside id="navigation-menu" className="w-full flex flex-col gap-4">
       <div className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4">
         <div className="flex flex-col gap-2 shrink-0">
-          {navItems.map((item, index) => {
-            const isActive = item.page !== null && currentPage === item.page;
-            const isDisabled = item.page === null;
+          {sidebarItems
+            .filter((item) => !item.hidden)
+            .map((item) => {
+              const isSearch = item.id === "search";
+              // For pages, id matches the page name. For search, it's null page.
+              const isActive = !isSearch && currentPage === item.id;
 
-            return (
-              <Button
-                key={index}
-                size="icon-lg"
-                variant="ghost"
-                onClick={() => {
-                  if (item.page) setPage(item.page);
-                  else if (index === 1) toggleSearch(); // Search index
-                }}
-                disabled={item.page === null && index !== 1} // Enable search button
-                className={
-                  isActive || (index === 1 && isSearchOpen)
-                    ? "text-white"
-                    : isDisabled && index !== 1
-                    ? "text-gray-600 cursor-not-allowed"
-                    : "text-gray-500 hover:text-white"
-                }
-              >
-                {item.icon}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={item.id}
+                  size="icon-lg"
+                  variant="ghost"
+                  onClick={() => {
+                    if (isSearch) toggleSearch();
+                    else setPage(item.id as Page);
+                  }}
+                  className={
+                    isActive || (isSearch && isSearchOpen)
+                      ? "text-white"
+                      : "text-gray-500 hover:text-white"
+                  }
+                >
+                  {iconMap[item.id] || <Disc />}
+                </Button>
+              );
+            })}
         </div>
       </div>
       <div

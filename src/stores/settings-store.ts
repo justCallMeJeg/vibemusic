@@ -12,6 +12,11 @@ const getStore = async () => {
   return storePromise;
 };
 
+export interface SidebarItem {
+  id: string;
+  hidden: boolean;
+}
+
 interface SettingsState {
   theme: "dark" | "light" | "system";
   dynamicGradient: boolean;
@@ -25,6 +30,10 @@ interface SettingsState {
   closeToTray: boolean;
   scanOnStartup: boolean;
   autoplay: boolean;
+
+  // Sidebar
+  sidebarItems: SidebarItem[];
+  defaultPage: string;
 }
 
 interface SettingsActions {
@@ -45,6 +54,10 @@ interface SettingsActions {
   setScanOnStartup: (enabled: boolean) => void;
   setAutoplay: (enabled: boolean) => void;
 
+  // Sidebar Actions
+  setSidebarItems: (items: { id: string; hidden: boolean }[]) => void;
+  setDefaultPage: (page: string) => void;
+
   loadSettings: () => Promise<void>;
 }
 
@@ -60,6 +73,17 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     closeToTray: false,
     scanOnStartup: false,
     autoplay: false,
+
+    // Sidebar Defaults
+    sidebarItems: [
+      { id: "home", hidden: false },
+      { id: "search", hidden: false },
+      { id: "songs", hidden: false },
+      { id: "albums", hidden: false },
+      { id: "playlists", hidden: false },
+      { id: "settings", hidden: false },
+    ],
+    defaultPage: "home",
 
     setTheme: async (theme) => {
       set({ theme });
@@ -147,6 +171,20 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setSidebarItems: async (items) => {
+      set({ sidebarItems: items });
+      const store = await getStore();
+      await store.set("sidebarItems", items);
+      await store.save();
+    },
+
+    setDefaultPage: async (page) => {
+      set({ defaultPage: page });
+      const store = await getStore();
+      await store.set("defaultPage", page);
+      await store.save();
+    },
+
     loadSettings: async () => {
       try {
         const store = await getStore();
@@ -159,6 +197,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const closeToTray = await store.get<boolean>("closeToTray");
         const scanOnStartup = await store.get<boolean>("scanOnStartup");
         const autoplay = await store.get<boolean>("autoplay");
+
+        const sidebarItems = await store.get<{ id: string; hidden: boolean }[]>(
+          "sidebarItems"
+        );
+        const defaultPage = await store.get<string>("defaultPage");
 
         if (theme) {
           set({ theme });
@@ -182,6 +225,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         if (typeof closeToTray === "boolean") set({ closeToTray });
         if (typeof scanOnStartup === "boolean") set({ scanOnStartup });
         if (typeof autoplay === "boolean") set({ autoplay });
+
+        if (sidebarItems) set({ sidebarItems });
+        if (defaultPage) set({ defaultPage });
 
         set({ isLoading: false });
 

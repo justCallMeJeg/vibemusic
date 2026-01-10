@@ -19,7 +19,7 @@ export function SettingsSidebar({
 
   return (
     <nav className="w-64 border-r border-white/5 p-4 flex flex-col gap-2">
-      <h2 className="text-xl font-bold px-4 mb-4">Settings</h2>
+      <h2 className="pt-6 text-xl font-bold px-4 mb-4">Settings</h2>
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;

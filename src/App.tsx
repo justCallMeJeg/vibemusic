@@ -16,6 +16,7 @@ import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useNavigationStore, Page } from "@/stores/navigation-store";
 
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
@@ -30,6 +31,11 @@ export default function App() {
   useEffect(() => {
     loadSettings().then(() => {
       const settings = useSettingsStore.getState();
+
+      // Default Page
+      if (settings.defaultPage) {
+        useNavigationStore.getState().setPage(settings.defaultPage as Page);
+      }
 
       // Scan on Startup
       if (settings.scanOnStartup && settings.libraryPaths.length > 0) {
