@@ -1,5 +1,6 @@
 import { useSettingsStore } from "@/stores/settings-store";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,8 @@ export default function SettingsPage() {
     audioDevices,
     setAudioDevice,
     refreshAudioDevices,
+    crossfadeDuration,
+    setCrossfadeDuration,
   } = useSettingsStore();
 
   const [isRescanning, setIsRescanning] = useState(false);
@@ -296,6 +299,25 @@ export default function SettingsPage() {
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Crossfade Setting */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="space-y-1">
+                <div className="font-medium">Crossfade</div>
+                <div className="text-sm text-gray-400">
+                  Overlap songs by {crossfadeDuration}s
+                </div>
+              </div>
+              <div className="w-48">
+                <Slider
+                  value={[crossfadeDuration]}
+                  min={0}
+                  max={12}
+                  step={1}
+                  onValueChange={(vals) => setCrossfadeDuration(vals[0])}
+                />
               </div>
             </div>
           </div>

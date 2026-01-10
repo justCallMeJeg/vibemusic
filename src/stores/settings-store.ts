@@ -19,6 +19,7 @@ interface SettingsState {
   selectedDevice: string | null;
   audioDevices: { name: string }[];
   isLoading: boolean;
+  crossfadeDuration: number; // New: crossfade duration in seconds
 }
 
 interface SettingsActions {
@@ -29,6 +30,7 @@ interface SettingsActions {
   setAudioDevice: (device: string) => Promise<void>;
   refreshAudioDevices: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  setCrossfadeDuration: (duration: number) => Promise<void>; // New: action to set crossfade duration
 }
 
 export const useSettingsStore = create<SettingsState & SettingsActions>(
@@ -39,6 +41,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     selectedDevice: null,
     audioDevices: [],
     isLoading: true,
+    crossfadeDuration: 0, // Default to 0 seconds (no crossfade)
 
     setTheme: async (theme) => {
       set({ theme });
@@ -91,6 +94,15 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setCrossfadeDuration: async (duration) => {
+      set({ crossfadeDuration: duration });
+      const store = await getStore();
+      await store.set("crossfadeDuration", duration);
+      await store.save();
+      // Apply setting immediately
+      await invoke("audio_set_crossfade", { durationSecs: duration });
+    },
+
     loadSettings: async () => {
       set({ isLoading: true });
       try {
@@ -99,6 +111,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const dynamicGradient = await store.get<boolean>("dynamicGradient");
         const libraryPaths = await store.get<string[]>("libraryPaths");
         const selectedDevice = await store.get<string>("selectedDevice");
+        const crossfadeDuration = await store.get<number>("crossfadeDuration"); // New: load crossfade duration
 
         // Initial device fetch
         const devices = await invoke<{ name: string }[]>("audio_get_devices");
@@ -108,6 +121,13 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           await invoke("audio_set_device", { deviceName: selectedDevice });
         }
 
+        // New: Apply saved crossfade duration if exists
+        if (crossfadeDuration !== null) {
+          await invoke("audio_set_crossfade", {
+            durationSecs: crossfadeDuration,
+          });
+        }
+
         set({
           theme: theme || "dark",
           dynamicGradient:
@@ -115,6 +135,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           libraryPaths: libraryPaths || [],
           selectedDevice: selectedDevice || null,
           audioDevices: devices || [],
+          crossfadeDuration:
+            crossfadeDuration !== null ? (crossfadeDuration as number) : 0, // New: set crossfade duration
           isLoading: false,
         });
       } catch (error) {

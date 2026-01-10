@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useSettingsStore } from "./settings-store";
 import { Track } from "@/lib/api";
 
 // --- Types ---
@@ -42,6 +43,7 @@ interface AudioState {
   _isDraggingSlider: boolean;
   _listenersInitialized: boolean;
   _lastProgressUpdate: number; // For throttling
+  _isTransitioning: boolean;
 }
 
 // --- Store Actions Interface ---
@@ -193,6 +195,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _isDraggingSlider: false,
     _listenersInitialized: false,
     _lastProgressUpdate: 0,
+    _isTransitioning: false,
 
     // Player Actions
     play: async (track, newQueue?) => {
@@ -418,6 +421,38 @@ export const useAudioStore = create<AudioStore>((set, get) => {
             duration: s.duration_ms,
             _lastProgressUpdate: now,
           });
+
+          // Automatic Crossfade Logic
+          const crossfadeSec =
+            useSettingsStore.getState().crossfadeDuration || 0;
+          if (crossfadeSec > 0 && s.duration_ms > 0) {
+            const crossfadeMs = crossfadeSec * 1000;
+            const threshold = s.duration_ms - crossfadeMs;
+
+            // Check if we reached the transition point
+            // Also ensure we aren't already transitioning
+            if (s.position_ms >= threshold && !state._isTransitioning) {
+              // Verify we have a next track
+              const hasNext =
+                state.queue.length > 0 &&
+                (state.repeat !== "off" ||
+                  state.currentIndex < state.queue.length - 1);
+              if (hasNext) {
+                console.log(
+                  "Triggering automatic crossfade",
+                  s.position_ms,
+                  threshold
+                );
+                set({ _isTransitioning: true });
+                get().next();
+              }
+            }
+
+            // Reset transition flag if we are at the beginning of a track
+            if (state._isTransitioning && s.position_ms < threshold * 0.5) {
+              set({ _isTransitioning: false });
+            }
+          }
         }
       );
 
