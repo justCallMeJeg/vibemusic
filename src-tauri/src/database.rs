@@ -1,5 +1,5 @@
 use crate::scanner::TrackMetadata;
-use rusqlite::{params, Connection, Result};
+use rusqlite::{params, Connection, Result, Transaction};
 use std::path::Path;
 
 pub struct DbHelper {
@@ -8,6 +8,12 @@ pub struct DbHelper {
 
 impl DbHelper {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            }
+        }
         let conn = Connection::open(path)?;
 
         // Robustness check: Ensure schema exists
@@ -27,9 +33,7 @@ impl DbHelper {
         Ok(Self { conn })
     }
 
-    pub fn get_or_create_artist(&mut self, name: &str) -> Result<i64> {
-        let tx = self.conn.transaction()?;
-
+    pub fn get_or_create_artist(tx: &Transaction, name: &str) -> Result<i64> {
         {
             let mut stmt = tx.prepare("SELECT id FROM artists WHERE name = ?")?;
             let mut rows = stmt.query(params![name])?;
@@ -40,21 +44,16 @@ impl DbHelper {
         }
 
         tx.execute("INSERT INTO artists (name) VALUES (?)", params![name])?;
-        let id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(id)
+        Ok(tx.last_insert_rowid())
     }
 
     pub fn get_or_create_album(
-        &mut self,
+        tx: &Transaction,
         title: &str,
         artist_id: Option<i64>,
         year: Option<u32>,
         artwork_path: Option<&String>,
     ) -> Result<i64> {
-        let tx = self.conn.transaction()?;
-
         {
             let sql = "SELECT id, artwork_path FROM albums WHERE title = ? AND (artist_id = ? OR (artist_id IS NULL AND ? IS NULL))";
             let mut stmt = tx.prepare(sql)?;
@@ -63,19 +62,22 @@ impl DbHelper {
             if let Some(row) = rows.next()? {
                 let id: i64 = row.get(0)?;
                 let current_artwork: Option<String> = row.get(1)?;
+                
+                // If we found new artwork and the album has none, we should update it
+                let should_update = current_artwork.is_none() && artwork_path.is_some();
+                
+                // Explicitly drop borrows to free tx for use
+                drop(row); 
+                drop(rows); 
+                drop(stmt);
 
-                // If we found new artwork and the album has none, update it
-                if current_artwork.is_none() && artwork_path.is_some() {
-                    drop(row); // Release borrow
-                    drop(rows); // Release borrow
-                    drop(stmt); // Release borrow
-
-                    tx.execute(
+                if should_update {
+                     tx.execute(
                         "UPDATE albums SET artwork_path = ? WHERE id = ?",
                         params![artwork_path, id],
                     )?;
                 }
-
+                
                 return Ok(id);
             }
         }
@@ -84,23 +86,31 @@ impl DbHelper {
             "INSERT INTO albums (title, artist_id, year, artwork_path) VALUES (?, ?, ?, ?)",
             params![title, artist_id, year, artwork_path],
         )?;
-        let id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(id)
+        Ok(tx.last_insert_rowid())
     }
 
-    pub fn upsert_track(&mut self, metadata: &TrackMetadata) -> Result<()> {
+    pub fn upsert_track(tx: &Transaction, metadata: &TrackMetadata) -> Result<()> {
+        // Track artist (used for the track itself)
         let artist_id = if let Some(artist) = &metadata.artist {
-            Some(self.get_or_create_artist(artist)?)
+            Some(Self::get_or_create_artist(tx, artist)?)
         } else {
             None
         };
 
+        // Album artist (used for album grouping - prefer album_artist, fallback to track artist)
+        let album_artist_id = if let Some(album_artist) = &metadata.album_artist {
+            Some(Self::get_or_create_artist(tx, album_artist)?)
+        } else {
+            // Don't use track artist for albums - this causes duplicate albums
+            // when different tracks have different artists
+            None
+        };
+
         let album_id = if let Some(album) = &metadata.album {
-            Some(self.get_or_create_album(
+            Some(Self::get_or_create_album(
+                tx,
                 album,
-                artist_id,
+                album_artist_id,  // Use album artist, not track artist
                 metadata.year,
                 metadata.artwork_path.as_ref(),
             )?)
@@ -110,21 +120,22 @@ impl DbHelper {
 
         // Check if track exists
         let exists = {
-            let mut stmt = self
-                .conn
-                .prepare("SELECT id FROM tracks WHERE file_path = ?")?;
+            let mut stmt = tx.prepare("SELECT id FROM tracks WHERE file_path = ?")?;
             stmt.exists(params![metadata.file_path])?
         };
 
-        if exists {
-            self.conn.execute(
+        let track_id = if exists {
+             let mut stmt = tx.prepare("SELECT id FROM tracks WHERE file_path = ?")?;
+             let id: i64 = stmt.query_row(params![metadata.file_path], |row| row.get(0))?;
+
+            tx.execute(
                 "UPDATE tracks SET 
                     title = ?, artist_id = ?, album_id = ?, album_artist = ?, 
                     track_number = ?, disc_number = ?, duration_ms = ?, 
                     file_size = ?, file_format = ?, sample_rate = ?, 
                     bit_rate = ?, channels = ?, genre = ?, year = ?, 
                     updated_at = CURRENT_TIMESTAMP 
-                WHERE file_path = ?",
+                WHERE id = ?",
                 params![
                     metadata.title.as_deref().unwrap_or(&metadata.file_name), // Fallback to filename if title is None
                     artist_id,
@@ -140,11 +151,12 @@ impl DbHelper {
                     metadata.channels,
                     metadata.genre,
                     metadata.year,
-                    metadata.file_path
+                    id
                 ],
             )?;
+            id
         } else {
-            self.conn.execute(
+            tx.execute(
                 "INSERT INTO tracks (
                     title, artist_id, album_id, album_artist, 
                     track_number, disc_number, duration_ms, 
@@ -169,8 +181,63 @@ impl DbHelper {
                     metadata.year
                 ],
             )?;
+            tx.last_insert_rowid()
+        };
+
+        // Handle multiple artists (track_artists junction table)
+        // First, clear existing associations for this track (simplest update strategy)
+        tx.execute("DELETE FROM track_artists WHERE track_id = ?", params![track_id])?;
+
+        // Insert new associations
+        for artist_name in &metadata.artists {
+             let artist_id = Self::get_or_create_artist(tx, artist_name)?;
+             // Ignore duplicate insertions if any (schema has UNIQUE constraint, but we cleaned up first)
+             // Use INSERT OR IGNORE just in case
+             tx.execute(
+                 "INSERT OR IGNORE INTO track_artists (track_id, artist_id) VALUES (?, ?)", 
+                 params![track_id, artist_id]
+             )?;
         }
 
+        Ok(())
+    }
+
+    pub fn get_conn(&self) -> &Connection {
+        &self.conn
+    }
+
+    pub fn get_conn_mut(&mut self) -> &mut Connection {
+        &mut self.conn
+    }
+    
+    pub fn get_all_track_paths(&self) -> Result<Vec<(i64, String)>> {
+        let mut stmt = self.conn.prepare("SELECT id, file_path FROM tracks")?;
+        let rows = stmt.query_map([], |row| {
+             Ok((row.get(0)?, row.get(1)?))
+        })?;
+        
+        let mut paths = Vec::new();
+        for row in rows {
+            paths.push(row?);
+        }
+        Ok(paths)
+    }
+    
+    pub fn delete_tracks(tx: &Transaction, ids: &[i64]) -> Result<()> {
+        // SQLite doesn't have a clean WHERE IN (?) for array binding in rusqlite readily available without dynamic SQL construction
+        // or using a series of statements.
+        // For pruning, batched calls are fine.
+        
+        // We could also do "DELETE FROM tracks WHERE id IN (1, 2, 3...)" dynamically
+        if ids.is_empty() {
+            return Ok(());
+        }
+        
+        let mut stmt = tx.prepare("DELETE FROM tracks WHERE id = ?")?;
+        for id in ids {
+            stmt.execute(params![id])?;
+        }
+        
         Ok(())
     }
 
@@ -209,4 +276,116 @@ impl DbHelper {
 
         Ok(tracks)
     }
+
+    pub fn get_all_albums(&self) -> Result<Vec<crate::library::LibraryAlbum>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                al.id,
+                al.title,
+                al.artist_id,
+                ar.name as artist_name,
+                al.year,
+                al.artwork_path,
+                COUNT(t.id) as track_count,
+                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+            FROM albums al
+            LEFT JOIN artists ar ON al.artist_id = ar.id
+            LEFT JOIN tracks t ON t.album_id = al.id
+            GROUP BY al.id
+            ORDER BY al.title ASC"
+        )?;
+
+        let album_iter = stmt.query_map([], |row| {
+            Ok(crate::library::LibraryAlbum {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist_id: row.get(2)?,
+                artist_name: row.get(3)?,
+                year: row.get(4)?,
+                artwork_path: row.get(5)?,
+                track_count: row.get(6)?,
+                total_duration_ms: row.get(7)?,
+            })
+        })?;
+
+        let mut albums = Vec::new();
+        for album in album_iter {
+            albums.push(album?);
+        }
+
+        Ok(albums)
+    }
+
+    pub fn get_album_by_id(&self, id: i64) -> Result<Option<crate::library::LibraryAlbum>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                al.id,
+                al.title,
+                al.artist_id,
+                ar.name as artist_name,
+                al.year,
+                al.artwork_path,
+                COUNT(t.id) as track_count,
+                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+            FROM albums al
+            LEFT JOIN artists ar ON al.artist_id = ar.id
+            LEFT JOIN tracks t ON t.album_id = al.id
+            WHERE al.id = ?
+            GROUP BY al.id"
+        )?;
+
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(crate::library::LibraryAlbum {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist_id: row.get(2)?,
+                artist_name: row.get(3)?,
+                year: row.get(4)?,
+                artwork_path: row.get(5)?,
+                track_count: row.get(6)?,
+                total_duration_ms: row.get(7)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_album_tracks(&self, album_id: i64) -> Result<Vec<crate::library::LibraryTrack>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                t.id, 
+                t.title, 
+                ar.name as artist, 
+                al.title as album, 
+                t.duration_ms, 
+                t.file_path, 
+                al.artwork_path 
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN albums al ON t.album_id = al.id
+            WHERE t.album_id = ?
+            ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC"
+        )?;
+
+        let track_iter = stmt.query_map(params![album_id], |row| {
+            Ok(crate::library::LibraryTrack {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                album: row.get(3)?,
+                duration_ms: row.get(4)?,
+                file_path: row.get(5)?,
+                artwork_path: row.get(6)?,
+            })
+        })?;
+
+        let mut tracks = Vec::new();
+        for track in track_iter {
+            tracks.push(track?);
+        }
+
+        Ok(tracks)
+    }
 }
+

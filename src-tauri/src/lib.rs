@@ -53,10 +53,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             library::get_all_tracks,
+            library::get_all_albums,
+            library::get_album_by_id,
+            library::get_album_tracks,
             scanner::get_file_metadata,
             scanner::scan_folder,
             scanner::scan_music_library,
             scanner::check_files_exist,
+            scanner::prune_library,
             // Audio commands
             audio::audio_play,
             audio::audio_pause,

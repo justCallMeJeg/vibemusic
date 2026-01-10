@@ -258,7 +258,106 @@ impl AudioEngine {
     pub fn seek(&self, position_ms: u64) {
         let sink = self.sink.lock().unwrap();
         let pos = Duration::from_millis(position_ms);
-        sink.try_seek(pos).ok();
+        if let Err(e) = sink.try_seek(pos) {
+            eprintln!("[WARN] Native seek failed: {}. Attempting threaded fallback...", e);
+            drop(sink); // Release lock before heavy work
+
+            // Clone Arcs for thread
+            let sink_arc = self.sink.clone();
+            let state_arc = self.state.clone();
+            let timer_arc = self.timer.clone();
+            let controls_arc = self.media_controls.clone();
+            
+            // Get path cleanly
+            let path_opt = {
+                let state = state_arc.lock().unwrap();
+                state.current_file.clone()
+            };
+
+            if let Some(path) = path_opt {
+                thread::spawn(move || {
+                    match File::open(&path) {
+                        Ok(file) => {
+                            let reader = BufReader::new(file);
+                            match Decoder::new(reader) {
+                                Ok(source) => {
+                                    // Heavy CPU operation: decoding until position
+                                    let source = source.skip_duration(pos);
+                                    
+                                    // Critical section: Update Sink
+                                    {
+                                        let sink = sink_arc.lock().unwrap();
+                                        sink.clear(); 
+                                        sink.append(source);
+                                        sink.play();
+                                    }
+
+                                    // Update State & Timer
+                                    {
+                                        let mut state = state_arc.lock().unwrap();
+                                        state.position_ms = position_ms;
+                                    }
+                                    
+                                    {
+                                        let mut timer = timer_arc.lock().unwrap();
+                                        let now = Instant::now();
+                                        // Update timer reference points
+                                        // Assume playing (since we called sink.play())
+                                        // Even if we were paused, a seek usually implies "go here". 
+                                        // But if we want to stay paused, we'd need to check state.is_paused.
+                                        // However, sink.append(source) usually starts if sink is active?
+                                        // sink.play() force starts it.
+                                        // Let's check previous state? complex.
+                                        // For now, let's assume seek -> play is acceptable, 
+                                        // OR we should check is_paused state.
+                                        
+                                        // Helper to safely check paused
+                                        let is_paused = {
+                                            state_arc.lock().unwrap().is_paused
+                                        };
+
+                                        if is_paused {
+                                            timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
+                                            timer.pause_start = Some(now);
+                                            timer.paused_duration = Duration::ZERO;
+                                            
+                                            // Ensure sink matches paused state?
+                                            let sink = sink_arc.lock().unwrap();
+                                            sink.pause();
+                                        } else {
+                                            timer.start_time = Some(now.checked_sub(Duration::from_millis(position_ms)).unwrap_or(now));
+                                            timer.pause_start = None;
+                                            timer.paused_duration = Duration::ZERO;
+                                        }
+                                    }
+
+                                    // Update Controls
+                                    {
+                                        let mut controls = controls_arc.lock().unwrap();
+                                        let is_paused = { state_arc.lock().unwrap().is_paused };
+                                        if is_paused {
+                                            controls.set_playback(MediaPlayback::Paused {
+                                                progress: Some(MediaPosition(pos)),
+                                            }).ok();
+                                        } else {
+                                            controls.set_playback(MediaPlayback::Playing {
+                                                progress: Some(MediaPosition(pos)),
+                                            }).ok();
+                                        }
+                                    }
+
+                                    eprintln!("[INFO] Threaded fallback seek successful");
+                                },
+                                Err(e) => eprintln!("[ERROR] Failed to decode for seek fallback: {}", e)
+                            }
+                        },
+                        Err(e) => eprintln!("[ERROR] Failed to open file for seek fallback: {}", e)
+                    }
+                });
+            }
+            // Return immediately - UI unblocked
+            return;
+        }
 
         let mut state = self.state.lock().unwrap();
         state.position_ms = position_ms;
@@ -314,7 +413,7 @@ pub fn start_progress_tracking(app: AppHandle, engine: Arc<AudioEngine>) {
         
         // Timer update logic
         // We do this in a block to release locks quickly
-        let (should_emit, current_pos_ms) = {
+        let (should_emit, _current_pos_ms) = {
              let mut state = engine.state.lock().unwrap();
              let timer = engine.timer.lock().unwrap();
 

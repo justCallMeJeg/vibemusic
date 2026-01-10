@@ -79,6 +79,16 @@ CREATE TABLE IF NOT EXISTS play_history (
     FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
 );
 
+-- Track Artists junction table (for multiple artists support)
+CREATE TABLE IF NOT EXISTS track_artists (
+    track_id INTEGER NOT NULL,
+    artist_id INTEGER NOT NULL,
+    role TEXT DEFAULT 'main',
+    FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE,
+    FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE CASCADE,
+    UNIQUE(track_id, artist_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album_id);
