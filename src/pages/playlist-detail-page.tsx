@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { ChevronLeft, Play, Trash2 } from "lucide-react";
+import { ChevronLeft, Play, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import { formatDistanceToNow } from "date-fns";
@@ -45,6 +45,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { TrackSelectDialog } from "@/components/track-select-dialog";
 
 interface SortableTrackItemProps {
   track: Track;
@@ -116,6 +117,7 @@ export default function PlaylistDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAddSongOpen, setIsAddSongOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -125,18 +127,14 @@ export default function PlaylistDetailPage() {
     if (!playlistId) return;
     setIsLoading(true);
     try {
-      // Parallel fetch could be better but we need to find the playlist from the list or add a getPlaylistById
-      // Since we don't have getPlaylistById, we'll fetch all playlists and find it.
-      // Optimization for later: add getPlaylistById
       const [allPlaylists, tracksData] = await Promise.all([
         getPlaylists(),
         getPlaylistTracks(playlistId),
       ]);
 
       const found = allPlaylists.find((p) => p.id === playlistId);
-      console.log("Loaded Playlist Data:", found);
       if (found) setPlaylist(found);
-      setImageError(false); // Reset error on new data
+      setImageError(false);
       setTracks(tracksData);
     } catch (error) {
       console.error("Failed to load playlist:", error);
@@ -162,7 +160,7 @@ export default function PlaylistDetailPage() {
     try {
       await deletePlaylist(playlistId);
       toast.success("Playlist deleted");
-      await fetchPlaylists(); // Update store
+      await fetchPlaylists();
       goBack();
     } catch (e) {
       console.error(e);
@@ -193,7 +191,6 @@ export default function PlaylistDetailPage() {
         const trackIds = newOrder.map((t) => t.id);
         if (playlistId) {
           reorderPlaylist(playlistId, trackIds).catch(() => {
-            // Revert on failure (reload)
             loadData();
           });
         }
@@ -212,7 +209,6 @@ export default function PlaylistDetailPage() {
       toast.success("Track removed");
       const newTracks = tracks.filter((t) => t.id !== trackId);
       setTracks(newTracks);
-      // loadData(); // No need to reload, just update local state
     } catch (e) {
       console.error(e);
       toast.error("Failed to remove track");
@@ -277,10 +273,6 @@ export default function PlaylistDetailPage() {
               alt={playlist.name}
               className="w-full h-full object-cover"
               onError={(_e) => {
-                console.error(
-                  "Failed to load playlist cover:",
-                  playlist.artwork_path
-                );
                 setImageError(true);
               }}
             />
@@ -312,14 +304,25 @@ export default function PlaylistDetailPage() {
           {/* Action buttons */}
           <div className="flex gap-2 mt-6">
             <Button
-              variant="default" // Primary style
-              size="lg" // Larger play button
+              variant="default"
+              size="lg"
               onClick={handlePlay}
               className="gap-2 rounded-full px-8 bg-white text-black hover:bg-white/90"
             >
               <Play size={20} fill="currentColor" />
               Play
             </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 rounded-full"
+              onClick={() => setIsAddSongOpen(true)}
+            >
+              <Plus size={20} />
+              Add Songs
+            </Button>
+
             <Button
               variant="outline"
               size="icon-lg"
@@ -371,9 +374,21 @@ export default function PlaylistDetailPage() {
               open={isEditOpen}
               onOpenChange={(open) => {
                 setIsEditOpen(open);
-                if (!open) loadData(); // Reload data when dialog closes to update specific playlist details
+                if (!open) loadData();
               }}
             />
+
+            {playlistId && (
+              <TrackSelectDialog
+                open={isAddSongOpen}
+                onOpenChange={(open) => {
+                  setIsAddSongOpen(open);
+                  if (!open) loadData();
+                }}
+                playlistId={playlistId}
+                existingTrackIds={new Set(tracks.map((t) => t.id))}
+              />
+            )}
           </div>
         </div>
       </div>
