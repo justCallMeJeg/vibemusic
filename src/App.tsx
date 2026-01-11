@@ -22,10 +22,13 @@ export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
+  const status = useAudioStore((s) => s.status); // Get status directly or use selector
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
 
   const { theme, dynamicGradient, loadSettings } = useSettingsStore();
+
+  const isPlayerVisible = !!currentTrack && status !== "stopped";
 
   // Load settings on mount and handle startup behaviors
   useEffect(() => {
@@ -161,9 +164,9 @@ export default function App() {
 
           {/* Queue Menu */}
           <div
-            className={`pb-42 pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
+            className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
               isQueueOpen ? "w-96 p-1" : "w-0 p-0"
-            }`}
+            } ${isPlayerVisible ? "pb-42" : "pb-6"}`}
           >
             <QueueMenu />
           </div>
@@ -173,7 +176,7 @@ export default function App() {
       {/* Music Controller */}
       <div
         className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
-          currentTrack
+          isPlayerVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0"
         }`}

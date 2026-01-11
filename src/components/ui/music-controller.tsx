@@ -101,7 +101,7 @@ export default function MusicControler() {
 
   if (isCompact) {
     return (
-      <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-94 ml-auto h-auto flex flex-col items-center gap-4 p-3 pr-4 transition-all duration-500 pointer-events-auto">
+      <div className="bg-neutral-900/75 backdrop-blur-md rounded-lg outline outline-gray-850 w-94 ml-auto h-auto flex flex-col items-center gap-5 p-3 pr-4 transition-all duration-500 pointer-events-auto">
         <div id="track" className="flex items-center gap-3 w-full">
           {currentTrack ? (
             <img

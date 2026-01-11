@@ -110,7 +110,8 @@ export const useAudioStore = create<AudioStore>((set, get) => {
 
     if (state.queue.length === 0) {
       console.log("[handleNext] Queue empty -> Stop");
-      set({ status: "stopped", currentTrack: null });
+      // Don't clear currentTrack so UI can still show last played song
+      set({ status: "stopped", position: 0 });
       await invoke("audio_stop");
       return;
     }

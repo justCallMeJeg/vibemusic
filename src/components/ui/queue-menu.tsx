@@ -5,6 +5,7 @@ import {
   useCurrentTrack,
   useQueue,
   useQueueOpen,
+  usePlayerStatus,
 } from "@/stores/audio-store";
 import {
   DndContext,
@@ -29,6 +30,7 @@ export default function QueueMenu() {
   const currentTrack = useCurrentTrack();
   const queue = useQueue();
   const isQueueOpen = useQueueOpen();
+  const status = usePlayerStatus();
 
   // Get actions directly (stable references)
   const reorderQueue = useAudioStore((s) => s.reorderQueue);
@@ -75,38 +77,43 @@ export default function QueueMenu() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
-        {currentTrack && (
-          <div className="mb-6">
-            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
-              Now Playing
-            </h2>
-            <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
-              <img
-                src={
-                  currentTrack.artwork_path
-                    ? convertFileSrc(currentTrack.artwork_path)
-                    : placeholderArt
-                }
-                alt={currentTrack.title}
-                className="w-12 h-12 rounded object-cover shadow-lg"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="font-bold text-white truncate text-lg">
-                  {currentTrack.title}
-                </p>
-                <p className="text-sm text-purple-400 truncate">
-                  {currentTrack.artist || "Unknown Artist"}
-                </p>
-              </div>
-              <div className="text-xs font-mono font-bold text-neutral-500 bg-neutral-900 px-2 py-1 rounded">
-                PLAYING
-              </div>
+      {currentTrack && (
+        <div className="mb-6 shrink-0">
+          <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
+            Now Playing
+          </h2>
+          <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
+            <img
+              src={
+                currentTrack.artwork_path
+                  ? convertFileSrc(currentTrack.artwork_path)
+                  : placeholderArt
+              }
+              alt={currentTrack.title}
+              className="w-12 h-12 rounded object-cover shadow-lg"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-white truncate text-lg">
+                {currentTrack.title}
+              </p>
+              <p className="text-sm text-purple-400 truncate">
+                {currentTrack.artist || "Unknown Artist"}
+              </p>
+            </div>
+            <div className="text-xs font-mono font-bold text-neutral-500 bg-neutral-900 px-2 py-1 rounded">
+              {status === "playing"
+                ? "PLAYING"
+                : status === "paused"
+                ? "PAUSED"
+                : "STOPPED"}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
         <div className="mb-2">
+          {/* Tracks list content */}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
               Tracks

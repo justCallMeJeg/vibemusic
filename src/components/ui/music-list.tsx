@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Clock, Play } from "lucide-react";
+import { Clock, Play, Pause } from "lucide-react";
 import { Track } from "@/lib/api";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
@@ -7,6 +7,7 @@ import {
   useCurrentTrack,
   usePlayerStatus,
 } from "@/stores/audio-store";
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -34,7 +35,6 @@ interface MusicListItemProps {
 
 const MusicListItem = memo(function MusicListItem({
   track,
-  context,
 }: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
@@ -46,10 +46,35 @@ const MusicListItem = memo(function MusicListItem({
 
   // Get actions directly from store (stable references)
   const play = useAudioStore((s) => s.play);
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
 
-  const isPlaying = currentTrack?.id === track.id && status === "playing";
+  const isCurrentTrack = currentTrack?.id === track.id;
+  const isPlaying = isCurrentTrack && status === "playing";
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isCurrentTrack) {
+      if (status === "playing") {
+        pause();
+      } else {
+        resume();
+      }
+    } else {
+      play(track);
+    }
+  };
+
+  const handleContextMenuPlay = () => {
+    if (isCurrentTrack) {
+      if (status === "playing") pause();
+      else resume();
+    } else {
+      play(track);
+    }
+  };
 
   const artworkSrc = track.artwork_path
     ? convertFileSrc(track.artwork_path)
@@ -59,9 +84,9 @@ const MusicListItem = memo(function MusicListItem({
     <ContextMenu>
       <ContextMenuTrigger>
         <div
-          onClick={() => play(track, context)}
+          onClick={handlePlayClick}
           className={`flex w-full h-min rounded-lg px-4 py-2 hover:outline hover:outline-gray-850 hover:bg-white/3 cursor-pointer group transition-colors ${
-            isPlaying ? "bg-white/10 outline outline-gray-800" : ""
+            isCurrentTrack ? "bg-white/10 outline outline-gray-800" : ""
           }`}
         >
           <div className="flex h-min w-full gap-4">
@@ -75,11 +100,20 @@ const MusicListItem = memo(function MusicListItem({
                 }}
                 alt="Album Art"
               />
-              {isPlaying && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
+              {/* Overlay: Visible if playing, paused (current), or on hover */}
+              <div
+                className={`absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg transition-opacity ${
+                  isCurrentTrack
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
+              >
+                {isPlaying ? (
+                  <Pause size={16} className="fill-white text-white" />
+                ) : (
                   <Play size={16} className="fill-white text-white" />
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="flex w-full items-center justify-between">
@@ -102,8 +136,8 @@ const MusicListItem = memo(function MusicListItem({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={() => play(track, context)}>
-          Play
+        <ContextMenuItem onSelect={handleContextMenuPlay}>
+          {isCurrentTrack && status === "playing" ? "Pause" : "Play"}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => playNext(track)}>
           Play Next
