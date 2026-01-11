@@ -5,6 +5,7 @@ import {
   debug as logDebug,
   trace as logTrace,
 } from "@tauri-apps/plugin-log";
+import { toast } from "sonner";
 
 /**
  * Enhanced logger that forwards logs to the Rust backend via tauri-plugin-log.
@@ -33,10 +34,8 @@ export const logger = {
   error: async (message: string, ...args: unknown[]) => {
     console.error(message, ...args);
     // Visual feedback for errors
-    import("sonner").then(({ toast }) => {
-      toast.error(message, {
-        description: args.length > 0 ? "Check logs for details" : undefined,
-      });
+    toast.error(message, {
+      description: args.length > 0 ? "Check logs for details" : undefined,
     });
 
     try {

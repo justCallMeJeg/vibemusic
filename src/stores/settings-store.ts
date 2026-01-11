@@ -4,6 +4,7 @@ import { load } from "@tauri-apps/plugin-store";
 // Lazy store initialization
 // const storePromise: Promise<Store> | null = null;
 import { invoke } from "@tauri-apps/api/core";
+import { useLibraryStore } from "./library-store";
 
 const getStore = async () => {
   const state = useSettingsStore.getState();
@@ -128,7 +129,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await store.save();
 
         // Auto-scan the new path
-        const { useLibraryStore } = await import("./library-store");
         try {
           // Define ScanStats locally or treat as any/unknown if interface not available globally
           // But better to just return it.

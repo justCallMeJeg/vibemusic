@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./settings-store";
+import { useLibraryStore } from "./library-store";
+import { toast } from "sonner";
 import { Track } from "@/lib/api";
 
 // --- Types ---
@@ -481,20 +483,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
             // Try to auto-delete first
             try {
               await invoke("delete_track", { trackId: track.id });
-              const { useLibraryStore } = await import("./library-store");
-              await useLibraryStore.getState().fetchLibrary();
+              useLibraryStore.getState().fetchLibrary();
 
-              import("sonner").then(({ toast }) => {
-                toast("File not found", {
-                  description: `Removed "${track.title}" from library.`,
-                });
+              toast("File not found", {
+                description: `Removed "${track.title}" from library.`,
               });
             } catch (e) {
               console.error("Failed to self-heal library:", e);
-              import("sonner").then(({ toast }) => {
-                toast.error(`File missing: ${track.title}`, {
-                  description: "Run 'Prune Library' in settings to clean up.",
-                });
+              toast.error(`File missing: ${track.title}`, {
+                description: "Run 'Prune Library' in settings to clean up.",
               });
             }
 

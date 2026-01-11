@@ -23,6 +23,7 @@ import {
 import { appLogDir } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { FileText } from "lucide-react";
+import { toast } from "sonner";
 
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
@@ -198,10 +199,8 @@ export function SettingsAbout() {
                 await openPath(logDir);
               } catch (error) {
                 console.error("Failed to open logs folder:", error);
-                import("sonner").then(({ toast }) => {
-                  toast.error("Failed to open logs folder", {
-                    description: "Please check if the logs directory exists.",
-                  });
+                toast.error("Failed to open logs folder", {
+                  description: "Please check if the logs directory exists.",
                 });
               }
             }}
