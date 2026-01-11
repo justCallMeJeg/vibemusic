@@ -1,6 +1,6 @@
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
-use std::path::PathBuf;
 
 pub struct ProfileState(pub Mutex<Option<String>>);
 
@@ -13,7 +13,7 @@ pub fn set_active_profile(app: AppHandle, profile_id: Option<String>) {
 
 pub fn get_library_db_path(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    
+
     // Default path
     let mut db_name = "library.db".to_string();
 
@@ -41,19 +41,24 @@ pub fn delete_profile_data(app: AppHandle, profile_id: String) -> Result<(), Str
     // 2. Delete Settings
     let settings_path = app_data_dir.join(format!("settings_{}.json", profile_id));
     if settings_path.exists() {
-        std::fs::remove_file(&settings_path).map_err(|e| format!("Failed to delete settings: {}", e))?;
+        std::fs::remove_file(&settings_path)
+            .map_err(|e| format!("Failed to delete settings: {}", e))?;
     }
-    
+
     // 3. Delete Store .lock? (Optional, store plugin might leave lock files)
-    
+
     Ok(())
 }
 
 #[tauri::command]
-pub fn upload_profile_avatar(app: AppHandle, profile_id: String, file_path: String) -> Result<String, String> {
+pub fn upload_profile_avatar(
+    app: AppHandle,
+    profile_id: String,
+    file_path: String,
+) -> Result<String, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let avatars_dir = app_data_dir.join("avatars");
-    
+
     // Create avatars directory if it doesn't exist
     if !avatars_dir.exists() {
         std::fs::create_dir_all(&avatars_dir).map_err(|e| e.to_string())?;
@@ -96,8 +101,10 @@ pub fn save_profile_avatar_bytes(
     let target_path = avatars_dir.join(&target_filename);
 
     use std::io::Write;
-    let mut file = std::fs::File::create(&target_path).map_err(|e| format!("Failed to create file: {}", e))?;
-    file.write_all(&image_data).map_err(|e| format!("Failed to write data: {}", e))?;
+    let mut file =
+        std::fs::File::create(&target_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    file.write_all(&image_data)
+        .map_err(|e| format!("Failed to write data: {}", e))?;
 
     Ok(target_path.to_string_lossy().to_string())
 }

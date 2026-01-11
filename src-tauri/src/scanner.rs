@@ -74,7 +74,7 @@ fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
         Some(s) => {
             let mut artists = Vec::new();
             let splitters = [',', '&'];
-            
+
             for part in s.split(&splitters[..]) {
                 let trimmed = part.trim();
                 if !trimmed.is_empty() {
@@ -123,7 +123,11 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             let ch = properties.channels();
 
             if duration == 0 {
-                eprintln!("[WARN] Zero duration for: {} (format: {})", path.display(), file_format);
+                eprintln!(
+                    "[WARN] Zero duration for: {} (format: {})",
+                    path.display(),
+                    file_format
+                );
             }
 
             let tag = tagged_file
@@ -135,25 +139,39 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             }
 
             let tag_data = if let Some(tag) = tag {
-                let artist_str = tag.artist().map(|s| s.to_string())
-                    .or_else(|| tag.get_string(&lofty::tag::ItemKey::AlbumArtist).map(|s| s.to_string()))
-                    .or_else(|| tag.get_string(&lofty::tag::ItemKey::TrackArtist).map(|s| s.to_string()));
+                let artist_str = tag
+                    .artist()
+                    .map(|s| s.to_string())
+                    .or_else(|| {
+                        tag.get_string(&lofty::tag::ItemKey::AlbumArtist)
+                            .map(|s| s.to_string())
+                    })
+                    .or_else(|| {
+                        tag.get_string(&lofty::tag::ItemKey::TrackArtist)
+                            .map(|s| s.to_string())
+                    });
 
                 if artist_str.is_none() {
-                    eprintln!("[WARN] No artist found in: {} (tag type: {:?})", path.display(), tag.tag_type());
+                    eprintln!(
+                        "[WARN] No artist found in: {} (tag type: {:?})",
+                        path.display(),
+                        tag.tag_type()
+                    );
                 }
 
                 let artists = parse_artists(artist_str.as_deref());
 
-                let artwork_path = tag.pictures()
+                let artwork_path = tag
+                    .pictures()
                     .iter()
                     .find(|p| p.pic_type() == lofty::picture::PictureType::CoverFront)
                     .or_else(|| tag.pictures().first())
                     .and_then(|pic| extract_and_cache_cover(pic, cache_dir));
 
                 if artwork_path.is_none() && !tag.pictures().is_empty() {
-                    eprintln!("[WARN] Found {} pictures but failed to extract for: {}", 
-                        tag.pictures().len(), 
+                    eprintln!(
+                        "[WARN] Found {} pictures but failed to extract for: {}",
+                        tag.pictures().len(),
                         path.display()
                     );
                 }
@@ -172,13 +190,28 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     artwork_path,
                 )
             } else {
-                (None, None, Vec::new(), None, None, None, None, None, None, None)
+                (
+                    None,
+                    None,
+                    Vec::new(),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
             };
 
             (duration, sr, br, ch, tag_data)
         }
         Err(e) => {
-            eprintln!("[WARN] Strict parse failed for {}: {}. Retrying without tags...", path.display(), e);
+            eprintln!(
+                "[WARN] Strict parse failed for {}: {}. Retrying without tags...",
+                path.display(),
+                e
+            );
 
             let retry_probe = match Probe::open(path) {
                 Ok(p) => p,
@@ -187,31 +220,80 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     return Err(format!("Failed to re-open file: {}", e2));
                 }
             };
-            
+
             let retry_options = ParseOptions::new()
                 .parsing_mode(ParsingMode::Relaxed)
                 .read_tags(false);
 
             match retry_probe.options(retry_options).read() {
                 Ok(tagged_file) => {
-                     eprintln!("[INFO] Successfully read properties for {}", path.display());
-                     let properties = tagged_file.properties();
-                     let duration = properties.duration().as_millis() as u64;
-                     let sr = properties.sample_rate();
-                     let br = properties.audio_bitrate();
-                     let ch = properties.channels();
+                    eprintln!("[INFO] Successfully read properties for {}", path.display());
+                    let properties = tagged_file.properties();
+                    let duration = properties.duration().as_millis() as u64;
+                    let sr = properties.sample_rate();
+                    let br = properties.audio_bitrate();
+                    let ch = properties.channels();
 
-                    (duration, sr, br, ch, (None, None, Vec::new(), None, None, None, None, None, None, None))
+                    (
+                        duration,
+                        sr,
+                        br,
+                        ch,
+                        (
+                            None,
+                            None,
+                            Vec::new(),
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                        ),
+                    )
                 }
                 Err(e2) => {
-                    eprintln!("[ERROR] Failed to parse file {} even without tags: {}", path.display(), e2);
-                    (0, None, None, None, (None, None, Vec::new(), None, None, None, None, None, None, None))
+                    eprintln!(
+                        "[ERROR] Failed to parse file {} even without tags: {}",
+                        path.display(),
+                        e2
+                    );
+                    (
+                        0,
+                        None,
+                        None,
+                        None,
+                        (
+                            None,
+                            None,
+                            Vec::new(),
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                        ),
+                    )
                 }
             }
         }
     };
 
-    let (title, artist, artists, album, album_artist, track_number, disc_number, year, genre, artwork_path) = tag_info;
+    let (
+        title,
+        artist,
+        artists,
+        album,
+        album_artist,
+        track_number,
+        disc_number,
+        year,
+        genre,
+        artwork_path,
+    ) = tag_info;
 
     let final_title: Option<String> = title.or_else(|| {
         path.file_stem()
@@ -244,8 +326,12 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
 #[command]
 pub fn get_file_metadata(path: String) -> Result<TrackMetadata, String> {
     let path = Path::new(&path);
-    if !path.exists() { return Err("File does not exist".to_string()); }
-    if !is_audio_file(path) { return Err("Not a supported audio file".to_string()); }
+    if !path.exists() {
+        return Err("File does not exist".to_string());
+    }
+    if !is_audio_file(path) {
+        return Err("Not a supported audio file".to_string());
+    }
     let cache_dir = std::env::temp_dir();
     extract_metadata(path, &cache_dir)
 }
@@ -253,11 +339,19 @@ pub fn get_file_metadata(path: String) -> Result<TrackMetadata, String> {
 #[command]
 pub fn scan_folder(path: String) -> Result<Vec<String>, String> {
     let root = Path::new(&path);
-    if !root.exists() { return Err("Directory does not exist".to_string()); }
-    if !root.is_dir() { return Err("Path is not a directory".to_string()); }
+    if !root.exists() {
+        return Err("Directory does not exist".to_string());
+    }
+    if !root.is_dir() {
+        return Err("Path is not a directory".to_string());
+    }
 
     let mut audio_files = Vec::new();
-    for entry in WalkDir::new(root).follow_links(true).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(root)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         let path = entry.path();
         if path.is_file() && is_audio_file(path) {
             audio_files.push(path.to_string_lossy().to_string());
@@ -283,7 +377,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
     // Get database path using profile helper
     let db_path = get_library_db_path(&app)?;
     eprintln!("Scanner using database at: {:?}", db_path);
-    
+
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let cache_dir = app_data_dir.join("covers");
 
@@ -298,29 +392,29 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
         let mut batch = Vec::with_capacity(50);
 
         let process_batch = |db: &mut DbHelper, batch: &Vec<TrackMetadata>| {
-             let tx = match db.get_conn_mut().transaction() {
-                 Ok(tx) => tx,
-                 Err(e) => {
-                     eprintln!("Failed to start transaction: {}", e);
-                     return 0;
-                 }
-             };
+            let tx = match db.get_conn_mut().transaction() {
+                Ok(tx) => tx,
+                Err(e) => {
+                    eprintln!("Failed to start transaction: {}", e);
+                    return 0;
+                }
+            };
 
-             let mut batch_success = 0;
-             for metadata in batch {
-                 if let Err(e) = DbHelper::upsert_track(&tx, metadata) {
-                     eprintln!("Failed to save track in batch: {}", e);
-                 } else {
-                     batch_success += 1;
-                 }
-             }
+            let mut batch_success = 0;
+            for metadata in batch {
+                if let Err(e) = DbHelper::upsert_track(&tx, metadata) {
+                    eprintln!("Failed to save track in batch: {}", e);
+                } else {
+                    batch_success += 1;
+                }
+            }
 
-             if let Err(e) = tx.commit() {
-                 eprintln!("Failed to commit batch: {}", e);
-                 0
-             } else {
-                 batch_success
-             }
+            if let Err(e) = tx.commit() {
+                eprintln!("Failed to commit batch: {}", e);
+                0
+            } else {
+                batch_success
+            }
         };
 
         for result in rx {
@@ -334,7 +428,9 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
                         batch.clear();
                     }
                 }
-                Err(_) => { error_count += 1; }
+                Err(_) => {
+                    error_count += 1;
+                }
             }
         }
 
@@ -349,12 +445,15 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
 
     all_files.par_iter().for_each(|file_path| {
         let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
-        let _ = app.emit("scan-progress", ScanProgress {
-            current,
-            total,
-            current_file: file_path.clone(),
-            status: "scanning".to_string(),
-        });
+        let _ = app.emit(
+            "scan-progress",
+            ScanProgress {
+                current,
+                total,
+                current_file: file_path.clone(),
+                status: "scanning".to_string(),
+            },
+        );
 
         let metadata = extract_metadata(Path::new(file_path), &cache_dir)
             .map_err(|e| format!("{}: {}", file_path, e));
@@ -368,19 +467,29 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
         Err(_) => return Err("Database thread panicked".to_string()),
     };
 
-    let _ = app.emit("scan-progress", ScanProgress {
-        current: total,
-        total,
-        current_file: String::new(),
-        status: "complete".to_string(),
-    });
+    let _ = app.emit(
+        "scan-progress",
+        ScanProgress {
+            current: total,
+            total,
+            current_file: String::new(),
+            status: "complete".to_string(),
+        },
+    );
 
-    Ok(ScanStats { scanned_count: total, success_count, error_count })
+    Ok(ScanStats {
+        scanned_count: total,
+        success_count,
+        error_count,
+    })
 }
 
 #[command]
 pub async fn check_files_exist(paths: Vec<String>) -> Vec<String> {
-    paths.into_iter().filter(|path| !Path::new(path).exists()).collect()
+    paths
+        .into_iter()
+        .filter(|path| !Path::new(path).exists())
+        .collect()
 }
 
 #[command]
@@ -389,19 +498,27 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
 
     let stats = std::thread::spawn(move || -> Result<ScanStats, String> {
         let mut db = DbHelper::new(&db_path).map_err(|e| e.to_string())?;
-        
+
         let all_tracks = db.get_all_track_paths().map_err(|e| e.to_string())?;
         let total = all_tracks.len();
-        
+
         let missing_ids: Vec<i64> = all_tracks
             .par_iter()
             .filter_map(|(id, path_str)| {
-                 if !Path::new(path_str).exists() { Some(*id) } else { None }
+                if !Path::new(path_str).exists() {
+                    Some(*id)
+                } else {
+                    None
+                }
             })
             .collect();
 
         if missing_ids.is_empty() {
-            return Ok(ScanStats { scanned_count: total, success_count: 0, error_count: 0 });
+            return Ok(ScanStats {
+                scanned_count: total,
+                success_count: 0,
+                error_count: 0,
+            });
         }
 
         let tx = db.get_conn_mut().transaction().map_err(|e| e.to_string())?;
@@ -409,7 +526,11 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
         let deleted_count = missing_ids.len();
         tx.commit().map_err(|e| e.to_string())?;
 
-        Ok(ScanStats { scanned_count: total, success_count: deleted_count, error_count: 0 })
+        Ok(ScanStats {
+            scanned_count: total,
+            success_count: deleted_count,
+            error_count: 0,
+        })
     })
     .join()
     .map_err(|_| "Thread panicked".to_string())??;

@@ -33,6 +33,7 @@ import { useProfileStore } from "@/stores/profile-store";
 import ProfileSelectionPage from "@/pages/profile-selection-page";
 
 import { useLibraryStore } from "@/stores/library-store";
+import { logger } from "@/lib/logger";
 
 // ... (imports)
 
@@ -154,14 +155,14 @@ export default function App() {
 
       if (selected && typeof selected === "string") {
         setIsScanning(true);
-        console.log("Scanning folder:", selected);
+        logger.info("Scanning folder:", selected);
         await invoke("scan_music_library", { folders: [selected] });
 
         // Refresh library after scan
         await fetchLibrary();
       }
     } catch (error) {
-      console.error("Failed to import folder:", error);
+      logger.error("Failed to import folder:", error);
     } finally {
       setIsScanning(false);
     }

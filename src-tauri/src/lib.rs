@@ -6,9 +6,9 @@ mod database;
 mod error;
 mod ffmpeg;
 mod library;
-mod scanner;
 mod playlists;
-mod profile; 
+mod profile;
+mod scanner;
 
 use audio::{AudioEngine, AudioState};
 use profile::ProfileState;
@@ -23,6 +23,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(
@@ -48,6 +49,16 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("vibemusic".to_string()),
+                    },
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .setup(move |app| {
             use tauri::menu::{Menu, MenuItem};
             use tauri::tray::{TrayIconBuilder, TrayIconEvent};

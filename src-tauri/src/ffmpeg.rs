@@ -36,10 +36,10 @@ impl FFmpegProcess {
         // For Tauri sidecar, binaries need the target triple suffix
         #[cfg(target_os = "windows")]
         let binary_name = format!("{}-x86_64-pc-windows-msvc.exe", name);
-        
+
         #[cfg(target_os = "macos")]
         let binary_name = format!("{}-x86_64-apple-darwin", name);
-        
+
         #[cfg(target_os = "linux")]
         let binary_name = format!("{}-x86_64-unknown-linux-gnu", name);
 
@@ -51,7 +51,7 @@ impl FFmpegProcess {
                     return sidecar_path.to_string_lossy().to_string();
                 }
             }
-            
+
             // Development: exe is in target/debug or target/release
             // binaries are in src-tauri/binaries/
             // Walk up from exe to find src-tauri/binaries
@@ -63,13 +63,14 @@ impl FFmpegProcess {
                     if binaries_path.exists() {
                         return binaries_path.to_string_lossy().to_string();
                     }
-                    
+
                     // Also check direct binaries folder (for when exe is in src-tauri)
-                    let src_tauri_binaries = dir.join("src-tauri").join("binaries").join(&binary_name);
+                    let src_tauri_binaries =
+                        dir.join("src-tauri").join("binaries").join(&binary_name);
                     if src_tauri_binaries.exists() {
                         return src_tauri_binaries.to_string_lossy().to_string();
                     }
-                    
+
                     search_dir = dir.parent();
                 } else {
                     break;
@@ -107,32 +108,36 @@ impl FFmpegProcess {
         let ffmpeg = Self::ffmpeg_path();
 
         let mut cmd = Command::new(&ffmpeg);
-        
+
         // Hide banner and reduce logging
         cmd.args(["-hide_banner", "-loglevel", "error"]);
-        
+
         // Add seek position BEFORE input (faster seeking with -ss before -i)
         if let Some(ms) = seek_ms {
             let seconds = ms as f64 / 1000.0;
             cmd.args(["-ss", &format!("{:.3}", seconds)]);
         }
-        
+
         // Input file
         cmd.args(["-i", path]);
-        
+
         // Output format: raw PCM f32le (little-endian float)
         cmd.args([
-            "-f", "f32le",           // Raw 32-bit float little-endian
-            "-acodec", "pcm_f32le",  // PCM codec
-            "-ar", &sample_rate.to_string(),
-            "-ac", &channels.to_string(),
-            "-",                      // Output to stdout
+            "-f",
+            "f32le", // Raw 32-bit float little-endian
+            "-acodec",
+            "pcm_f32le", // PCM codec
+            "-ar",
+            &sample_rate.to_string(),
+            "-ac",
+            &channels.to_string(),
+            "-", // Output to stdout
         ]);
-        
+
         // Configure pipes
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::null()); // Suppress errors to avoid blocking
-        
+
         // On Windows, hide the console window
         #[cfg(target_os = "windows")]
         {
@@ -141,7 +146,7 @@ impl FFmpegProcess {
         }
 
         let mut child = cmd.spawn()?;
-        
+
         let stdout = child
             .stdout
             .take()
@@ -161,13 +166,13 @@ impl FFmpegProcess {
         // Each f32 sample is 4 bytes
         let byte_buffer_size = buffer.len() * 4;
         let mut byte_buffer = vec![0u8; byte_buffer_size];
-        
+
         let bytes_read = self.stdout.read(&mut byte_buffer)?;
-        
+
         if bytes_read == 0 {
             return Ok(0); // EOF
         }
-        
+
         // Convert bytes to f32 samples (little-endian)
         let samples_read = bytes_read / 4;
         for i in 0..samples_read {
@@ -179,7 +184,7 @@ impl FFmpegProcess {
             ];
             buffer[i] = f32::from_le_bytes(bytes);
         }
-        
+
         Ok(samples_read)
     }
 
@@ -209,18 +214,22 @@ pub fn probe_file(path: &str) -> io::Result<AudioMetadata> {
 
     // Build ffprobe command
     let mut cmd = Command::new(&ffprobe);
-    
+
     cmd.args([
-        "-v", "error",
-        "-select_streams", "a:0",
-        "-show_entries", "stream=sample_rate,channels:format=duration",
-        "-of", "csv=p=0",
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=sample_rate,channels:format=duration",
+        "-of",
+        "csv=p=0",
         path,
     ]);
-    
+
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::null());
-    
+
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
@@ -228,7 +237,7 @@ pub fn probe_file(path: &str) -> io::Result<AudioMetadata> {
     }
 
     let output = cmd.output()?;
-    
+
     if !output.status.success() {
         return Err(io::Error::new(
             io::ErrorKind::Other,
@@ -245,7 +254,7 @@ fn parse_ffprobe_output(output: &str) -> io::Result<AudioMetadata> {
     // Expected format: "sample_rate,channels\nduration"
     // Example: "44100,2\n180.5"
     let lines: Vec<&str> = output.trim().lines().collect();
-    
+
     if lines.is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
@@ -255,12 +264,12 @@ fn parse_ffprobe_output(output: &str) -> io::Result<AudioMetadata> {
 
     // Parse stream info (first line): sample_rate,channels
     let stream_parts: Vec<&str> = lines[0].split(',').collect();
-    
+
     let sample_rate = stream_parts
         .first()
         .and_then(|s| s.trim().parse().ok())
         .unwrap_or(44100);
-        
+
     let channels = stream_parts
         .get(1)
         .and_then(|s| s.trim().parse().ok())
@@ -274,7 +283,7 @@ fn parse_ffprobe_output(output: &str) -> io::Result<AudioMetadata> {
     } else {
         "0"
     };
-    
+
     let duration_secs: f64 = duration_str.trim().parse().unwrap_or(0.0);
     let duration_ms = (duration_secs * 1000.0) as u64;
 

@@ -11,30 +11,36 @@ impl DbHelper {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
             }
         }
         let conn = Connection::open(path)?;
 
         // Robustness check: Ensure schema exists
-        // This handles race conditions where this thread might create the DB file 
+        // This handles race conditions where this thread might create the DB file
         // before the main plugin runs migrations, or if path resolution differs.
-        let table_exists: bool = conn.query_row(
-            "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='artists'",
-            [],
-            |row| row.get(0),
-        ).unwrap_or(0) > 0;
+        let table_exists: bool = conn
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='artists'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
 
         if !table_exists {
             eprintln!("Database tables missing. Applying initial schema to ensure robustness...");
             conn.execute_batch(include_str!("../migrations/001_initial_schema.sql"))?;
         } else {
             // Manual migration check for artwork_path to ensure it exists even if plugin migration is skipped
-            let has_artwork: i64 = conn.query_row(
-                "SELECT COUNT(*) FROM pragma_table_info('playlists') WHERE name='artwork_path'",
-                [],
-                |row| row.get(0),
-            ).unwrap_or(0);
+            let has_artwork: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('playlists') WHERE name='artwork_path'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
 
             if has_artwork == 0 {
                 eprintln!("Applying missing column artwork_path to playlists...");
@@ -75,21 +81,21 @@ impl DbHelper {
             if let Some(row) = rows.next()? {
                 let id: i64 = row.get(0)?;
                 let current_artwork: Option<String> = row.get(1)?;
-                
+
                 // If we found new artwork and the album has none, we should update it
                 let should_update = current_artwork.is_none() && artwork_path.is_some();
-                
+
                 // Explicitly drop borrows to free tx for use
-                drop(rows); 
+                drop(rows);
                 drop(stmt);
 
                 if should_update {
-                     tx.execute(
+                    tx.execute(
                         "UPDATE albums SET artwork_path = ? WHERE id = ?",
                         params![artwork_path, id],
                     )?;
                 }
-                
+
                 return Ok(id);
             }
         }
@@ -122,7 +128,7 @@ impl DbHelper {
             Some(Self::get_or_create_album(
                 tx,
                 album,
-                album_artist_id,  // Use album artist, not track artist
+                album_artist_id, // Use album artist, not track artist
                 metadata.year,
                 metadata.artwork_path.as_ref(),
             )?)
@@ -137,8 +143,8 @@ impl DbHelper {
         };
 
         let track_id = if exists {
-             let mut stmt = tx.prepare("SELECT id FROM tracks WHERE file_path = ?")?;
-             let id: i64 = stmt.query_row(params![metadata.file_path], |row| row.get(0))?;
+            let mut stmt = tx.prepare("SELECT id FROM tracks WHERE file_path = ?")?;
+            let id: i64 = stmt.query_row(params![metadata.file_path], |row| row.get(0))?;
 
             tx.execute(
                 "UPDATE tracks SET 
@@ -198,17 +204,20 @@ impl DbHelper {
 
         // Handle multiple artists (track_artists junction table)
         // First, clear existing associations for this track (simplest update strategy)
-        tx.execute("DELETE FROM track_artists WHERE track_id = ?", params![track_id])?;
+        tx.execute(
+            "DELETE FROM track_artists WHERE track_id = ?",
+            params![track_id],
+        )?;
 
         // Insert new associations
         for artist_name in &metadata.artists {
-             let artist_id = Self::get_or_create_artist(tx, artist_name)?;
-             // Ignore duplicate insertions if any (schema has UNIQUE constraint, but we cleaned up first)
-             // Use INSERT OR IGNORE just in case
-             tx.execute(
-                 "INSERT OR IGNORE INTO track_artists (track_id, artist_id) VALUES (?, ?)", 
-                 params![track_id, artist_id]
-             )?;
+            let artist_id = Self::get_or_create_artist(tx, artist_name)?;
+            // Ignore duplicate insertions if any (schema has UNIQUE constraint, but we cleaned up first)
+            // Use INSERT OR IGNORE just in case
+            tx.execute(
+                "INSERT OR IGNORE INTO track_artists (track_id, artist_id) VALUES (?, ?)",
+                params![track_id, artist_id],
+            )?;
         }
 
         Ok(())
@@ -221,35 +230,33 @@ impl DbHelper {
     pub fn get_conn_mut(&mut self) -> &mut Connection {
         &mut self.conn
     }
-    
+
     pub fn get_all_track_paths(&self) -> Result<Vec<(i64, String)>> {
         let mut stmt = self.conn.prepare("SELECT id, file_path FROM tracks")?;
-        let rows = stmt.query_map([], |row| {
-             Ok((row.get(0)?, row.get(1)?))
-        })?;
-        
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+
         let mut paths = Vec::new();
         for row in rows {
             paths.push(row?);
         }
         Ok(paths)
     }
-    
+
     pub fn delete_tracks(tx: &Transaction, ids: &[i64]) -> Result<()> {
         // SQLite doesn't have a clean WHERE IN (?) for array binding in rusqlite readily available without dynamic SQL construction
         // or using a series of statements.
         // For pruning, batched calls are fine.
-        
+
         // We could also do "DELETE FROM tracks WHERE id IN (1, 2, 3...)" dynamically
         if ids.is_empty() {
             return Ok(());
         }
-        
+
         let mut stmt = tx.prepare("DELETE FROM tracks WHERE id = ?")?;
         for id in ids {
             stmt.execute(params![id])?;
         }
-        
+
         Ok(())
     }
 
@@ -266,7 +273,7 @@ impl DbHelper {
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN albums al ON t.album_id = al.id
-            ORDER BY t.created_at DESC"
+            ORDER BY t.created_at DESC",
         )?;
 
         let track_iter = stmt.query_map([], |row| {
@@ -304,7 +311,7 @@ impl DbHelper {
             LEFT JOIN artists ar ON al.artist_id = ar.id
             LEFT JOIN tracks t ON t.album_id = al.id
             GROUP BY al.id
-            ORDER BY al.title ASC"
+            ORDER BY al.title ASC",
         )?;
 
         let album_iter = stmt.query_map([], |row| {
@@ -343,7 +350,7 @@ impl DbHelper {
             LEFT JOIN artists ar ON al.artist_id = ar.id
             LEFT JOIN tracks t ON t.album_id = al.id
             WHERE al.id = ?
-            GROUP BY al.id"
+            GROUP BY al.id",
         )?;
 
         let mut rows = stmt.query(params![id])?;
@@ -377,7 +384,7 @@ impl DbHelper {
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN albums al ON t.album_id = al.id
             WHERE t.album_id = ?
-            ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC"
+            ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC",
         )?;
 
         let track_iter = stmt.query_map(params![album_id], |row| {
@@ -408,7 +415,7 @@ impl DbHelper {
         let mut stmt = self.conn.prepare(
             "INSERT INTO playlists (name, description) VALUES (?, ?) RETURNING id, name, description, created_at",
         )?;
-        
+
         // Use query_row with returning clause (SQLite 3.35+)
         let playlist = stmt.query_row(params![name, description], |row| {
             Ok(crate::playlists::Playlist {
@@ -425,7 +432,8 @@ impl DbHelper {
     }
 
     pub fn delete_playlist(&self, id: i64) -> Result<()> {
-        self.conn.execute("DELETE FROM playlists WHERE id = ?", params![id])?;
+        self.conn
+            .execute("DELETE FROM playlists WHERE id = ?", params![id])?;
         Ok(())
     }
 
@@ -455,7 +463,7 @@ impl DbHelper {
             FROM playlists p
             LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
             GROUP BY p.id
-            ORDER BY p.name ASC"
+            ORDER BY p.name ASC",
         )?;
 
         let playlist_iter = stmt.query_map([], |row| {
@@ -477,7 +485,10 @@ impl DbHelper {
         Ok(playlists)
     }
 
-    pub fn get_playlist_tracks(&self, playlist_id: i64) -> Result<Vec<crate::library::LibraryTrack>> {
+    pub fn get_playlist_tracks(
+        &self,
+        playlist_id: i64,
+    ) -> Result<Vec<crate::library::LibraryTrack>> {
         let mut stmt = self.conn.prepare(
             "SELECT 
                 t.id, 
@@ -492,7 +503,7 @@ impl DbHelper {
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN albums al ON t.album_id = al.id
             WHERE pt.playlist_id = ?
-            ORDER BY pt.position ASC"
+            ORDER BY pt.position ASC",
         )?;
 
         let track_iter = stmt.query_map(params![playlist_id], |row| {
@@ -540,4 +551,3 @@ impl DbHelper {
         Ok(())
     }
 }
-

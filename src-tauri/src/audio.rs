@@ -2,7 +2,10 @@
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Stream, StreamConfig};
-use ringbuf::{traits::{Consumer, Observer, Producer, Split}, HeapRb};
+use ringbuf::{
+    traits::{Consumer, Observer, Producer, Split},
+    HeapRb,
+};
 use serde::Serialize;
 use souvlaki::{MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -98,8 +101,7 @@ impl AudioEngine {
             hwnd,
         };
 
-        let mut controls =
-            MediaControls::new(config).expect("Failed to initialize media controls");
+        let mut controls = MediaControls::new(config).expect("Failed to initialize media controls");
         controls.set_playback(MediaPlayback::Stopped).ok();
 
         let (tx, rx) = mpsc::channel();
@@ -326,7 +328,8 @@ impl AudioWorker {
             AudioCommand::Stop => self.stop(),
             AudioCommand::Seek(pos) => self.seek(pos),
             AudioCommand::SetVolume(vol) => {
-                self.volume.store(f32::to_bits(vol) as u64, Ordering::Relaxed);
+                self.volume
+                    .store(f32::to_bits(vol) as u64, Ordering::Relaxed);
                 self.state.lock().unwrap().volume = vol;
             }
             AudioCommand::SetDevice(name) => {
@@ -355,9 +358,9 @@ impl AudioWorker {
             // 1. Set current secondary to None (sanity check)
             // 2. Spawn new process as secondary
             // 3. Set CrossfadeState to Fading
-            
+
             // Probe new file
-             let metadata = match ffmpeg::probe_file(path) {
+            let metadata = match ffmpeg::probe_file(path) {
                 Ok(m) => m,
                 Err(e) => {
                     let msg = format!("Failed to probe file (crossfade): {}", e);
@@ -373,22 +376,22 @@ impl AudioWorker {
                         start_time: Instant::now(),
                         duration: self.crossfade_setting,
                     };
-                    
+
                     // Note: We don't update current_file_path metadata yet to keeping the UI showing the old song fading out
-                    // But typically UI wants to show the new song immediately. 
+                    // But typically UI wants to show the new song immediately.
                     // Let's swap metadata immediately for UI responsiveness, even though audio is mixing.
                     self.current_file_path = Some(path.to_string());
                     self.duration_ms = metadata.duration_ms;
                     self.current_position_ms = 0;
                     self.samples_played = 0;
-                    
+
                     {
                         let mut s = self.state.lock().unwrap();
                         s.current_file = Some(path.to_string());
                         s.duration_ms = self.duration_ms;
                         s.position_ms = 0;
                     }
-                    
+
                     self.update_media_metadata(title, artist, album, self.duration_ms);
                     self.emit_state();
                 }
@@ -399,14 +402,14 @@ impl AudioWorker {
                 }
             }
         } else {
-             self.play_file_hard_cut(path, title, artist, album);
+            self.play_file_hard_cut(path, title, artist, album);
         }
     }
 
     fn play_file_hard_cut(&mut self, path: &str, title: &str, artist: &str, album: &str) {
         self.stop(); // Clears everything
 
-         let metadata = match ffmpeg::probe_file(path) {
+        let metadata = match ffmpeg::probe_file(path) {
             Ok(m) => m,
             Err(e) => {
                 let msg = format!("Failed to probe file: {}", e);
@@ -446,9 +449,9 @@ impl AudioWorker {
         self.is_playing.store(true, Ordering::Relaxed);
         self.emit_state();
     }
-    
+
     fn update_media_metadata(&self, title: &str, artist: &str, album: &str, duration_ms: u64) {
-         if let Ok(mut c) = self.media_controls.lock() {
+        if let Ok(mut c) = self.media_controls.lock() {
             c.set_metadata(MediaMetadata {
                 title: Some(title),
                 artist: Some(artist),
@@ -466,7 +469,7 @@ impl AudioWorker {
 
     fn recreate_cpal_stream(&mut self, _sample_rate: u32, _channels: u16) {
         let host = cpal::default_host();
-        
+
         let device = if let Some(ref name) = self.selected_device_name {
             host.output_devices()
                 .ok()
@@ -476,7 +479,8 @@ impl AudioWorker {
                 .or_else(|| host.default_output_device())
                 .expect("No output device found")
         } else {
-            host.default_output_device().expect("No output device found")
+            host.default_output_device()
+                .expect("No output device found")
         };
 
         let config: StreamConfig = device.default_output_config().unwrap().into();
@@ -531,8 +535,10 @@ impl AudioWorker {
         let mut track_finished = false;
 
         {
-            let Some(ref mut producer) = self.producer else { return; };
-            
+            let Some(ref mut producer) = self.producer else {
+                return;
+            };
+
             // Ensure we have at least a primary process
             if self.primary_process.is_none() {
                 return;
@@ -540,7 +546,7 @@ impl AudioWorker {
 
             let capacity = producer.capacity().get();
             let target_fill = capacity / 2;
-            
+
             // We will process chunk by chunk
             loop {
                 let occupied = capacity - producer.vacant_len();
@@ -554,8 +560,12 @@ impl AudioWorker {
                 // Check crossfade status
                 let mut crossfade_progress = 0.0;
                 let mut is_fading = false;
-                
-                if let CrossfadeState::Fading { start_time, duration } = self.crossfade_state {
+
+                if let CrossfadeState::Fading {
+                    start_time,
+                    duration,
+                } = self.crossfade_state
+                {
                     let elapsed = start_time.elapsed();
                     if elapsed < duration {
                         crossfade_progress = elapsed.as_secs_f32() / duration.as_secs_f32();
@@ -580,7 +590,9 @@ impl AudioWorker {
                         Ok(n) => n,
                         Err(_) => 0,
                     }
-                } else { 0 };
+                } else {
+                    0
+                };
 
                 if primary_read == 0 && !is_fading {
                     track_finished = true;
@@ -589,24 +601,26 @@ impl AudioWorker {
 
                 // If fading, read secondary
                 if is_fading && self.secondary_process.is_some() {
-                     let secondary_buffer = &mut self.secondary_buffer;
-                     let secondary_read = if let Some(proc) = &mut self.secondary_process {
+                    let secondary_buffer = &mut self.secondary_buffer;
+                    let secondary_read = if let Some(proc) = &mut self.secondary_process {
                         match proc.read_samples(secondary_buffer) {
                             Ok(n) => n,
                             Err(_) => 0,
                         }
-                    } else { 0 };
+                    } else {
+                        0
+                    };
 
                     // Mixing logic
                     // We drive the output by the Secondary (incoming) track since it's the future.
                     let mix_count = secondary_read;
-                    
+
                     if mix_count == 0 {
-                         // Secondary finished or failed?
-                         // If secondary is empty, we probably shouldn't be fading or track ended.
-                         // Treat as track finished for safety to avoid infinite loop.
-                         track_finished = true;
-                         break;
+                        // Secondary finished or failed?
+                        // If secondary is empty, we probably shouldn't be fading or track ended.
+                        // Treat as track finished for safety to avoid infinite loop.
+                        track_finished = true;
+                        break;
                     }
 
                     // Zero-pad primary if it ended early
@@ -615,18 +629,20 @@ impl AudioWorker {
                             primary_buffer[i] = 0.0;
                         }
                     }
-                    
+
                     for i in 0..mix_count {
                         let p = primary_buffer[i];
                         let s = secondary_buffer[i];
-                        primary_buffer[i] = (p * (1.0 - crossfade_progress)) + (s * crossfade_progress);
+                        primary_buffer[i] =
+                            (p * (1.0 - crossfade_progress)) + (s * crossfade_progress);
                     }
-                    
+
                     producer.push_slice(&primary_buffer[..mix_count]);
-                    
+
                     // Inline update_stats
                     self.samples_played += mix_count as u64;
-                    let samples_per_ms = (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                    let samples_per_ms =
+                        (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
                     if samples_per_ms > 0 {
                         self.current_position_ms = self.samples_played / samples_per_ms;
                     }
@@ -634,10 +650,11 @@ impl AudioWorker {
                     // Just Primary
                     if primary_read > 0 {
                         producer.push_slice(&primary_buffer[..primary_read]);
-                        
+
                         // Inline update_stats
                         self.samples_played += primary_read as u64;
-                        let samples_per_ms = (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                        let samples_per_ms =
+                            (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
                         if samples_per_ms > 0 {
                             self.current_position_ms = self.samples_played / samples_per_ms;
                         }
@@ -650,8 +667,6 @@ impl AudioWorker {
             self.handle_end_of_track();
         }
     }
-    
-
 
     fn handle_device_change(&mut self) {
         self.device_error.store(false, Ordering::Relaxed);
@@ -692,8 +707,12 @@ impl AudioWorker {
     fn stop(&mut self) {
         self.is_playing.store(false, Ordering::Relaxed);
 
-        if let Some(mut p) = self.primary_process.take() { p.kill(); }
-        if let Some(mut s) = self.secondary_process.take() { s.kill(); }
+        if let Some(mut p) = self.primary_process.take() {
+            p.kill();
+        }
+        if let Some(mut s) = self.secondary_process.take() {
+            s.kill();
+        }
 
         self._current_stream = None;
         self.producer = None;
@@ -719,23 +738,35 @@ impl AudioWorker {
     }
 
     fn seek(&mut self, pos_ms: u64) {
-        let Some(path) = self.current_file_path.clone() else { return; };
-        
+        let Some(path) = self.current_file_path.clone() else {
+            return;
+        };
+
         // Stop any fading, just hard seek primary
-        if let Some(mut s) = self.secondary_process.take() { s.kill(); }
-        if let Some(mut p) = self.primary_process.take() { p.kill(); }
+        if let Some(mut s) = self.secondary_process.take() {
+            s.kill();
+        }
+        if let Some(mut p) = self.primary_process.take() {
+            p.kill();
+        }
         self.crossfade_state = CrossfadeState::None;
 
         self.producer = None;
         self._current_stream = None;
 
-        match FFmpegProcess::spawn_at(&path, self.device_sample_rate, self.device_channels, Some(pos_ms)) {
+        match FFmpegProcess::spawn_at(
+            &path,
+            self.device_sample_rate,
+            self.device_channels,
+            Some(pos_ms),
+        ) {
             Ok(process) => {
                 self.primary_process = Some(process);
                 self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
-                
+
                 self.current_position_ms = pos_ms;
-                self.samples_played = pos_ms * (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                self.samples_played =
+                    pos_ms * (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
 
                 {
                     let mut s = self.state.lock().unwrap();
@@ -765,9 +796,15 @@ impl AudioWorker {
             let s = self.state.lock().unwrap();
             let pos = MediaPosition(Duration::from_millis(s.position_ms));
             if s.is_paused {
-                c.set_playback(MediaPlayback::Paused { progress: Some(pos) }).ok();
+                c.set_playback(MediaPlayback::Paused {
+                    progress: Some(pos),
+                })
+                .ok();
             } else if s.is_playing {
-                c.set_playback(MediaPlayback::Playing { progress: Some(pos) }).ok();
+                c.set_playback(MediaPlayback::Playing {
+                    progress: Some(pos),
+                })
+                .ok();
             }
         }
     }
@@ -787,7 +824,13 @@ pub fn audio_play(
     album: Option<String>,
     cover: Option<String>,
 ) -> Result<(), AppError> {
-    state.0.play(path, title.unwrap_or("Unknown".into()), artist.unwrap_or("Unknown".into()), album.unwrap_or("Unknown".into()), cover);
+    state.0.play(
+        path,
+        title.unwrap_or("Unknown".into()),
+        artist.unwrap_or("Unknown".into()),
+        album.unwrap_or("Unknown".into()),
+        cover,
+    );
     Ok(())
 }
 
@@ -834,13 +877,19 @@ pub fn audio_get_devices() -> Result<Vec<AudioDevice>, AppError> {
 }
 
 #[tauri::command]
-pub fn audio_set_device(state: tauri::State<AudioState>, device_name: String) -> Result<(), AppError> {
+pub fn audio_set_device(
+    state: tauri::State<AudioState>,
+    device_name: String,
+) -> Result<(), AppError> {
     state.0.set_device(device_name);
     Ok(())
 }
 
 #[tauri::command]
-pub fn audio_set_crossfade(state: tauri::State<AudioState>, duration_secs: u64) -> Result<(), AppError> {
+pub fn audio_set_crossfade(
+    state: tauri::State<AudioState>,
+    duration_secs: u64,
+) -> Result<(), AppError> {
     state.0.set_crossfade(duration_secs);
     Ok(())
 }

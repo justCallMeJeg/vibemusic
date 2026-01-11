@@ -55,7 +55,7 @@ pub fn extract_and_cache_cover(
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
-    
+
     // Use thread ID or random mix to ensure uniqueness across threads
     let temp_name = format!("{}_{}.tmp", hash, timestamp);
     let temp_path = cache_dir.join(&temp_name);
@@ -79,7 +79,7 @@ pub fn extract_and_cache_cover(
         Err(_) => {
             // Clean up temp file
             let _ = fs::remove_file(&temp_path);
-            
+
             // If rename failed, check if target exists (created by another thread)
             if file_path.exists() {
                 Some(file_path.to_string_lossy().to_string())
