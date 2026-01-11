@@ -4,6 +4,7 @@ import { getTracks, Track } from "@/lib/api";
 import MusicListItem from "@/components/ui/music-list";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,14 +106,6 @@ export default function SongsPage() {
     overscan: 5, // Render 5 extra items above/below viewport
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Loading songs...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
       <div className="mt-8 flex items-end justify-between mb-4 px-1 gap-4">
@@ -187,9 +180,23 @@ export default function SongsPage() {
 
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar scroll-mask-y"
+        className="flex-1 overflow-y-auto px-4 pb-42 space-y-1 custom-scrollbar scroll-mask-y"
       >
-        {displayedTracks.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-2 rounded-md">
+                <Skeleton className="w-10 h-10 rounded-md bg-white/5 shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-4 w-48 bg-white/10" />
+                  <Skeleton className="h-3 w-24 bg-white/5" />
+                </div>
+                <Skeleton className="h-3 w-12 bg-white/5" />
+                <Skeleton className="h-3 w-12 bg-white/5" />
+              </div>
+            ))}
+          </div>
+        ) : displayedTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             {searchQuery ? (
               <>

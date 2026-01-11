@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/context-menu";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { Pencil } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PlaylistsPage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
@@ -236,7 +237,17 @@ export default function PlaylistsPage() {
 
       <div className="flex-1 overflow-y-auto px-2 scroll-mask-y">
         {isLoading ? (
-          <div className="text-gray-500 text-center py-8">Loading...</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
+                <Skeleton className="aspect-square w-full rounded-md bg-white/5" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4 bg-white/10" />
+                  <Skeleton className="h-3 w-1/2 bg-white/5" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : playlists.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
             <ListMusic size={48} className="opacity-50" />

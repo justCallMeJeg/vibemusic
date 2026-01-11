@@ -7,6 +7,7 @@ import { ChevronLeft, Play, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import placeholderArt from "@/assets/placeholder-art.jpg";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AlbumDetailPage() {
   const detailView = useDetailView();
@@ -76,8 +77,34 @@ export default function AlbumDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Loading album...</div>
+      <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+        <div className="mt-8 flex items-center gap-2 mb-4">
+          <Skeleton className="h-10 w-10 rounded-md bg-white/5" />
+          <Skeleton className="h-4 w-32 bg-white/10" />
+        </div>
+        <div className="flex gap-6 mb-6 px-2">
+          <Skeleton className="w-40 h-40 rounded-lg bg-white/5 shrink-0" />
+          <div className="flex flex-col justify-center min-w-0 flex-1 space-y-3">
+            <Skeleton className="h-8 w-1/2 bg-white/10" />
+            <Skeleton className="h-4 w-24 bg-white/5" />
+            <Skeleton className="h-4 w-32 bg-white/5" />
+            <div className="flex gap-2 pt-2">
+              <Skeleton className="h-8 w-24 rounded-md bg-white/10" />
+              <Skeleton className="h-8 w-24 rounded-md bg-white/5" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 px-2 space-y-1">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-2">
+              <Skeleton className="w-8 h-8 rounded bg-white/5" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/2 bg-white/10" />
+                <Skeleton className="h-3 w-1/3 bg-white/5" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -24,6 +24,7 @@ import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { Pencil } from "lucide-react";
 import { Playlist } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomePage() {
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -94,8 +95,69 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+        {/* Header Loading */}
+        <div className="mt-8 mb-4">
+          <Skeleton className="h-10 w-64 bg-white/10" />
+          <Skeleton className="h-4 w-48 mt-2 bg-white/5" />
+        </div>
+
+        <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar">
+          {/* Albums Skeleton */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-24 bg-white/10" />
+            </div>
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="w-40 shrink-0 space-y-3">
+                  <Skeleton className="aspect-square w-full rounded-xl bg-white/5" />
+                  <div>
+                    <Skeleton className="h-4 w-32 bg-white/10 mb-1" />
+                    <Skeleton className="h-3 w-20 bg-white/5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Playlists Skeleton */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-24 bg-white/10" />
+            </div>
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="w-40 shrink-0 space-y-3">
+                  <Skeleton className="aspect-square w-full rounded-xl bg-white/5" />
+                  <div>
+                    <Skeleton className="h-4 w-24 bg-white/10 mb-1" />
+                    <Skeleton className="h-3 w-16 bg-white/5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Songs Skeleton */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-32 bg-white/10" />
+            </div>
+            <div className="flex flex-col gap-1">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded-md">
+                  <Skeleton className="w-10 h-10 rounded-md bg-white/5 shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-4 w-48 bg-white/10" />
+                    <Skeleton className="h-3 w-24 bg-white/5" />
+                  </div>
+                  <Skeleton className="h-3 w-12 bg-white/5" />
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     );
   }
