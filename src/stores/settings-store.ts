@@ -252,6 +252,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         // Update Store State
         set({
+          currentProfileId: profileId, // <--- FIX: valid profile ID set here
           theme: theme ?? "dark",
           dynamicGradient: dynamicGradient ?? true,
           libraryPaths: libraryPaths ?? [],

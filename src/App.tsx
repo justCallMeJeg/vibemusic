@@ -96,8 +96,22 @@ export default function App() {
       if (settings.defaultPage) {
         useNavigationStore.getState().setPage(settings.defaultPage as Page);
       }
+
+      if (settings.scanOnStartup && settings.libraryPaths.length > 0) {
+        logger.info(
+          "Auto-scanning library paths on startup:",
+          settings.libraryPaths
+        );
+        setIsScanning(true);
+        invoke("scan_music_library", { folders: settings.libraryPaths })
+          .then(async () => {
+            await fetchLibrary();
+          })
+          .catch((err) => logger.error("Startup scan failed:", err))
+          .finally(() => setIsScanning(false));
+      }
     }
-  }, [isSettingsLoading, activeProfileId]);
+  }, [isSettingsLoading, activeProfileId, fetchLibrary]);
 
   // Handle Close-to-Tray and Quit Confirmation
   useEffect(() => {
