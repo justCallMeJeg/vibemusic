@@ -21,6 +21,7 @@ interface PlaylistState {
     artworkPath?: string
   ) => Promise<boolean>;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
+  reorderPlaylist: (id: number, newOrder: number[]) => Promise<void>;
 }
 
 export const usePlaylistStore = create<PlaylistState>((set, get) => ({
@@ -79,6 +80,17 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
     } catch (error) {
       console.error("Failed to add to playlist:", error);
       toast.error("Failed to add to playlist");
+    }
+  },
+
+  reorderPlaylist: async (id, newOrder) => {
+    try {
+      const { reorderPlaylist } = await import("@/lib/api");
+      await reorderPlaylist(id, newOrder);
+    } catch (error) {
+      console.error("Failed to reorder playlist:", error);
+      toast.error("Failed to reorder playlist");
+      throw error;
     }
   },
 }));

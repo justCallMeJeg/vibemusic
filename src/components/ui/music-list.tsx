@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Clock, Play, Pause } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { Track } from "@/lib/api";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
@@ -125,9 +125,8 @@ const MusicListItem = memo(function MusicListItem({
                   {track.artist || "Unknown Artist"}
                 </p>
               </div>
-              <div className="flex gap-1 h-min items-center shrink-0">
-                <Clock color="gray" size={12} />
-                <p className="text-gray-400 text-xs font-normal">
+              <div className="flex gap-1 h-min items-center shrink-0 w-16 justify-end">
+                <p className="text-gray-400 text-xs font-normal tabular-nums text-right w-full">
                   {formatDuration(track.duration_ms)}
                 </p>
               </div>

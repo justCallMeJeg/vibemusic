@@ -8,6 +8,7 @@ export interface Track {
   duration_ms: number;
   file_path: string;
   artwork_path: string | null;
+  track_number: number | null;
 }
 
 export interface Album {
@@ -91,4 +92,11 @@ export async function removeTrackFromPlaylist(
   trackId: number
 ): Promise<void> {
   return await invoke("remove_track_from_playlist", { playlistId, trackId });
+}
+
+export async function reorderPlaylist(
+  id: number,
+  newOrder: number[]
+): Promise<void> {
+  return await invoke("reorder_playlist", { id, newOrder });
 }

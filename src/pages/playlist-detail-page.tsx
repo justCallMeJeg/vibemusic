@@ -27,13 +27,89 @@ import {
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { Pencil } from "lucide-react";
+import { Pencil, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+interface SortableTrackItemProps {
+  track: Track;
+  index: number;
+  onRemove: (e: React.MouseEvent) => void;
+}
+
+function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : "auto",
+    position: "relative" as const,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors ${
+        isDragging ? "bg-white/10 shadow-xl" : ""
+      }`}
+    >
+      <div
+        className="w-12 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing text-gray-600 group-hover:text-white"
+        {...attributes}
+        {...listeners}
+      >
+        <span className="text-sm font-variant-numeric tabular-nums group-hover:hidden">
+          {index + 1}
+        </span>
+        <GripVertical size={16} className="hidden group-hover:block" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <MusicListItem track={track} />
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400"
+        onClick={onRemove}
+        title="Remove from playlist"
+      >
+        <Trash2 size={16} />
+      </Button>
+    </div>
+  );
+}
 
 export default function PlaylistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const play = useAudioStore((s) => s.play);
-  const { fetchPlaylists } = usePlaylistStore();
+  const { fetchPlaylists, reorderPlaylist } = usePlaylistStore();
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -97,6 +173,36 @@ export default function PlaylistDetailPage() {
     }
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTracks((items) => {
+        const oldIndex = items.findIndex((t) => t.id === active.id);
+        const newIndex = items.findIndex((t) => t.id === over.id);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+
+        // Optimistic update
+        const trackIds = newOrder.map((t) => t.id);
+        if (playlistId) {
+          reorderPlaylist(playlistId, trackIds).catch(() => {
+            // Revert on failure (reload)
+            loadData();
+          });
+        }
+
+        return newOrder;
+      });
+    }
+  };
+
   const handleRemoveTrack = async (trackId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!playlistId) return;
@@ -104,7 +210,9 @@ export default function PlaylistDetailPage() {
     try {
       await removeTrackFromPlaylist(playlistId, trackId);
       toast.success("Track removed");
-      loadData(); // Refresh list
+      const newTracks = tracks.filter((t) => t.id !== trackId);
+      setTracks(newTracks);
+      // loadData(); // No need to reload, just update local state
     } catch (e) {
       console.error(e);
       toast.error("Failed to remove track");
@@ -283,35 +391,29 @@ export default function PlaylistDetailPage() {
               <div className="w-8 text-center">#</div>
               <div className="flex-1">Title</div>
               <div className="p-2">
-                {" "}
-                <div className="w-4" />{" "}
+                <div className="w-4" />
               </div>
             </div>
 
-            {tracks.map((track, index) => (
-              <div
-                key={`${track.id}-${index}`}
-                className="group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors"
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={tracks.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <span className="text-gray-600 text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-white transition-colors">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <MusicListItem track={track} />
-                </div>
-
-                {/* Remove Action */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400"
-                  onClick={(e) => handleRemoveTrack(track.id, e)}
-                  title="Remove from playlist"
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            ))}
+                {tracks.map((track, index) => (
+                  <SortableTrackItem
+                    key={track.id}
+                    track={track}
+                    index={index}
+                    onRemove={(e) => handleRemoveTrack(track.id, e)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         )}
       </div>
