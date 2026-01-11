@@ -67,6 +67,7 @@ interface AudioActions {
   playNext: (track: Track) => void;
   removeFromQueue: (trackId: number) => void;
   reorderQueue: (newQueue: Track[]) => void;
+  clearQueue: () => void;
 
   // Progress Actions
   setPosition: (position: number) => void;
@@ -368,6 +369,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         return {
           queue: newQueue,
           currentIndex: newIndex !== -1 ? newIndex : s.currentIndex,
+        };
+      }),
+
+    clearQueue: () =>
+      set((s) => {
+        if (!s.currentTrack) return { queue: [], currentIndex: -1 };
+        return {
+          queue: [s.currentTrack],
+          currentIndex: 0,
         };
       }),
 

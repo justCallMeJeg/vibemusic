@@ -173,7 +173,7 @@ export default function AlbumDetailPage() {
                   {index + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <MusicListItem track={track} context={tracks} />
+                  <MusicListItem track={track} />
                 </div>
               </div>
             ))}

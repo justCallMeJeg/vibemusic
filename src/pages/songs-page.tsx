@@ -223,7 +223,7 @@ export default function SongsPage() {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <MusicListItem track={track} context={displayedTracks} />
+                  <MusicListItem track={track} />
                 </div>
               );
             })}

@@ -107,9 +107,21 @@ export default function QueueMenu() {
         )}
 
         <div className="mb-2">
-          <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
-            Up Next
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+              Up Next
+            </h2>
+            {queue.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 px-2 text-neutral-500 hover:text-red-400"
+                onClick={useAudioStore.getState().clearQueue}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
