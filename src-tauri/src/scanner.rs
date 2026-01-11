@@ -523,14 +523,14 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
 
         let tx = db.get_conn_mut().transaction().map_err(|e| e.to_string())?;
         DbHelper::delete_tracks(&tx, &missing_ids).map_err(|e| e.to_string())?;
-        
+
         let deleted_count = missing_ids.len();
-        
+
         // Clean up empty albums
         if let Ok(album_count) = DbHelper::delete_empty_albums(&tx) {
-             if album_count > 0 {
-                 println!("Pruned {} empty albums", album_count);
-             }
+            if album_count > 0 {
+                println!("Pruned {} empty albums", album_count);
+            }
         }
 
         tx.commit().map_err(|e| e.to_string())?;

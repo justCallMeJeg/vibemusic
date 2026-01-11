@@ -2,7 +2,13 @@ import { create } from "zustand";
 
 // --- Types ---
 // --- Types ---
-export type Page = "home" | "songs" | "albums" | "playlists" | "settings";
+export type Page =
+  | "home"
+  | "songs"
+  | "albums"
+  | "playlists"
+  | "settings"
+  | "about";
 
 export type DetailView =
   | { type: "album"; id: number }

@@ -32,6 +32,7 @@ export default function MainContent() {
     case "playlists":
       return <PlaylistsPage />;
     case "settings":
+    case "about":
       return <SettingsPage />;
     default:
       return <SongsPage />;

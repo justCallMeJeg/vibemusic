@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Settings, Palette, FolderOpen, Speaker } from "lucide-react";
+import { Settings, Palette, Speaker, Info, FolderOpen } from "lucide-react";
 
 interface SettingsSidebarProps {
   activeTab: string;
@@ -15,6 +15,7 @@ export function SettingsSidebar({
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "library", label: "Library", icon: FolderOpen },
     { id: "audio", label: "Audio", icon: Speaker },
+    { id: "about", label: "About", icon: Info },
   ];
 
   return (

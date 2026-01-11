@@ -269,7 +269,8 @@ impl DbHelper {
     }
 
     pub fn delete_track(&self, id: i64) -> Result<()> {
-        self.conn.execute("DELETE FROM tracks WHERE id = ?", params![id])?;
+        self.conn
+            .execute("DELETE FROM tracks WHERE id = ?", params![id])?;
         Ok(())
     }
 

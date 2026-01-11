@@ -19,6 +19,7 @@
     "opener:default",
     "log:default",
     "updater:default",
+    "process:default",
     "fs:scope",
     "sql:default",
     "sql:allow-execute",

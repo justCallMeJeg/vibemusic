@@ -37,6 +37,7 @@ import { useLibraryStore } from "@/stores/library-store";
 import { logger } from "@/lib/logger";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { useUpdateStore } from "./stores/update-store";
 
 // ... (imports)
 
@@ -110,6 +111,23 @@ export default function App() {
           .catch((err) => logger.error("Startup scan failed:", err))
           .finally(() => setIsScanning(false));
       }
+
+      // Check for updates
+      const updateStore = useUpdateStore.getState();
+      updateStore.check(true).then((hasUpdate) => {
+        if (hasUpdate) {
+          toast.info("Update Available", {
+            description: "A new version of vibemusic is available.",
+            action: {
+              label: "View",
+              onClick: () => {
+                useNavigationStore.getState().setPage("about"); // Navigate to settings/about
+              },
+            },
+            duration: 10000,
+          });
+        }
+      });
     }
   }, [isSettingsLoading, activeProfileId, fetchLibrary]);
 
@@ -136,12 +154,15 @@ export default function App() {
 
   // Listen for global scan progress to refresh library
   useEffect(() => {
-    const unlistenPromise = listen("scan-progress", (event: any) => {
-      if (event.payload?.status === "complete") {
-        logger.info("Scan complete event received, refreshing library...");
-        fetchLibrary();
+    const unlistenPromise = listen(
+      "scan-progress",
+      (event: { payload: { status: string } }) => {
+        if (event.payload?.status === "complete") {
+          logger.info("Scan complete event received, refreshing library...");
+          fetchLibrary();
+        }
       }
-    });
+    );
     return () => {
       unlistenPromise.then((u) => u());
     };
