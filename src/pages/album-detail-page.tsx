@@ -7,7 +7,7 @@ import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 

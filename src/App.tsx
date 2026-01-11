@@ -356,7 +356,7 @@ export default function App() {
           <div
             className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
               isQueueOpen ? "w-96 p-1" : "w-0 p-0"
-            } ${isPlayerVisible ? "pb-42" : "pb-6"}`}
+            } ${isPlayerVisible ? "pb-39" : "pb-6"}`}
           >
             <QueueMenu />
           </div>

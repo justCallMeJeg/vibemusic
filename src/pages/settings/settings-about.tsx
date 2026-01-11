@@ -20,6 +20,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { appLogDir } from "@tauri-apps/api/path";
+import { openPath } from "@tauri-apps/plugin-opener";
+import { FileText } from "lucide-react";
 
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
@@ -177,6 +180,37 @@ export function SettingsAbout() {
         </div>
       </div>
 
+      {/* Logs Section */}
+      <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <h3 className="text-white font-medium">Trobleshooting</h3>
+            <p className="text-sm text-neutral-400">
+              View application logs for debugging
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white gap-2"
+            onClick={async () => {
+              try {
+                const logDir = await appLogDir();
+                await openPath(logDir);
+              } catch (error) {
+                console.error("Failed to open logs folder:", error);
+                import("sonner").then(({ toast }) => {
+                  toast.error("Failed to open logs folder", {
+                    description: "Please check if the logs directory exists.",
+                  });
+                });
+              }
+            }}
+          >
+            <FileText className="h-4 w-4" />
+            Open Logs
+          </Button>
+        </div>
+      </div>
       <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );

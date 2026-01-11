@@ -1,7 +1,7 @@
 import { getAlbumTracks } from "@/lib/api";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 import {
   ContextMenu,
   ContextMenuContent,

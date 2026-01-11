@@ -13,7 +13,7 @@ import {
   ContextMenuTrigger,
 } from "../../ui/context-menu";
 
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 
 interface MusicCardProps {
   track: Track;

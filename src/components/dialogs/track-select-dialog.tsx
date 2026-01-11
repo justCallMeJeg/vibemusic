@@ -11,7 +11,7 @@ import { Search, Check } from "lucide-react";
 import { Track, getTracks } from "@/lib/api";
 import { useLibraryStore } from "@/stores/library-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 
 interface TrackSelectDialogProps {
   open: boolean;

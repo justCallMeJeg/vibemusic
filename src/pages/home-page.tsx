@@ -3,7 +3,7 @@ import { getAlbumTracks, getPlaylistTracks } from "@/lib/api";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 import MusicListItem from "@/components/shared/item/music-list";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Play } from "lucide-react";

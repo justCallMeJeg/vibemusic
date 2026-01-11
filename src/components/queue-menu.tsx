@@ -23,7 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import QueueItem from "./shared/item/queue-item";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 
 export default function QueueMenu() {
   // Use atomic selectors

@@ -34,7 +34,7 @@ import {
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 
 export default function MusicControler() {
   // Use atomic selectors for minimal re-renders

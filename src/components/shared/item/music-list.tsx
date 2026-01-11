@@ -19,7 +19,7 @@ import {
 } from "../../ui/context-menu";
 import { useLibraryStore } from "@/stores/library-store";
 
-import placeholderArt from "@/assets/placeholder-art.jpg";
+import placeholderArt from "@/assets/placeholder-art.png";
 
 // Pure function - hoisted outside component to avoid recreation
 const formatDuration = (ms: number) => {
