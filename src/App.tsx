@@ -225,14 +225,25 @@ export default function App() {
           <div
             id="user_profile"
             onClick={() => selectProfile(null)} // Click to switch profile
-            className={`aspect-square w-full rounded-lg ${
-              activeProfile?.color || "bg-gray-600"
-            } flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform`}
+            className={`aspect-square w-full shrink-0 rounded-lg overflow-hidden ${
+              !activeProfile?.avatarPath &&
+              (activeProfile?.color || "bg-gray-600")
+            } flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform relative`}
             title={`Current: ${
               activeProfile?.name || "User"
             } (Click to switch)`}
           >
-            {activeProfile?.name?.[0]?.toUpperCase()}
+            {activeProfile?.avatarPath ? (
+              <img
+                src={convertFileSrc(activeProfile.avatarPath)}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              activeProfile?.name?.[0]?.toUpperCase()
+            )}
+
+            {/* Hover overlay hint? Optional */}
           </div>
           <div className="flex justify-center h-full">
             <NavigationMenu

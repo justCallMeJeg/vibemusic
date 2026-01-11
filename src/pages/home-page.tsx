@@ -20,12 +20,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { cn } from "@/lib/utils";
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Pencil } from "lucide-react";
 import { Playlist } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
 
 export default function HomePage() {
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -168,7 +170,7 @@ export default function HomePage() {
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="mt-8 mb-4">
+      <div className="mt-8 mb-6 px-2">
         <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Welcome Back
         </h1>
@@ -176,7 +178,10 @@ export default function HomePage() {
       </div>
       <div
         ref={scrollRef}
-        className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar scroll-mask-y"
+        className={cn(
+          "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
+          (albums.length > 0 || playlists.length > 0) && "pb-42"
+        )}
       >
         {/* Albums Section */}
         {albums.length > 0 && (
@@ -192,7 +197,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
               {albums.map((album) => (
                 <ContextMenu key={album.id}>
                   <ContextMenuTrigger>
@@ -268,7 +273,7 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
+            <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
               {playlists.map((playlist) => (
                 <ContextMenu key={playlist.id}>
                   <ContextMenuTrigger>
@@ -363,17 +368,11 @@ export default function HomePage() {
         {albums.length === 0 &&
           playlists.length === 0 &&
           tracks.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="p-4 rounded-full bg-white/5 mb-4">
-                <Play size={48} className="text-gray-500" />
-              </div>
-              <h2 className="text-xl font-bold">Your library is empty</h2>
-              <p className="text-gray-400 mt-2 mb-6 max-w-sm">
-                Import your local music to get started. Go to the Songs page to
-                import a folder.
-              </p>
-              <Button onClick={() => setPage("songs")}>Go to Songs</Button>
-            </div>
+            <EmptyState
+              icon={Play}
+              title="Your library is empty"
+              description="Import your local music to get started."
+            />
           )}
       </div>
 

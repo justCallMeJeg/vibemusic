@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Manager};
 use std::path::PathBuf;
 
 pub struct ProfileState(pub Mutex<Option<String>>);
@@ -47,4 +47,57 @@ pub fn delete_profile_data(app: AppHandle, profile_id: String) -> Result<(), Str
     // 3. Delete Store .lock? (Optional, store plugin might leave lock files)
     
     Ok(())
+}
+
+#[tauri::command]
+pub fn upload_profile_avatar(app: AppHandle, profile_id: String, file_path: String) -> Result<String, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let avatars_dir = app_data_dir.join("avatars");
+    
+    // Create avatars directory if it doesn't exist
+    if !avatars_dir.exists() {
+        std::fs::create_dir_all(&avatars_dir).map_err(|e| e.to_string())?;
+    }
+
+    let source_path = std::path::Path::new(&file_path);
+    if !source_path.exists() {
+        return Err("Source file does not exist".to_string());
+    }
+
+    let extension = source_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("jpg"); // Default to jpg if unknown, though we should validate
+
+    let target_filename = format!("{}.{}", profile_id, extension);
+    let target_path = avatars_dir.join(&target_filename);
+
+    std::fs::copy(source_path, &target_path).map_err(|e| format!("Failed to copy file: {}", e))?;
+
+    Ok(target_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn save_profile_avatar_bytes(
+    app: AppHandle,
+    profile_id: String,
+    image_data: Vec<u8>,
+) -> Result<String, String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let avatars_dir = app_data_dir.join("avatars");
+
+    if !avatars_dir.exists() {
+        std::fs::create_dir_all(&avatars_dir).map_err(|e| e.to_string())?;
+    }
+
+    // Always save as jpg for cropped images (assuming ImageCropDialog outputs jpeg)
+    // Or we could detect signature, but jpg is safe assumption from frontend default (0.9 quality jpeg)
+    let target_filename = format!("{}.jpg", profile_id);
+    let target_path = avatars_dir.join(&target_filename);
+
+    use std::io::Write;
+    let mut file = std::fs::File::create(&target_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    file.write_all(&image_data).map_err(|e| format!("Failed to write data: {}", e))?;
+
+    Ok(target_path.to_string_lossy().to_string())
 }

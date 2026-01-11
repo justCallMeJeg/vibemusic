@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/empty-state";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -255,10 +256,11 @@ export default function PlaylistsPage() {
             ))}
           </div>
         ) : playlists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">
-            <ListMusic size={48} className="opacity-50" />
-            <p>No playlists yet</p>
-          </div>
+          <EmptyState
+            icon={ListMusic}
+            title="No playlists created"
+            description="Create your first playlist to organize your music."
+          />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
             {playlists.map((playlist) => (

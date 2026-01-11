@@ -3,7 +3,8 @@ import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ChevronLeft, Play, Shuffle } from "lucide-react";
+import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import placeholderArt from "@/assets/placeholder-art.jpg";
@@ -189,9 +190,11 @@ export default function AlbumDetailPage() {
       {/* Track list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-mask-y">
         {tracks.length === 0 ? (
-          <div className="text-gray-500 text-center p-8">
-            No tracks in this album
-          </div>
+          <EmptyState
+            icon={Music}
+            title="No tracks found"
+            description="This album appears to be empty."
+          />
         ) : (
           <div className="flex flex-col gap-1 p-1 pb-42">
             {tracks.map((track, index) => (

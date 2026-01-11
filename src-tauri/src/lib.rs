@@ -138,7 +138,9 @@ pub fn run() {
             playlists::remove_track_from_playlist,
             // Profile
             profile::set_active_profile,
-            profile::delete_profile_data
+            profile::delete_profile_data,
+            profile::upload_profile_avatar,
+            profile::save_profile_avatar_bytes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

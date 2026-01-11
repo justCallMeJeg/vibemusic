@@ -9,7 +9,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Play, Shuffle, ListPlus } from "lucide-react";
+import { Play, Shuffle, ListPlus, Disc } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { useAudioStore } from "@/stores/audio-store";
 import { toast } from "react-hot-toast";
 
@@ -109,13 +110,17 @@ export default function AlbumsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <h1 className="mt-8 mb-4 text-3xl font-bold ml-1">Albums</h1>
+      <div className="mt-8 flex items-center justify-between mb-6 px-2">
+        <h1 className="text-3xl font-bold">Albums</h1>
+      </div>
 
-      <div className="flex-1 overflow-y-auto scroll-mask-y">
+      <div className="flex-1 overflow-y-auto scroll-mask-y px-2">
         {albums.length === 0 ? (
-          <div className="text-gray-500 text-center p-8">
-            No albums found. Import some music to see albums here.
-          </div>
+          <EmptyState
+            icon={Disc}
+            title="No albums found"
+            description="Import music using the sidebar button to get started."
+          />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
             {albums.map((album) => {

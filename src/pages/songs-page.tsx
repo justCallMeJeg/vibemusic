@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/empty-state";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
 
@@ -112,8 +113,8 @@ export default function SongsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <div className="mt-8 flex items-end justify-between mb-4 px-1 gap-4">
-        <h1 className="text-3xl font-bold ml-1">Songs</h1>
+      <div className="mt-8 flex items-center justify-between mb-6 px-2 gap-4">
+        <h1 className="text-3xl font-bold">Songs</h1>
 
         {/* Toolbar */}
         <div className="flex items-center gap-2">
@@ -184,7 +185,7 @@ export default function SongsPage() {
 
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto px-4 pb-42 pt-4 space-y-1 custom-scrollbar scroll-mask-y"
+        className="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar scroll-mask-y"
       >
         {isLoading ? (
           <div className="flex flex-col gap-1">
@@ -201,24 +202,19 @@ export default function SongsPage() {
             ))}
           </div>
         ) : displayedTracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            {searchQuery ? (
-              <>
-                <Filter className="h-10 w-10 text-gray-600 mb-4" />
-                <h2 className="text-xl font-bold">No matches found</h2>
-                <p className="text-gray-400 mt-2">
-                  Try adjusting your filters.
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-xl font-bold">No songs found</h2>
-                <p className="text-gray-400 mt-2 mb-6 max-w-sm">
-                  Import music using the sidebar button to get started.
-                </p>
-              </>
-            )}
-          </div>
+          searchQuery ? (
+            <EmptyState
+              icon={Search}
+              title="No matches found"
+              description={`We couldn't find any songs matching "${searchQuery}"`}
+            />
+          ) : (
+            <EmptyState
+              icon={Filter}
+              title="No songs found"
+              description="Import music using the sidebar button to get started."
+            />
+          )
         ) : (
           <div
             style={{

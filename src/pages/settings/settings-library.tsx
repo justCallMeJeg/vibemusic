@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import { EmptyState } from "@/components/empty-state";
 
 export function SettingsLibrary() {
   const { libraryPaths, addLibraryPath, removeLibraryPath } =
@@ -101,9 +102,14 @@ export function SettingsLibrary() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500 bg-white/5 rounded-lg border border-dashed border-white/10">
-              No folders added yet.
-            </div>
+            <EmptyState
+              icon={FolderOpen}
+              title="No library folders"
+              description="No folders added yet."
+              variant="default"
+              emptyClassName="py-8 bg-white/5 border-dashed"
+              className="h-auto"
+            />
           )}
 
           <div className="pt-4 border-t border-white/10 flex gap-4">

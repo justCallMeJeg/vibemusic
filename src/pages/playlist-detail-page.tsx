@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { ChevronLeft, Play, Trash2, Plus } from "lucide-react";
+import { ChevronLeft, Play, Trash2, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { usePlaylistStore } from "@/stores/playlist-store";
+import { EmptyState } from "@/components/empty-state";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Pencil, GripVertical } from "lucide-react";
@@ -430,9 +431,16 @@ export default function PlaylistDetailPage() {
       {/* Track list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-mask-y">
         {tracks.length === 0 ? (
-          <div className="text-gray-500 text-center p-8">
-            This playlist is empty. Add songs from your library!
-          </div>
+          <EmptyState
+            icon={Music}
+            title="This playlist is empty"
+            description="Add songs from your library to build this playlist."
+            action={
+              <Button variant="outline" onClick={() => setIsAddSongOpen(true)}>
+                Add Songs
+              </Button>
+            }
+          />
         ) : (
           <div className="flex flex-col gap-1 pb-42">
             {/* Header Row */}
