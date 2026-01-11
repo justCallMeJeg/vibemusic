@@ -1,5 +1,5 @@
 import { useSettingsStore } from "@/stores/settings-store";
-import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -89,21 +89,32 @@ export function SettingsAudio() {
         </div>
 
         {/* Crossfade Setting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-white/10">
           <div className="space-y-1">
             <div className="font-medium">Crossfade</div>
             <div className="text-sm text-gray-400">
-              Overlap songs by {crossfadeDuration}s
+              Overlap songs by specifying duration in milliseconds.
+            </div>
+            <div className="text-xs text-gray-500 pt-1">
+              Tip: 1000ms = 1 second
             </div>
           </div>
-          <div className="w-48">
-            <Slider
-              value={[crossfadeDuration]}
-              min={0}
-              max={12}
-              step={1}
-              onValueChange={(vals) => setCrossfadeDuration(vals[0])}
-            />
+          <div className="w-48 space-y-2">
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={crossfadeDuration}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*$/.test(val)) {
+                    setCrossfadeDuration(Number(val));
+                  }
+                }}
+                className="bg-neutral-900 border-neutral-800 text-right font-mono"
+                placeholder="0"
+              />
+              <span className="text-sm text-gray-500 font-medium">ms</span>
+            </div>
           </div>
         </div>
       </div>

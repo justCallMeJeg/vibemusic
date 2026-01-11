@@ -407,10 +407,9 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           });
 
           // Automatic Crossfade Logic
-          const crossfadeSec =
+          const crossfadeMs =
             useSettingsStore.getState().crossfadeDuration || 0;
-          if (crossfadeSec > 0 && s.duration_ms > 0) {
-            const crossfadeMs = crossfadeSec * 1000;
+          if (crossfadeMs > 0 && s.duration_ms > 0) {
             const threshold = s.duration_ms - crossfadeMs;
 
             // Check if we reached the transition point
