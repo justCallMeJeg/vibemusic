@@ -30,7 +30,11 @@ export default function AlbumDetailPage() {
           getAlbumTracks(albumId),
         ]);
         setAlbum(albumData);
-        setTracks(tracksData);
+        // Sort by track number by default
+        const sortedTracks = tracksData.sort(
+          (a, b) => (a.track_number || 0) - (b.track_number || 0)
+        );
+        setTracks(sortedTracks);
       } catch (error) {
         console.error("Failed to load album:", error);
       } finally {
@@ -147,10 +151,6 @@ export default function AlbumDetailPage() {
             >
               <Shuffle size={14} />
               Shuffle
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Plus size={14} />
-              Add Song
             </Button>
           </div>
         </div>
