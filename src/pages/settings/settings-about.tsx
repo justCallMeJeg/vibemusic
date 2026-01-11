@@ -5,7 +5,6 @@ import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useState } from "react";
 import { UpdateDialog } from "@/components/dialogs/update-dialog";
 import { cn } from "@/lib/utils";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
@@ -58,24 +62,31 @@ export function SettingsAbout() {
           </div>
           <div className="flex bg-neutral-900 p-1 rounded-lg border border-neutral-800">
             {(["stable", "dev"] as const).map((ch) => (
-              <button
-                key={ch}
-                onClick={() => {
-                  if (ch === "dev" && channel !== "dev") {
-                    setWarningOpen(true);
-                  } else {
-                    useUpdateStore.getState().setChannel(ch);
-                  }
-                }}
-                className={cn(
-                  "px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize",
-                  channel === ch
-                    ? "bg-neutral-800 text-white shadow-sm"
-                    : "text-neutral-400 hover:text-white"
-                )}
-              >
-                {ch}
-              </button>
+              <Tooltip key={ch}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (ch === "dev" && channel !== "dev") {
+                        setWarningOpen(true);
+                      } else {
+                        useUpdateStore.getState().setChannel(ch);
+                      }
+                    }}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize",
+                      channel === ch
+                        ? "bg-neutral-800 text-white shadow-sm"
+                        : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {ch}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Switch to{" "}
+                  {ch === "stable" ? "Stable Release" : "Nightly Dev Build"}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>
@@ -122,23 +133,31 @@ export function SettingsAbout() {
             <p className="text-sm text-white/50">Version {appVersion}</p>
           </div>
           <div className="text-right">
-            <Button
-              variant="outline"
-              onClick={handleCheck}
-              disabled={isChecking}
-              className="bg-white/5 border-white/10 hover:bg-white/10 text-white min-w-[140px]"
-            >
-              {isChecking ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Checking...
-                </>
-              ) : isUpdateAvailable ? (
-                "View Update"
-              ) : (
-                "Check for Updates"
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={handleCheck}
+                  disabled={isChecking}
+                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white min-w-[140px]"
+                >
+                  {isChecking ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Checking...
+                    </>
+                  ) : isUpdateAvailable ? (
+                    "View Update"
+                  ) : (
+                    "Check for Updates"
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Check for updates on{" "}
+                {channel === "stable" ? "Stable" : "Nightly"} channel
+              </TooltipContent>
+            </Tooltip>
             {lastChecked && !isChecking && !isUpdateAvailable && (
               <p className="text-xs text-white/30 mt-2 flex items-center justify-end gap-1">
                 <CheckCircle2 className="h-3 w-3" />

@@ -2,24 +2,28 @@ import {
   Disc,
   Import,
   ListMusic,
-  Music,
-  Search,
+  Music2,
   Settings,
-  TvMinimal,
+  Search,
+  Home,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   useCurrentPage,
   useNavigationStore,
   type Page,
 } from "@/stores/navigation-store";
+import { useSettingsStore } from "@/stores/settings-store";
 
 interface NavigationMenuProps {
   onImport?: () => void;
   isScanning?: boolean;
 }
-
-import { useSettingsStore } from "@/stores/settings-store";
 
 export default function NavigationMenu({
   onImport,
@@ -32,12 +36,21 @@ export default function NavigationMenu({
   const { sidebarItems } = useSettingsStore();
 
   const iconMap: Record<string, React.ReactNode> = {
-    home: <TvMinimal />,
+    home: <Home />,
     search: <Search />,
-    songs: <Music />,
+    songs: <Music2 />,
     albums: <Disc />,
     playlists: <ListMusic />,
     settings: <Settings />,
+  };
+
+  const labelMap: Record<string, string> = {
+    home: "Home",
+    search: "Search",
+    songs: "Songs",
+    albums: "Albums",
+    playlists: "Playlists",
+    settings: "Settings",
   };
 
   return (
@@ -52,22 +65,28 @@ export default function NavigationMenu({
               const isActive = !isSearch && currentPage === item.id;
 
               return (
-                <Button
-                  key={item.id}
-                  size="icon-lg"
-                  variant="ghost"
-                  onClick={() => {
-                    if (isSearch) toggleSearch();
-                    else setPage(item.id as Page);
-                  }}
-                  className={
-                    isActive || (isSearch && isSearchOpen)
-                      ? "text-white"
-                      : "text-gray-500 hover:text-white"
-                  }
-                >
-                  {iconMap[item.id] || <Disc />}
-                </Button>
+                <Tooltip key={item.id} delayDuration={1000}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon-lg"
+                      variant="ghost"
+                      onClick={() => {
+                        if (isSearch) toggleSearch();
+                        else setPage(item.id as Page);
+                      }}
+                      className={
+                        isActive || (isSearch && isSearchOpen)
+                          ? "text-white"
+                          : "text-gray-500 hover:text-white"
+                      }
+                    >
+                      {iconMap[item.id] || <Disc />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {labelMap[item.id] || item.id}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
         </div>
@@ -77,15 +96,20 @@ export default function NavigationMenu({
           isScanning ? "animate-pulse border border-blue-400" : ""
         }`}
       >
-        <Button
-          size="icon-lg"
-          variant="ghost"
-          onClick={onImport}
-          disabled={isScanning}
-          className="text-gray-500 hover:text-white"
-        >
-          <Import />
-        </Button>
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon-lg"
+              variant="ghost"
+              onClick={onImport}
+              disabled={isScanning}
+              className="text-gray-500 hover:text-white"
+            >
+              <Import />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Import Library</TooltipContent>
+        </Tooltip>
       </div>
     </aside>
   );

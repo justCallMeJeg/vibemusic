@@ -14,6 +14,11 @@ import {
   Minimize2,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Slider } from "./ui/slider";
 import {
   useAudioStore,
@@ -128,69 +133,125 @@ export default function MusicControler() {
         </div>
         <div className="flex items-center w-full">
           <div className="flex items-center gap-1 w-full justify-between">
-            <Button
-              variant="ghost"
-              onClick={toggleShuffle}
-              className={shuffle ? "text-purple-500 hover:text-purple-400" : ""}
-            >
-              <Shuffle size={20} />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => previous()}>
-              <SkipBack size={18} />
-            </Button>
-            <Button
-              size={"icon"}
-              variant="ghost"
-              onClick={handlePlayPause}
-              className="h-9 w-9"
-            >
-              {isPlaying ? (
-                <Pause className="fill-white h-5 w-5" />
-              ) : (
-                <Play className="fill-white ml-0.5 h-5 w-5" />
-              )}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => next()}>
-              <SkipForward size={18} />
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={toggleRepeat}
-              className={
-                repeat !== "off" ? "text-purple-500 hover:text-purple-400" : ""
-              }
-            >
-              {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
-            </Button>
+            <Tooltip delayDuration={1000}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={toggleShuffle}
+                  className={
+                    shuffle ? "text-purple-500 hover:text-purple-400" : ""
+                  }
+                >
+                  <Shuffle size={20} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Shuffle {shuffle ? "On" : "Off"}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={1000}>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => previous()}>
+                  <SkipBack size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Previous</TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={1000}>
+              <TooltipTrigger asChild>
+                <Button
+                  size={"icon"}
+                  variant="ghost"
+                  onClick={handlePlayPause}
+                  className="h-9 w-9"
+                >
+                  {isPlaying ? (
+                    <Pause className="fill-white h-5 w-5" />
+                  ) : (
+                    <Play className="fill-white ml-0.5 h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isPlaying ? "Pause" : "Play"}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={1000}>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => next()}>
+                  <SkipForward size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Next</TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={1000}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={toggleRepeat}
+                  className={
+                    repeat !== "off"
+                      ? "text-purple-500 hover:text-purple-400"
+                      : ""
+                  }
+                >
+                  {repeat === "one" ? (
+                    <Repeat1 size={20} />
+                  ) : (
+                    <Repeat size={20} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Repeat{" "}
+                {repeat === "off" ? "Off" : repeat === "all" ? "All" : "One"}
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           <div className="h-8 w-px bg-white/10 mx-1" />
 
-          <Button variant="ghost" size="icon" onClick={toggleMute}>
-            {volume === 0 ? (
-              <VolumeX size={18} className="text-gray-400" />
-            ) : (
-              <Volume2 size={18} />
-            )}
-          </Button>
-          <Button
-            id="queue-menu-button"
-            variant="ghost"
-            onClick={toggleQueue}
-            className={
-              isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""
-            }
-          >
-            <Logs size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCompact(false)}
-            className="ml-2 text-gray-400 hover:text-white"
-          >
-            <Maximize2 size={18} />
-          </Button>
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={toggleMute}>
+                {volume === 0 ? (
+                  <VolumeX size={18} className="text-gray-400" />
+                ) : (
+                  <Volume2 size={18} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{volume === 0 ? "Unmute" : "Mute"}</TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                id="queue-menu-button"
+                variant="ghost"
+                onClick={toggleQueue}
+                className={
+                  isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""
+                }
+              >
+                <Logs size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Queue</TooltipContent>
+          </Tooltip>
+
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCompact(false)}
+                className="ml-2 text-gray-400 hover:text-white"
+              >
+                <Maximize2 size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Expand Player</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     );
@@ -235,35 +296,79 @@ export default function MusicControler() {
       >
         {/* Controls */}
         <div className=" flex items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={toggleShuffle}
-            className={shuffle ? "text-purple-500 hover:text-purple-400" : ""}
-          >
-            <Shuffle size={20} />
-          </Button>
-          <Button variant="ghost" onClick={() => previous()}>
-            <SkipBack size={20} />
-          </Button>
-          <Button size={"icon-lg"} variant="ghost" onClick={handlePlayPause}>
-            {isPlaying ? (
-              <Pause className="fill-white" />
-            ) : (
-              <Play className="fill-white ml-0.5" />
-            )}
-          </Button>
-          <Button variant="ghost" onClick={() => next()}>
-            <SkipForward size={20} />
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={toggleRepeat}
-            className={
-              repeat !== "off" ? "text-purple-500 hover:text-purple-400" : ""
-            }
-          >
-            {repeat === "one" ? <Repeat1 size={20} /> : <Repeat size={20} />}
-          </Button>
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={toggleShuffle}
+                className={
+                  shuffle ? "text-purple-500 hover:text-purple-400" : ""
+                }
+              >
+                <Shuffle size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Shuffle {shuffle ? "On" : "Off"}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" onClick={() => previous()}>
+                <SkipBack size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Previous</TooltipContent>
+          </Tooltip>
+
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                size={"icon-lg"}
+                variant="ghost"
+                onClick={handlePlayPause}
+              >
+                {isPlaying ? (
+                  <Pause className="fill-white" />
+                ) : (
+                  <Play className="fill-white ml-0.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isPlaying ? "Pause" : "Play"}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" onClick={() => next()}>
+                <SkipForward size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Next</TooltipContent>
+          </Tooltip>
+
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={toggleRepeat}
+                className={
+                  repeat !== "off"
+                    ? "text-purple-500 hover:text-purple-400"
+                    : ""
+                }
+              >
+                {repeat === "one" ? (
+                  <Repeat1 size={20} />
+                ) : (
+                  <Repeat size={20} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Repeat{" "}
+              {repeat === "off" ? "Off" : repeat === "all" ? "All" : "One"}
+            </TooltipContent>
+          </Tooltip>
         </div>
         {/* Seeker */}
         <div className=" flex items-center gap-4 w-full">
@@ -285,15 +390,20 @@ export default function MusicControler() {
       <div id="actions" className=" flex items-center gap-2 justify-end">
         {/* Volume */}
         <div className="flex items-center gap-2 w-32">
-          <Button variant="ghost" onClick={toggleMute}>
-            {volume === 0 ? (
-              <VolumeX size={20} className="text-gray-400" />
-            ) : volume < 0.5 ? (
-              <Volume1 size={20} />
-            ) : (
-              <Volume2 size={20} />
-            )}
-          </Button>
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" onClick={toggleMute}>
+                {volume === 0 ? (
+                  <VolumeX size={20} className="text-gray-400" />
+                ) : volume < 0.5 ? (
+                  <Volume1 size={20} />
+                ) : (
+                  <Volume2 size={20} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{volume === 0 ? "Unmute" : "Mute"}</TooltipContent>
+          </Tooltip>
           <Slider
             value={[volume]}
             max={1}
@@ -302,23 +412,35 @@ export default function MusicControler() {
           />
         </div>
         {/* Queue Menu Toggle */}
-        <Button
-          id="queue-menu-button"
-          variant="ghost"
-          onClick={toggleQueue}
-          className={isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""}
-        >
-          <Logs size={20} />
-        </Button>
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger asChild>
+            <Button
+              id="queue-menu-button"
+              variant="ghost"
+              onClick={toggleQueue}
+              className={
+                isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""
+              }
+            >
+              <Logs size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Queue</TooltipContent>
+        </Tooltip>
 
         {/* Compact Mode Toggle */}
-        <Button
-          variant="ghost"
-          onClick={() => setIsCompact(true)}
-          className="text-gray-400 hover:text-white"
-        >
-          <Minimize2 size={20} />
-        </Button>
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              onClick={() => setIsCompact(true)}
+              className="text-gray-400 hover:text-white"
+            >
+              <Minimize2 size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Mini Player</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

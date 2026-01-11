@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { X, Minus, Square, Copy } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 // import { cn } from "@/lib/utils";
 import { useUpdateStore } from "@/stores/update-store";
 
@@ -53,24 +58,48 @@ export function TitleBar() {
       </div>
 
       <div className="flex items-center gap-1 relative z-50">
-        <button
-          onClick={() => appWindow.minimize()}
-          className="p-2 hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white cursor-pointer"
-        >
-          <Minus size={14} />
-        </button>
-        <button
-          onClick={handleMaximize}
-          className="p-2 hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white cursor-pointer"
-        >
-          {isMaximized ? <Copy size={14} /> : <Square size={14} />}
-        </button>
-        <button
-          onClick={() => appWindow.close()}
-          className="p-2 hover:bg-red-500/20 hover:text-red-500 rounded-md transition-colors text-gray-400 cursor-pointer"
-        >
-          <X size={14} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => appWindow.minimize()}
+              className="p-2 hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white cursor-pointer"
+            >
+              <Minus size={14} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Minimize</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleMaximize}
+              className="p-2 hover:bg-white/10 rounded-md transition-colors text-gray-400 hover:text-white cursor-pointer"
+            >
+              {isMaximized ? <Copy size={14} /> : <Square size={14} />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {isMaximized ? "Restore Down" : "Maximize"}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => appWindow.close()}
+              className="p-2 hover:bg-red-500/20 hover:text-red-500 rounded-md transition-colors text-gray-400 cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="bottom"
+            className="bg-red-900 border-red-800 text-white"
+          >
+            Close
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );
