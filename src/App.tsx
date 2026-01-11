@@ -15,6 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 
@@ -34,6 +35,8 @@ import ProfileSelectionPage from "@/pages/profile-selection-page";
 
 import { useLibraryStore } from "@/stores/library-store";
 import { logger } from "@/lib/logger";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 // ... (imports)
 
@@ -51,17 +54,14 @@ export default function App() {
     dynamicGradient,
     loadSettings,
     isLoading: isSettingsLoading,
+    addLibraryPath,
+    libraryPaths,
   } = useSettingsStore();
 
   // Library Store Initialization
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
   useEffect(() => {
     fetchLibrary();
-
-    // Listen for scan completion to refresh library
-    // We can assume scan_music_library invokes might trigger an event,
-    // or we just manually refresh after the import action below.
-    // For now, let's just fetch on mount.
   }, [fetchLibrary]);
 
   const {
@@ -134,6 +134,19 @@ export default function App() {
     };
   }, []);
 
+  // Listen for global scan progress to refresh library
+  useEffect(() => {
+    const unlistenPromise = listen("scan-progress", (event: any) => {
+      if (event.payload?.status === "complete") {
+        logger.info("Scan complete event received, refreshing library...");
+        fetchLibrary();
+      }
+    });
+    return () => {
+      unlistenPromise.then((u) => u());
+    };
+  }, [fetchLibrary]);
+
   // Update gradient when track changes
   useEffect(() => {
     if (currentTrack?.artwork_path) {
@@ -169,14 +182,47 @@ export default function App() {
 
       if (selected && typeof selected === "string") {
         setIsScanning(true);
-        logger.info("Scanning folder:", selected);
-        await invoke("scan_music_library", { folders: [selected] });
+        const toastId = toast.loading(`Importing ${selected}...`);
+        logger.info("Importing folder:", selected);
 
-        // Refresh library after scan
-        await fetchLibrary();
+        let stats;
+
+        if (!libraryPaths.includes(selected)) {
+          // New folder: Add to settings (returns stats)
+          stats = await addLibraryPath(selected);
+          logger.info("Added folder to settings:", selected);
+        } else {
+          // Existing folder: Re-scan
+          logger.info("Rescanning existing folder:", selected);
+          stats = await invoke<{
+            scanned_count: number;
+            success_count: number;
+            error_count: number;
+          }>("scan_music_library", { folders: [selected] });
+          await fetchLibrary();
+        }
+
+        if (stats) {
+          if (stats.error_count > 0) {
+            toast.warning(`Scan complete with ${stats.error_count} errors`, {
+              id: toastId,
+              description: `Imported ${stats.success_count} tracks. Check logs for details.`,
+            });
+          } else {
+            toast.success(`Imported ${stats.scanned_count} tracks`, {
+              id: toastId,
+              description: "Library updated successfully.",
+            });
+          }
+        } else {
+          toast.success("Folder added", { id: toastId });
+        }
       }
     } catch (error) {
       logger.error("Failed to import folder:", error);
+      toast.error("Failed to import folder", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setIsScanning(false);
     }
@@ -309,6 +355,7 @@ export default function App() {
       <GlobalSearch />
 
       {quitDialog}
+      <Toaster />
     </main>
   );
 }

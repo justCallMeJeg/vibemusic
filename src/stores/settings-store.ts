@@ -46,7 +46,11 @@ interface SettingsActions {
   setDynamicGradient: (enabled: boolean) => void;
 
   // Library Actions
-  addLibraryPath: (path: string) => Promise<void>;
+  addLibraryPath: (path: string) => Promise<{
+    scanned_count: number;
+    success_count: number;
+    error_count: number;
+  } | null>;
   removeLibraryPath: (path: string) => Promise<void>;
 
   // Audio Actions
@@ -122,7 +126,25 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const store = await getStore();
         await store.set("libraryPaths", newPaths);
         await store.save();
+
+        // Auto-scan the new path
+        const { useLibraryStore } = await import("./library-store");
+        try {
+          // Define ScanStats locally or treat as any/unknown if interface not available globally
+          // But better to just return it.
+          const stats = await invoke<{
+            scanned_count: number;
+            success_count: number;
+            error_count: number;
+          }>("scan_music_library", { folders: [path] });
+          await useLibraryStore.getState().fetchLibrary();
+          return stats;
+        } catch (e) {
+          console.error("Failed to scan new library path:", e);
+          throw e; // Re-throw to allow caller to handle error toast
+        }
       }
+      return null;
     },
 
     removeLibraryPath: async (path) => {

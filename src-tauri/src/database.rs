@@ -260,6 +260,19 @@ impl DbHelper {
         Ok(())
     }
 
+    pub fn delete_empty_albums(tx: &Transaction) -> Result<usize> {
+        let count = tx.execute(
+            "DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks WHERE album_id IS NOT NULL)",
+            [],
+        )?;
+        Ok(count)
+    }
+
+    pub fn delete_track(&self, id: i64) -> Result<()> {
+        self.conn.execute("DELETE FROM tracks WHERE id = ?", params![id])?;
+        Ok(())
+    }
+
     pub fn get_all_tracks(&self) -> Result<Vec<crate::library::LibraryTrack>> {
         let mut stmt = self.conn.prepare(
             "SELECT 

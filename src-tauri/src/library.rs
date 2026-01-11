@@ -57,3 +57,11 @@ pub fn get_album_tracks(app: AppHandle, album_id: i64) -> Result<Vec<LibraryTrac
     db.get_album_tracks(album_id)
         .map_err(|e| format!("Failed to fetch album tracks: {}", e))
 }
+
+#[command]
+pub fn delete_track(app: AppHandle, track_id: i64) -> Result<(), String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.delete_track(track_id)
+        .map_err(|e| format!("Failed to delete track: {}", e))
+}

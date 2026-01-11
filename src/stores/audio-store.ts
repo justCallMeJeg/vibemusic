@@ -470,10 +470,45 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         get().stop();
       });
 
+      const unlistenError = listen<string>(
+        "audio-playback-error",
+        async (event) => {
+          console.error("Playback Error:", event.payload);
+          const state = get();
+          const track = state.currentTrack;
+
+          if (track) {
+            // Try to auto-delete first
+            try {
+              await invoke("delete_track", { trackId: track.id });
+              const { useLibraryStore } = await import("./library-store");
+              await useLibraryStore.getState().fetchLibrary();
+
+              import("sonner").then(({ toast }) => {
+                toast("File not found", {
+                  description: `Removed "${track.title}" from library.`,
+                });
+              });
+            } catch (e) {
+              console.error("Failed to self-heal library:", e);
+              import("sonner").then(({ toast }) => {
+                toast.error(`File missing: ${track.title}`, {
+                  description: "Run 'Prune Library' in settings to clean up.",
+                });
+              });
+            }
+
+            // Stop or Next?
+            get().next();
+          }
+        }
+      );
+
       return () => {
         unlistenState.then((f) => f());
         unlistenProgress.then((f) => f());
         unlistenFinished.then((f) => f());
+        unlistenError.then((f) => f());
 
         unlistenMediaPlay.then((f) => f());
         unlistenMediaPause.then((f) => f());

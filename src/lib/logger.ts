@@ -32,6 +32,13 @@ export const logger = {
 
   error: async (message: string, ...args: unknown[]) => {
     console.error(message, ...args);
+    // Visual feedback for errors
+    import("sonner").then(({ toast }) => {
+      toast.error(message, {
+        description: args.length > 0 ? "Check logs for details" : undefined,
+      });
+    });
+
     try {
       await logError(formatMessage(message, args));
     } catch (e) {

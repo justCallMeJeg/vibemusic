@@ -4,12 +4,14 @@ import { FolderOpen, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useLibraryStore } from "@/stores/library-store";
 
 export function SettingsLibrary() {
   const { libraryPaths, addLibraryPath, removeLibraryPath } =
     useSettingsStore();
+  const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
   const [isRescanning, setIsRescanning] = useState(false);
   const [isPruning, setIsPruning] = useState(false);
 
@@ -21,10 +23,23 @@ export function SettingsLibrary() {
       });
 
       if (selected && typeof selected === "string") {
-        await addLibraryPath(selected);
-        toast.success("Folder added to library");
-        await invoke("scan_music_library", { folders: [selected] });
-        toast.success("Scan complete");
+        // Add path
+        const addPromise = async () => {
+          const stats = await addLibraryPath(selected);
+          await fetchLibrary(); // Ensure library state is updated after adding a folder
+          return stats;
+        };
+
+        toast.promise(addPromise(), {
+          loading: "Adding folder...",
+          success: (stats: any) => {
+            if (stats) {
+              return `Added ${stats.success_count} tracks from new folder`;
+            }
+            return "Folder added to library";
+          },
+          error: "Failed to add folder",
+        });
       }
     } catch (error) {
       console.error("Failed to add folder:", error);
@@ -35,12 +50,26 @@ export function SettingsLibrary() {
   const handleRescan = async () => {
     if (libraryPaths.length === 0) return;
     setIsRescanning(true);
+
+    // Wrap invoke + fetch in one promise for the toast
+    const promise = (async () => {
+      const data = await invoke<{
+        scanned_count: number;
+        success_count: number;
+      }>("scan_music_library", { folders: libraryPaths });
+      await fetchLibrary();
+      return data;
+    })();
+
+    toast.promise(promise, {
+      loading: "Rescanning library...",
+      success: (data) =>
+        `Rescan complete. Found ${data.scanned_count} files (${data.success_count} processed).`,
+      error: (err) => `Failed to rescan: ${err}`,
+    });
+
     try {
-      await invoke("scan_music_library", { folders: libraryPaths });
-      toast.success("Library rescanned");
-    } catch (error) {
-      console.error("Failed to rescan:", error);
-      toast.error("Failed to rescan library");
+      await promise;
     } finally {
       setIsRescanning(false);
     }
@@ -48,12 +77,26 @@ export function SettingsLibrary() {
 
   const handlePrune = async () => {
     setIsPruning(true);
+
+    const promise = (async () => {
+      const data = await invoke<{ success_count: number }>("prune_library");
+      await fetchLibrary();
+      return data;
+    })();
+
+    toast.promise(promise, {
+      loading: "Pruning library...",
+      success: (data) => {
+        if (data.success_count > 0) {
+          return `Pruned ${data.success_count} missing tracks`;
+        }
+        return "Library checks out. No missing files found.";
+      },
+      error: "Failed to prune library",
+    });
+
     try {
-      await invoke("prune_library");
-      toast.success("Library pruned");
-    } catch (error) {
-      console.error("Failed to prune:", error);
-      toast.error("Failed to prune library");
+      await promise;
     } finally {
       setIsPruning(false);
     }
