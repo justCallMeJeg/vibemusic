@@ -3,7 +3,7 @@ import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ChevronLeft, Play, Shuffle, Plus } from "lucide-react";
+import { ChevronLeft, Play, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import placeholderArt from "@/assets/placeholder-art.jpg";

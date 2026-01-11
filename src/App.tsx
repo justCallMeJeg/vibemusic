@@ -18,6 +18,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 
+import { TitleBar } from "./components/ui/title-bar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
@@ -25,6 +37,7 @@ export default function App() {
   const status = useAudioStore((s) => s.status); // Get status directly or use selector
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
+  const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
 
   const { theme, dynamicGradient, loadSettings } = useSettingsStore();
 
@@ -57,14 +70,19 @@ export default function App() {
     });
   }, [loadSettings]);
 
-  // Handle Close-to-Tray
+  // Handle Close-to-Tray and Quit Confirmation
   useEffect(() => {
     const appWindow = getCurrentWindow();
     const unlistenPromise = appWindow.onCloseRequested(async (event) => {
+      // Prevent default close to handle everything manually
+      event.preventDefault();
+
       const { closeToTray } = useSettingsStore.getState();
+
       if (closeToTray) {
-        event.preventDefault();
         await appWindow.hide();
+      } else {
+        setIsQuitDialogOpen(true);
       }
     });
 
@@ -132,6 +150,9 @@ export default function App() {
         theme === "dark" || theme === "system" ? "dark" : ""
       }`}
     >
+      {/* Custom Title Bar */}
+      <TitleBar />
+
       {/* Background Gradient */}
       <div
         className="fixed top-0 left-0 right-0 h-96 pointer-events-none transition-colors duration-1000 ease-in-out z-0 opacity-25"
@@ -142,7 +163,7 @@ export default function App() {
         }}
       />
 
-      <div className="flex flex-1 gap-6 min-h-0 relative z-10">
+      <div className="flex flex-1 gap-6 min-h-0 relative z-10 pt-10">
         {/* Sidebar */}
         <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
           <div
@@ -184,6 +205,29 @@ export default function App() {
         <MusicController />
       </div>
       <GlobalSearch />
+
+      <AlertDialog open={isQuitDialogOpen} onOpenChange={setIsQuitDialogOpen}>
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to quit?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Playback will stop. You can enable "Close to Tray" in settings to
+              keep music playing in the background.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+              onClick={() => getCurrentWindow().destroy()}
+            >
+              Quit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
