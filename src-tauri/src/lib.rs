@@ -9,6 +9,7 @@ mod library;
 mod playlists;
 mod profile;
 mod scanner;
+mod updater;
 
 use audio::{AudioEngine, AudioState};
 use profile::ProfileState;
@@ -154,7 +155,10 @@ pub fn run() {
             profile::set_active_profile,
             profile::delete_profile_data,
             profile::upload_profile_avatar,
-            profile::save_profile_avatar_bytes
+            profile::save_profile_avatar_bytes,
+            // Updater
+            updater::check_update,
+            updater::install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

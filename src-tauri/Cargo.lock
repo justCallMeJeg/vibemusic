@@ -6158,6 +6158,7 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "thiserror 2.0.17",
+ "url",
  "walkdir",
 ]
 
