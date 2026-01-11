@@ -109,7 +109,7 @@ export default function QueueMenu() {
         <div className="mb-2">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-              Up Next
+              Tracks
             </h2>
             {queue.length > 1 && (
               <Button
@@ -139,8 +139,13 @@ export default function QueueMenu() {
                 ) : (
                   queue.map((track) => {
                     const isCurrent = currentTrack?.id === track.id;
-                    if (isCurrent) return null;
-                    return <QueueItem key={track.id} track={track} />;
+                    return (
+                      <QueueItem
+                        key={track.id}
+                        track={track}
+                        isActive={isCurrent}
+                      />
+                    );
                   })
                 )}
               </div>

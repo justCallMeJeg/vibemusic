@@ -98,6 +98,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
   };
 
   // Internal next handler
+  // Internal next handler
   const handleNext = async () => {
     const state = get();
     console.log("[handleNext] Start", {
@@ -123,57 +124,29 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       return;
     }
 
-    const newQueue = [...state.queue];
+    // Determine next index
+    let nextIndex = state.currentIndex + 1;
 
-    if (state.repeat === "all") {
-      // ... existing repeat all logic
-      console.log("[handleNext] Repeat All");
-      if (
-        newQueue.length > 0 &&
-        state.currentIndex >= 0 &&
-        state.currentIndex < newQueue.length
-      ) {
-        const [removed] = newQueue.splice(state.currentIndex, 1);
-        newQueue.push(removed);
-      }
-    } else {
-      console.log("[handleNext] Removing current track");
-      if (state.currentIndex >= 0 && state.currentIndex < newQueue.length) {
-        newQueue.splice(state.currentIndex, 1);
+    // Handle end of queue
+    if (nextIndex >= state.queue.length) {
+      if (state.repeat === "all") {
+        console.log("[handleNext] Repeat All -> Loop to start");
+        nextIndex = 0;
       } else {
-        console.warn(
-          "[handleNext] Index out of bounds, cannot remove",
-          state.currentIndex,
-          newQueue.length
-        );
+        console.log("[handleNext] End of queue -> Stop");
+        set({ status: "stopped", position: 0 });
+        await invoke("audio_stop");
+        return;
       }
     }
 
-    if (newQueue.length === 0) {
-      console.log("[handleNext] New queue empty -> Stop");
-      set({
-        status: "stopped",
-        queue: [],
-        currentTrack: null,
-        currentIndex: -1,
-      });
-      await invoke("audio_stop");
-      return;
-    }
+    const nextTrack = state.queue[nextIndex];
+    console.log("[handleNext] Playing next:", nextIndex, nextTrack.title);
 
-    let nextIndex = state.currentIndex;
-    // ... rest of logic
-    if (nextIndex >= newQueue.length) {
-      nextIndex = 0;
-    }
-    if (nextIndex >= newQueue.length) nextIndex = 0;
-
-    const nextTrack = newQueue[nextIndex];
     set({
       currentTrack: nextTrack,
       currentIndex: nextIndex,
       status: "loading",
-      queue: newQueue,
       position: 0,
     });
 
