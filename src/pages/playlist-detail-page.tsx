@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -149,6 +150,8 @@ export default function PlaylistDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const scrollRef = useScrollMask();
 
   const handlePlay = () => {
     if (tracks.length > 0) {
@@ -425,7 +428,7 @@ export default function PlaylistDetailPage() {
       </div>
 
       {/* Track list */}
-      <div className="flex-1 overflow-y-auto scroll-mask-y">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-mask-y">
         {tracks.length === 0 ? (
           <div className="text-gray-500 text-center p-8">
             This playlist is empty. Add songs from your library!

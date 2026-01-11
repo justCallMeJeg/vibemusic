@@ -178,9 +178,11 @@
 }
 
 @utility scroll-mask-y {
+  --scroll-mask-top: 1; /* Default to visible (no mask) */
+
   mask-image: linear-gradient(
     to bottom,
-    transparent 0,
+    rgb(0 0 0 / var(--scroll-mask-top)) 0,
     black 24px,
     black calc(100% - 24px),
     transparent 100%

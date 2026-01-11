@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/context-menu";
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Pencil } from "lucide-react";
 import { Playlist } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,8 @@ export default function HomePage() {
   const { playlists, fetchPlaylists } = usePlaylistStore();
 
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+
+  const scrollRef = useScrollMask();
 
   useEffect(() => {
     fetchPlaylists();
@@ -171,7 +174,10 @@ export default function HomePage() {
         </h1>
         <p className="text-gray-400 mt-1">Here's some music for you today.</p>
       </div>
-      <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar scroll-mask-y">
+      <div
+        ref={scrollRef}
+        className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar scroll-mask-y"
+      >
         {/* Albums Section */}
         {albums.length > 0 && (
           <section className="space-y-4">

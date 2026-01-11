@@ -39,6 +39,7 @@ import {
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { Pencil } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 
 export default function PlaylistsPage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
@@ -64,6 +65,8 @@ export default function PlaylistsPage() {
   );
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const scrollRef = useScrollMask();
 
   useEffect(() => {
     fetchPlaylists();
@@ -235,7 +238,10 @@ export default function PlaylistsPage() {
         </AlertDialog>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 scroll-mask-y">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-2 scroll-mask-y"
+      >
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
             {Array.from({ length: 15 }).map((_, i) => (

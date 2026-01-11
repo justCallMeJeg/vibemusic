@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/ui/music-list";
 import placeholderArt from "@/assets/placeholder-art.jpg";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 
 export default function AlbumDetailPage() {
   const detailView = useDetailView();
@@ -19,6 +20,8 @@ export default function AlbumDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const albumId = detailView?.type === "album" ? detailView.id : null;
+
+  const scrollRef = useScrollMask();
 
   useEffect(() => {
     if (!albumId) return;
@@ -184,7 +187,7 @@ export default function AlbumDetailPage() {
       </div>
 
       {/* Track list */}
-      <div className="flex-1 overflow-y-auto scroll-mask-y">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-mask-y">
         {tracks.length === 0 ? (
           <div className="text-gray-500 text-center p-8">
             No tracks in this album

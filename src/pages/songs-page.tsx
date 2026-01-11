@@ -5,6 +5,7 @@ import MusicListItem from "@/components/ui/music-list";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,9 @@ export default function SongsPage() {
 
   // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Apply visual scroll mask using the same ref
+  useScrollMask(24, parentRef);
 
   const loadTracks = async () => {
     try {
@@ -180,7 +184,7 @@ export default function SongsPage() {
 
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto px-4 pb-42 space-y-1 custom-scrollbar scroll-mask-y"
+        className="flex-1 overflow-y-auto px-4 pb-42 pt-4 space-y-1 custom-scrollbar scroll-mask-y"
       >
         {isLoading ? (
           <div className="flex flex-col gap-1">
