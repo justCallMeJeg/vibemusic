@@ -1,7 +1,7 @@
 use crate::scanner::TrackMetadata;
 use rusqlite::{params, Connection, Result, Transaction};
 use std::path::Path;
-use log::warn;
+
 
 pub struct DbHelper {
     conn: Connection,
@@ -17,38 +17,6 @@ impl DbHelper {
             }
         }
         let conn = Connection::open(path)?;
-
-        // Robustness check: Ensure schema exists
-        // This handles race conditions where this thread might create the DB file
-        // before the main plugin runs migrations, or if path resolution differs.
-        let table_exists: bool = conn
-            .query_row(
-                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='artists'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
-
-        if !table_exists {
-            warn!("Database tables missing. Applying initial schema to ensure robustness...");
-            conn.execute_batch(include_str!("../migrations/001_initial_schema.sql"))?;
-        } else {
-            // Manual migration check for artwork_path to ensure it exists even if plugin migration is skipped
-            let has_artwork: i64 = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM pragma_table_info('playlists') WHERE name='artwork_path'",
-                    [],
-                    |row| row.get(0),
-                )
-                .unwrap_or(0);
-
-            if has_artwork == 0 {
-                warn!("Applying missing column artwork_path to playlists...");
-                // We ignore error here just in case, but usually it should work
-                let _ = conn.execute("ALTER TABLE playlists ADD COLUMN artwork_path TEXT", []);
-            }
-        }
 
         Ok(Self { conn })
     }

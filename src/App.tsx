@@ -276,8 +276,14 @@ export default function App() {
 
   if (isProfilesLoading) {
     return (
-      <div className="h-screen w-screen bg-black flex items-center justify-center text-white">
-        {/* Loading state can be improved with skeleton or splash */}
+      <div className="h-screen w-screen bg-black text-white relative flex flex-col">
+        <TitleBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-white/10" />
+            <div className="w-32 h-4 rounded-full bg-white/10" />
+          </div>
+        </div>
       </div>
     );
   }
