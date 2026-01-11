@@ -18,6 +18,7 @@
     "core:tray:default",
     "opener:default",
     "log:default",
+    "updater:default",
     "fs:scope",
     "sql:default",
     "sql:allow-execute",

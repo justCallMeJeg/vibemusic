@@ -29,6 +29,14 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/justCallMeJeg/vibemusic/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzNjQwRjJFQTcxOUYxNzgKUldSNDhSbW5MZzlrMHhiM1V1dlJDSllDK3NBTmFjdDh4ZzNqSmd3NUR2UU1ZeE9tVVlXREUvQ3AK"
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
