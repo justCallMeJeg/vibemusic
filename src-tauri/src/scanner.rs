@@ -13,6 +13,7 @@ use std::sync::mpsc;
 use tauri::Manager;
 use tauri::{command, AppHandle, Emitter};
 use walkdir::WalkDir;
+use log::{info, warn, error};
 
 /// Supported audio file extensions
 const AUDIO_EXTENSIONS: &[&str] = &[
@@ -123,8 +124,8 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             let ch = properties.channels();
 
             if duration == 0 {
-                eprintln!(
-                    "[WARN] Zero duration for: {} (format: {})",
+                warn!(
+                    "Zero duration for: {} (format: {})",
                     path.display(),
                     file_format
                 );
@@ -135,7 +136,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                 .or_else(|| tagged_file.first_tag());
 
             if tag.is_none() {
-                eprintln!("[WARN] No tags found in: {}", path.display());
+                warn!("No tags found in: {}", path.display());
             }
 
             let tag_data = if let Some(tag) = tag {
@@ -152,8 +153,8 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     });
 
                 if artist_str.is_none() {
-                    eprintln!(
-                        "[WARN] No artist found in: {} (tag type: {:?})",
+                    warn!(
+                        "No artist found in: {} (tag type: {:?})",
                         path.display(),
                         tag.tag_type()
                     );
@@ -169,8 +170,8 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     .and_then(|pic| extract_and_cache_cover(pic, cache_dir));
 
                 if artwork_path.is_none() && !tag.pictures().is_empty() {
-                    eprintln!(
-                        "[WARN] Found {} pictures but failed to extract for: {}",
+                    warn!(
+                        "Found {} pictures but failed to extract for: {}",
                         tag.pictures().len(),
                         path.display()
                     );
@@ -207,8 +208,8 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             (duration, sr, br, ch, tag_data)
         }
         Err(e) => {
-            eprintln!(
-                "[WARN] Strict parse failed for {}: {}. Retrying without tags...",
+            warn!(
+                "Strict parse failed for {}: {}. Retrying without tags...",
                 path.display(),
                 e
             );
@@ -216,7 +217,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             let retry_probe = match Probe::open(path) {
                 Ok(p) => p,
                 Err(e2) => {
-                    eprintln!("[ERROR] Failed to re-open file {}: {}", path.display(), e2);
+                    error!("Failed to re-open file {}: {}", path.display(), e2);
                     return Err(format!("Failed to re-open file: {}", e2));
                 }
             };
@@ -227,7 +228,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
 
             match retry_probe.options(retry_options).read() {
                 Ok(tagged_file) => {
-                    eprintln!("[INFO] Successfully read properties for {}", path.display());
+                    info!("Successfully read properties for {}", path.display());
                     let properties = tagged_file.properties();
                     let duration = properties.duration().as_millis() as u64;
                     let sr = properties.sample_rate();
@@ -254,8 +255,8 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     )
                 }
                 Err(e2) => {
-                    eprintln!(
-                        "[ERROR] Failed to parse file {} even without tags: {}",
+                    error!(
+                        "Failed to parse file {} even without tags: {}",
                         path.display(),
                         e2
                     );
@@ -376,7 +377,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
 
     // Get database path using profile helper
     let db_path = get_library_db_path(&app)?;
-    eprintln!("Scanner using database at: {:?}", db_path);
+    info!("Scanner using database at: {:?}", db_path);
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let cache_dir = app_data_dir.join("covers");
@@ -395,7 +396,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
             let tx = match db.get_conn_mut().transaction() {
                 Ok(tx) => tx,
                 Err(e) => {
-                    eprintln!("Failed to start transaction: {}", e);
+                    error!("Failed to start transaction: {}", e);
                     return 0;
                 }
             };
@@ -403,14 +404,14 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
             let mut batch_success = 0;
             for metadata in batch {
                 if let Err(e) = DbHelper::upsert_track(&tx, metadata) {
-                    eprintln!("Failed to save track in batch: {}", e);
+                    error!("Failed to save track in batch: {}", e);
                 } else {
                     batch_success += 1;
                 }
             }
 
             if let Err(e) = tx.commit() {
-                eprintln!("Failed to commit batch: {}", e);
+                error!("Failed to commit batch: {}", e);
                 0
             } else {
                 batch_success
@@ -529,7 +530,7 @@ pub async fn prune_library(app: AppHandle) -> Result<ScanStats, String> {
         // Clean up empty albums
         if let Ok(album_count) = DbHelper::delete_empty_albums(&tx) {
             if album_count > 0 {
-                println!("Pruned {} empty albums", album_count);
+                info!("Pruned {} empty albums", album_count);
             }
         }
 

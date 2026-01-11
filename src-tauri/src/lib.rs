@@ -59,7 +59,10 @@ pub fn run() {
                         file_name: Some("vibemusic".to_string()),
                     },
                 ))
-                .level(log::LevelFilter::Info)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .max_file_size(2_000_000) // 2MB
+                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
+                .level(log::LevelFilter::Error)
                 .build(),
         )
         .setup(move |app| {

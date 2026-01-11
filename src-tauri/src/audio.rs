@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
+use log::{info, error};
 
 use crate::ffmpeg::{self, FFmpegProcess};
 
@@ -371,6 +372,7 @@ impl AudioWorker {
 
             match FFmpegProcess::spawn(path, self.device_sample_rate, self.device_channels) {
                 Ok(process) => {
+                    info!("Crossfading to new track: {}", path);
                     self.secondary_process = Some(process);
                     self.crossfade_state = CrossfadeState::Fading {
                         start_time: Instant::now(),
@@ -396,12 +398,13 @@ impl AudioWorker {
                     self.emit_state();
                 }
                 Err(e) => {
-                    eprintln!("Failed to spawn secondary FFmpeg: {}", e);
+                    error!("Failed to spawn secondary FFmpeg: {}", e);
                     // Fallback to hard cut
                     self.play_file_hard_cut(path, title, artist, album);
                 }
             }
         } else {
+            info!("Playing track (hard cut): {}", path);
             self.play_file_hard_cut(path, title, artist, album);
         }
     }
@@ -423,6 +426,7 @@ impl AudioWorker {
 
         match FFmpegProcess::spawn(path, self.device_sample_rate, self.device_channels) {
             Ok(process) => {
+                info!("Spawned FFmpeg process for: {}", path);
                 self.primary_process = Some(process);
             }
             Err(e) => {
@@ -520,7 +524,7 @@ impl AudioWorker {
                     }
                 },
                 move |err| {
-                    eprintln!("CPAL Error: {}", err);
+                    error!("CPAL Error: {}", err);
                     device_error.store(true, Ordering::Relaxed);
                 },
                 None,
@@ -678,11 +682,13 @@ impl AudioWorker {
     }
 
     fn handle_end_of_track(&mut self) {
+        info!("Track finished naturally");
         self.stop();
         self.app_handle.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
     }
 
     fn pause(&mut self) {
+        info!("Playback paused");
         self.is_playing.store(false, Ordering::Relaxed);
         {
             let mut s = self.state.lock().unwrap();
@@ -694,6 +700,7 @@ impl AudioWorker {
     }
 
     fn resume(&mut self) {
+        info!("Playback resumed");
         self.is_playing.store(true, Ordering::Relaxed);
         {
             let mut s = self.state.lock().unwrap();
@@ -705,6 +712,7 @@ impl AudioWorker {
     }
 
     fn stop(&mut self) {
+        info!("Playback stopped");
         self.is_playing.store(false, Ordering::Relaxed);
 
         if let Some(mut p) = self.primary_process.take() {
@@ -738,6 +746,7 @@ impl AudioWorker {
     }
 
     fn seek(&mut self, pos_ms: u64) {
+        info!("Seeking to {}ms", pos_ms);
         let Some(path) = self.current_file_path.clone() else {
             return;
         };
@@ -774,7 +783,7 @@ impl AudioWorker {
                 }
                 self.update_media_controls();
             }
-            Err(e) => eprintln!("Seek failed: {}", e),
+            Err(e) => error!("Seek failed: {}", e),
         }
     }
 
