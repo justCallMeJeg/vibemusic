@@ -163,7 +163,7 @@ export default function AlbumDetailPage() {
             No tracks in this album
           </div>
         ) : (
-          <div className="flex flex-col gap-1 p-1">
+          <div className="flex flex-col gap-1 p-1 pb-42">
             {tracks.map((track, index) => (
               <div
                 key={track.id}

@@ -13,7 +13,7 @@ export default function SettingsPage() {
       <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-8">
+        <div className="max-w-3xl mx-auto px-8 pt-8 pb-42">
           {activeTab === "general" && <SettingsGeneral />}
           {activeTab === "appearance" && <SettingsAppearance />}
           {activeTab === "library" && <SettingsLibrary />}

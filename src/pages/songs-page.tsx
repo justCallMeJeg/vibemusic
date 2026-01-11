@@ -14,6 +14,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
+import { useSettingsStore } from "@/stores/settings-store";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
@@ -25,8 +26,9 @@ export default function SongsPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("date_added");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Use persistent settings
+  const { songsSortKey, songsSortDirection, setSongsSort } = useSettingsStore();
 
   // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export default function SongsPage() {
       let valA: string | number | undefined;
       let valB: string | number | undefined;
 
-      switch (sortKey) {
+      switch (songsSortKey) {
         case "title":
           valA = a.title.toLowerCase();
           valB = b.title.toLowerCase();
@@ -87,13 +89,13 @@ export default function SongsPage() {
       }
 
       if (valA === undefined || valB === undefined) return 0;
-      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
-      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+      if (valA < valB) return songsSortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return songsSortDirection === "asc" ? 1 : -1;
       return 0;
     });
 
     return result;
-  }, [tracks, searchQuery, sortKey, sortDirection]);
+  }, [tracks, searchQuery, songsSortKey, songsSortDirection]);
 
   // Virtualizer for efficient list rendering
   const virtualizer = useVirtualizer({
@@ -125,6 +127,7 @@ export default function SongsPage() {
               className="pl-9 bg-neutral-900 border-none"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
             />
           </div>
 
@@ -139,8 +142,10 @@ export default function SongsPage() {
               <DropdownMenuLabel>Sort By</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup
-                value={sortKey}
-                onValueChange={(v) => setSortKey(v as SortKey)}
+                value={songsSortKey}
+                onValueChange={(v) =>
+                  setSongsSort(v as SortKey, songsSortDirection)
+                }
               >
                 <DropdownMenuRadioItem value="title">
                   Title
@@ -159,8 +164,10 @@ export default function SongsPage() {
               <DropdownMenuLabel>Order</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup
-                value={sortDirection}
-                onValueChange={(v) => setSortDirection(v as SortDirection)}
+                value={songsSortDirection}
+                onValueChange={(v) =>
+                  setSongsSort(songsSortKey, v as SortDirection)
+                }
               >
                 <DropdownMenuRadioItem value="asc">
                   Ascending
@@ -204,7 +211,7 @@ export default function SongsPage() {
         ) : (
           <div
             style={{
-              height: `${virtualizer.getTotalSize() + 96}px`, // +96px for bottom padding (scroll past player)
+              height: `${virtualizer.getTotalSize() + 168}px`, // +168px padding for controller
               width: "100%",
               position: "relative",
             }}

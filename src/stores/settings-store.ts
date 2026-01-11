@@ -34,6 +34,9 @@ interface SettingsState {
   // Sidebar
   sidebarItems: SidebarItem[];
   defaultPage: string;
+  // Sorting
+  songsSortKey: string;
+  songsSortDirection: string;
 }
 
 interface SettingsActions {
@@ -57,6 +60,9 @@ interface SettingsActions {
   // Sidebar Actions
   setSidebarItems: (items: { id: string; hidden: boolean }[]) => void;
   setDefaultPage: (page: string) => void;
+
+  // Sorting Actions
+  setSongsSort: (key: string, direction: string) => void;
 
   loadSettings: () => Promise<void>;
 }
@@ -185,6 +191,18 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    // Sorting
+    songsSortKey: "date_added",
+    songsSortDirection: "desc",
+
+    setSongsSort: async (key, direction) => {
+      set({ songsSortKey: key, songsSortDirection: direction });
+      const store = await getStore();
+      await store.set("songsSortKey", key);
+      await store.set("songsSortDirection", direction);
+      await store.save();
+    },
+
     loadSettings: async () => {
       try {
         const store = await getStore();
@@ -202,6 +220,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           "sidebarItems"
         );
         const defaultPage = await store.get<string>("defaultPage");
+
+        const songsSortKey = await store.get<string>("songsSortKey");
+        const songsSortDirection = await store.get<string>(
+          "songsSortDirection"
+        );
 
         if (theme) {
           set({ theme });
@@ -228,6 +251,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         if (sidebarItems) set({ sidebarItems });
         if (defaultPage) set({ defaultPage });
+
+        if (songsSortKey) set({ songsSortKey });
+        if (songsSortDirection) set({ songsSortDirection });
 
         set({ isLoading: false });
 

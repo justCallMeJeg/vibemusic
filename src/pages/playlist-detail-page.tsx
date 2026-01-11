@@ -400,7 +400,7 @@ export default function PlaylistDetailPage() {
             This playlist is empty. Add songs from your library!
           </div>
         ) : (
-          <div className="flex flex-col gap-1 pb-8">
+          <div className="flex flex-col gap-1 pb-42">
             {/* Header Row */}
             <div className="flex items-center gap-4 px-4 py-2 text-gray-500 text-xs uppercase tracking-wider border-b border-white/5 mb-2">
               <div className="w-8 text-center">#</div>

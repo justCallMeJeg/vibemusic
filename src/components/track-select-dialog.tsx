@@ -115,6 +115,7 @@ export function TrackSelectDialog({
               placeholder="Search library..."
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus-visible:ring-indigo-500"
               autoFocus
+              autoComplete="off"
             />
           </div>
         </DialogHeader>
