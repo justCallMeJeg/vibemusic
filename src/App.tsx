@@ -29,6 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useProfileStore } from "@/stores/profile-store";
+import ProfileSelectionPage from "@/pages/profile-selection-page";
 
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
@@ -39,36 +41,46 @@ export default function App() {
   const [gradientColor, setGradientColor] = useState<string>("transparent");
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
 
-  const { theme, dynamicGradient, loadSettings } = useSettingsStore();
+  const {
+    theme,
+    dynamicGradient,
+    loadSettings,
+    isLoading: isSettingsLoading,
+  } = useSettingsStore();
+  const {
+    activeProfileId,
+    profiles,
+    loadProfiles,
+    selectProfile,
+    isLoading: isProfilesLoading,
+  } = useProfileStore();
+
+  const activeProfile = profiles.find((p) => p.id === activeProfileId);
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 
-  // Load settings on mount and handle startup behaviors
+  // Load profiles on mount
   useEffect(() => {
-    loadSettings().then(() => {
-      const settings = useSettingsStore.getState();
+    loadProfiles();
+  }, [loadProfiles]);
 
-      // Default Page
+  // Load settings when profile changes
+  useEffect(() => {
+    if (activeProfileId) {
+      loadSettings(activeProfileId);
+    }
+  }, [activeProfileId, loadSettings]);
+
+  // Handle defaults after settings load
+  useEffect(() => {
+    if (!isSettingsLoading && activeProfileId) {
+      // Apply settings logic
+      const settings = useSettingsStore.getState();
       if (settings.defaultPage) {
         useNavigationStore.getState().setPage(settings.defaultPage as Page);
       }
-
-      // Scan on Startup
-      if (settings.scanOnStartup && settings.libraryPaths.length > 0) {
-        console.log("Auto-scanning library...");
-        invoke("scan_music_library", { folders: settings.libraryPaths });
-      }
-
-      // Autoplay
-      if (settings.autoplay) {
-        const audioState = useAudioStore.getState();
-        if (audioState.currentTrack) {
-          console.log("Auto-playing...");
-          audioState.play(audioState.currentTrack);
-        }
-      }
-    });
-  }, [loadSettings]);
+    }
+  }, [isSettingsLoading, activeProfileId]);
 
   // Handle Close-to-Tray and Quit Confirmation
   useEffect(() => {
@@ -134,7 +146,6 @@ export default function App() {
         setIsScanning(true);
         console.log("Scanning folder:", selected);
         await invoke("scan_music_library", { folders: [selected] });
-        // Optional: trigger a global event or store action to refresh views
       }
     } catch (error) {
       console.error("Failed to import folder:", error);
@@ -142,6 +153,51 @@ export default function App() {
       setIsScanning(false);
     }
   };
+
+  const quitDialog = (
+    <AlertDialog open={isQuitDialogOpen} onOpenChange={setIsQuitDialogOpen}>
+      <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure you want to quit?</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-400">
+            Playback will stop. You can enable "Close to Tray" in settings to
+            keep music playing in the background.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+            onClick={() => getCurrentWindow().destroy()}
+          >
+            Quit
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  if (isProfilesLoading) {
+    return (
+      <div className="h-screen w-screen bg-black flex items-center justify-center text-white">
+        {/* Loading state can be improved with skeleton or splash */}
+      </div>
+    );
+  }
+
+  if (!activeProfileId) {
+    return (
+      <div className="h-screen w-screen bg-black text-white relative flex flex-col">
+        <TitleBar />
+        <div className="flex-1 overflow-hidden">
+          <ProfileSelectionPage />
+        </div>
+        {quitDialog}
+      </div>
+    );
+  }
 
   return (
     <main
@@ -167,10 +223,17 @@ export default function App() {
         {/* Sidebar */}
         <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
           <div
-            id="folder_input"
-            className="aspect-square w-full rounded-lg bg-white/5"
-            title="User Profile"
-          />
+            id="user_profile"
+            onClick={() => selectProfile(null)} // Click to switch profile
+            className={`aspect-square w-full rounded-lg ${
+              activeProfile?.color || "bg-gray-600"
+            } flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform`}
+            title={`Current: ${
+              activeProfile?.name || "User"
+            } (Click to switch)`}
+          >
+            {activeProfile?.name?.[0]?.toUpperCase()}
+          </div>
           <div className="flex justify-center h-full">
             <NavigationMenu
               onImport={handleFolderImport}
@@ -206,28 +269,7 @@ export default function App() {
       </div>
       <GlobalSearch />
 
-      <AlertDialog open={isQuitDialogOpen} onOpenChange={setIsQuitDialogOpen}>
-        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to quit?</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Playback will stop. You can enable "Close to Tray" in settings to
-              keep music playing in the background.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
-              onClick={() => getCurrentWindow().destroy()}
-            >
-              Quit
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {quitDialog}
     </main>
   );
 }

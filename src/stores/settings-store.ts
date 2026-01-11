@@ -1,15 +1,16 @@
 import { create } from "zustand";
-import { load, Store } from "@tauri-apps/plugin-store";
+import { load } from "@tauri-apps/plugin-store";
 
 // Lazy store initialization
-let storePromise: Promise<Store> | null = null;
+// const storePromise: Promise<Store> | null = null;
 import { invoke } from "@tauri-apps/api/core";
 
 const getStore = async () => {
-  if (!storePromise) {
-    storePromise = load("settings.json");
+  const state = useSettingsStore.getState();
+  if (!state.currentProfileId) {
+    throw new Error("No active profile set");
   }
-  return storePromise;
+  return load(`settings_${state.currentProfileId}.json`);
 };
 
 export interface SidebarItem {
@@ -24,6 +25,7 @@ interface SettingsState {
   selectedDevice: string | null;
   audioDevices: { name: string }[];
   isLoading: boolean;
+  currentProfileId: string | null;
   crossfadeDuration: number; // Audio
 
   // Behavior
@@ -64,7 +66,7 @@ interface SettingsActions {
   // Sorting Actions
   setSongsSort: (key: string, direction: string) => void;
 
-  loadSettings: () => Promise<void>;
+  loadSettings: (profileId?: string) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState & SettingsActions>(
@@ -75,6 +77,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     selectedDevice: null,
     audioDevices: [],
     isLoading: true,
+    currentProfileId: null,
     crossfadeDuration: 0,
     closeToTray: false,
     scanOnStartup: false,
@@ -204,62 +207,100 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
-    loadSettings: async () => {
+    loadSettings: async (profileId?: string) => {
+      // If no profileId provided, verify if we already have one loaded or just stop?
+      // Actually, we should REQUIRE profileId now, or use a default.
+
+      if (!profileId) {
+        // If called without ID (legacy/init), maybe do nothing until selectProfile is called?
+        // Or load "default" if we want a fallback.
+        return;
+      }
+
+      set({ isLoading: true });
+
       try {
-        const store = await getStore();
-        const theme = await store.get<"dark" | "light" | "system">("theme");
-        const dynamicGradient = await store.get<boolean>("dynamicGradient");
-        const libraryPaths = await store.get<string[]>("libraryPaths");
-        const selectedDevice = await store.get<string>("selectedDevice");
-        const crossfadeDuration = await store.get<number>("crossfadeDuration");
+        // Dynamic load
+        // Note: checking if load() creates a new instance or reuses.
+        // tauri-plugin-store manages instances by path.
+        const store = await load(`settings_${profileId}.json`);
 
-        const closeToTray = await store.get<boolean>("closeToTray");
-        const scanOnStartup = await store.get<boolean>("scanOnStartup");
-        const autoplay = await store.get<boolean>("autoplay");
+        // Helper to get with default
+        const getVal = async <T>(
+          key: string
+        ): Promise<T | null | undefined> => {
+          return await store.get<T>(key);
+        };
 
-        const sidebarItems = await store.get<{ id: string; hidden: boolean }[]>(
+        const theme = await getVal<"dark" | "light" | "system">("theme");
+        const dynamicGradient = await getVal<boolean>("dynamicGradient");
+        const libraryPaths = await getVal<string[]>("libraryPaths");
+        const selectedDevice = await getVal<string>("selectedDevice");
+        const crossfadeDuration = await getVal<number>("crossfadeDuration");
+
+        const closeToTray = await getVal<boolean>("closeToTray");
+        const scanOnStartup = await getVal<boolean>("scanOnStartup");
+        const autoplay = await getVal<boolean>("autoplay");
+
+        const sidebarItems = await getVal<{ id: string; hidden: boolean }[]>(
           "sidebarItems"
         );
-        const defaultPage = await store.get<string>("defaultPage");
+        const defaultPage = await getVal<string>("defaultPage");
 
-        const songsSortKey = await store.get<string>("songsSortKey");
-        const songsSortDirection = await store.get<string>(
-          "songsSortDirection"
-        );
+        const songsSortKey = await getVal<string>("songsSortKey");
+        const songsSortDirection = await getVal<string>("songsSortDirection");
 
+        // Update Store State
+        set({
+          theme: theme ?? "dark",
+          dynamicGradient: dynamicGradient ?? true,
+          libraryPaths: libraryPaths ?? [],
+          selectedDevice: selectedDevice ?? null,
+          crossfadeDuration: crossfadeDuration ?? 0,
+          closeToTray: closeToTray ?? false,
+          scanOnStartup: scanOnStartup ?? false,
+          autoplay: autoplay ?? false,
+          sidebarItems: sidebarItems ?? [
+            { id: "home", hidden: false },
+            { id: "search", hidden: false },
+            { id: "songs", hidden: false },
+            { id: "albums", hidden: false },
+            { id: "playlists", hidden: false },
+            { id: "settings", hidden: false },
+          ],
+          defaultPage: defaultPage ?? "home",
+          songsSortKey: songsSortKey ?? "date_added",
+          songsSortDirection: songsSortDirection ?? "desc",
+          isLoading: false,
+        });
+
+        // Apply Side Effects
         if (theme) {
-          set({ theme });
           if (theme !== "system") {
+            document.documentElement.classList.remove("dark", "light");
             document.documentElement.classList.add(theme);
+          } else {
+            document.documentElement.classList.remove("dark", "light");
+            // System theme logic usually handled by CSS media query or separate listener,
+            // but here we just clean up manual classes
           }
         }
-        if (typeof dynamicGradient === "boolean") set({ dynamicGradient });
-        if (libraryPaths) set({ libraryPaths });
+
         if (selectedDevice) {
-          set({ selectedDevice });
           await invoke("audio_set_device", { deviceName: selectedDevice });
         }
         if (typeof crossfadeDuration === "number") {
-          set({ crossfadeDuration });
           await invoke("audio_set_crossfade", {
             durationSecs: crossfadeDuration / 1000,
           });
         }
 
-        if (typeof closeToTray === "boolean") set({ closeToTray });
-        if (typeof scanOnStartup === "boolean") set({ scanOnStartup });
-        if (typeof autoplay === "boolean") set({ autoplay });
-
-        if (sidebarItems) set({ sidebarItems });
-        if (defaultPage) set({ defaultPage });
-
-        if (songsSortKey) set({ songsSortKey });
-        if (songsSortDirection) set({ songsSortDirection });
-
-        set({ isLoading: false });
-
-        // Initial device fetch
         get().refreshAudioDevices();
+
+        // Update global store reference for future saves
+        // Warning: 'storePromise' global var in this file needs to be updated or removed.
+        // We should attach the current store instance to the state or a closure variable.
+        // Let's update the global `getStore` function implementation below.
       } catch (e) {
         console.error("Failed to load settings:", e);
         set({ isLoading: false });
@@ -267,3 +308,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
   })
 );
+
+// Helper to get the CURRENT active store file.
+// We need to track which file is active.
+// Ideally, we pass the profileId to every action, OR we store `activeStore` in the state.
+// Since actions are closures, we can store it in the state.

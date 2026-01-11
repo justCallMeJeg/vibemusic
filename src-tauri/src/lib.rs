@@ -8,8 +8,11 @@ mod ffmpeg;
 mod library;
 mod scanner;
 mod playlists;
+mod profile; 
+
 use audio::{AudioEngine, AudioState};
-use std::sync::Arc;
+use profile::ProfileState;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 #[tauri::command]
@@ -55,6 +58,7 @@ pub fn run() {
 
             // Manage state manually since we are in setup
             app.manage(state);
+            app.manage(ProfileState(Mutex::new(None)));
 
             // Initialize media events
             engine.init_media_events(app.handle().clone());
@@ -131,7 +135,10 @@ pub fn run() {
             playlists::get_playlists,
             playlists::get_playlist_tracks,
             playlists::add_track_to_playlist,
-            playlists::remove_track_from_playlist
+            playlists::remove_track_from_playlist,
+            // Profile
+            profile::set_active_profile,
+            profile::delete_profile_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
