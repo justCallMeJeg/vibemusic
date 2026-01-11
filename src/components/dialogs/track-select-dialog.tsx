@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Check } from "lucide-react";
 import { Track, getTracks } from "@/lib/api";
-import { usePlaylistStore } from "@/stores/playlist-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
@@ -34,7 +34,7 @@ export function TrackSelectDialog({
   );
   const [isAdding, setIsAdding] = useState(false);
 
-  const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
+  const addToPlaylist = useLibraryStore((s) => s.addToPlaylist);
 
   useEffect(() => {
     if (open) {

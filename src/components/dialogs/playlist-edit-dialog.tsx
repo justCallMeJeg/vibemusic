@@ -22,7 +22,7 @@ import { join, appDataDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Loader2, Upload, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
-import { usePlaylistStore } from "@/stores/playlist-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { Textarea } from "../ui/textarea";
 import { ImageCropDialog } from "./image-crop-dialog";
 
@@ -49,7 +49,7 @@ export function PlaylistEditDialog({
   );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const { fetchPlaylists } = usePlaylistStore();
+  const fetchPlaylists = useLibraryStore((s) => s.refreshPlaylists);
 
   const handleSelectImage = async () => {
     try {

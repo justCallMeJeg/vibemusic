@@ -1,12 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  getAlbums,
-  getTracks,
-  Album,
-  Track,
-  getAlbumTracks,
-  getPlaylistTracks,
-} from "@/lib/api";
+import { useState } from "react";
+import { getAlbumTracks, getPlaylistTracks } from "@/lib/api";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -21,62 +14,37 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { usePlaylistStore } from "@/stores/playlist-store";
+/* import { usePlaylistStore } from "@/stores/playlist-store"; */
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Pencil } from "lucide-react";
 import { Playlist } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useLibraryStore } from "@/stores/library-store";
 
 export default function HomePage() {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  /* const [playlists, setPlaylists] = useState<Playlist[]>([]); */
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const albums = useLibraryStore((s) => s.albums);
+  const tracks = useLibraryStore((s) => s.tracks);
+  const playlists = useLibraryStore((s) => s.playlists);
+  const isLoading = useLibraryStore((s) => s.isLoading);
 
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
   const setPage = useNavigationStore((s) => s.setPage);
   const play = useAudioStore((s) => s.play);
 
-  /* Use store for playlists to ensure updates (like edits) are reflected immediately */
-  const { playlists, fetchPlaylists } = usePlaylistStore();
-
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
 
   const scrollRef = useScrollMask();
 
-  useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [albumsData, tracksData] = await Promise.all([
-          getAlbums().catch((e) => {
-            console.error("Failed to fetch albums:", e);
-            return [];
-          }),
-          getTracks().catch((e) => {
-            console.error("Failed to fetch tracks:", e);
-            return [];
-          }),
-        ]);
-
-        setAlbums(albumsData);
-        // Optimization: Limit rendering to 20 items
-        setTracks(tracksData.slice(0, 20));
-      } catch (error) {
-        console.error("Failed to load home data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  // Derived state for display
+  const recentTracks = tracks.slice(0, 20);
+  // Sort albums by date or random? Library store maintains sort.
+  // We can just take the first few or random ones.
+  // For "Quick Picks" let's just take the first 10 for now.
+  const displayAlbums = albums.slice(0, 10);
+  const displayPlaylists = playlists;
 
   const handlePlayAlbum = async (albumId: number) => {
     try {
@@ -180,11 +148,11 @@ export default function HomePage() {
         ref={scrollRef}
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
-          (albums.length > 0 || playlists.length > 0) && "pb-42"
+          (displayAlbums.length > 0 || displayPlaylists.length > 0) && "pb-42"
         )}
       >
         {/* Albums Section */}
-        {albums.length > 0 && (
+        {displayAlbums.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Albums</h2>
@@ -198,7 +166,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
-              {albums.map((album) => (
+              {displayAlbums.map((album) => (
                 <ContextMenu key={album.id}>
                   <ContextMenuTrigger>
                     <div
@@ -260,7 +228,7 @@ export default function HomePage() {
         )}
 
         {/* Playlists Section */}
-        {playlists.length > 0 && (
+        {displayPlaylists.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Playlists</h2>
@@ -274,7 +242,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
-              {playlists.map((playlist) => (
+              {displayPlaylists.map((playlist) => (
                 <ContextMenu key={playlist.id}>
                   <ContextMenuTrigger>
                     <div
@@ -344,7 +312,7 @@ export default function HomePage() {
         )}
 
         {/* Songs Section */}
-        {tracks.length > 0 && (
+        {recentTracks.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Recently Added</h2>
@@ -358,16 +326,20 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-1">
-              {tracks.map((track) => (
-                <MusicListItem key={track.id} track={track} context={tracks} />
+              {recentTracks.map((track) => (
+                <MusicListItem
+                  key={track.id}
+                  track={track}
+                  context={recentTracks}
+                />
               ))}
             </div>
           </section>
         )}
 
-        {albums.length === 0 &&
-          playlists.length === 0 &&
-          tracks.length === 0 && (
+        {displayAlbums.length === 0 &&
+          displayPlaylists.length === 0 &&
+          recentTracks.length === 0 && (
             <EmptyState
               icon={Play}
               title="Your library is empty"

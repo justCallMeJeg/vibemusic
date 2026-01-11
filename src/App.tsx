@@ -3,7 +3,7 @@ import "./styles/globals.css";
 import MusicController from "./components/music-controller";
 import { useEffect, useState } from "react";
 import { useAudioStore } from "./stores/audio-store";
-import { usePlaylistStore } from "./stores/playlist-store";
+
 import NavigationMenu from "./components/navigation-menu";
 import QueueMenu from "./components/queue-menu";
 import MainContent from "./components/main-content";
@@ -32,6 +32,10 @@ import {
 import { useProfileStore } from "@/stores/profile-store";
 import ProfileSelectionPage from "@/pages/profile-selection-page";
 
+import { useLibraryStore } from "@/stores/library-store";
+
+// ... (imports)
+
 export default function App() {
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
@@ -47,6 +51,18 @@ export default function App() {
     loadSettings,
     isLoading: isSettingsLoading,
   } = useSettingsStore();
+
+  // Library Store Initialization
+  const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
+  useEffect(() => {
+    fetchLibrary();
+
+    // Listen for scan completion to refresh library
+    // We can assume scan_music_library invokes might trigger an event,
+    // or we just manually refresh after the import action below.
+    // For now, let's just fetch on mount.
+  }, [fetchLibrary]);
+
   const {
     activeProfileId,
     profiles,
@@ -119,12 +135,6 @@ export default function App() {
     return cleanup;
   }, [initListeners]);
 
-  // Load playlists once on app startup (centralized fetch)
-  const fetchPlaylists = usePlaylistStore((s) => s.fetchPlaylists);
-  useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
-
   // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
@@ -146,6 +156,9 @@ export default function App() {
         setIsScanning(true);
         console.log("Scanning folder:", selected);
         await invoke("scan_music_library", { folders: [selected] });
+
+        // Refresh library after scan
+        await fetchLibrary();
       }
     } catch (error) {
       console.error("Failed to import folder:", error);

@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { getTracks, Track } from "@/lib/api";
+
 import MusicListItem from "@/components/shared/item/music-list";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useLibraryStore } from "@/stores/library-store";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
@@ -26,8 +27,8 @@ type SortDirection = "asc" | "desc";
 const ITEM_HEIGHT = 56;
 
 export default function SongsPage() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const tracks = useLibraryStore((s) => s.tracks);
+  const isLoading = useLibraryStore((s) => s.isLoading);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Use persistent settings
@@ -38,21 +39,6 @@ export default function SongsPage() {
 
   // Apply visual scroll mask using the same ref
   useScrollMask(24, parentRef);
-
-  const loadTracks = async () => {
-    try {
-      const data = await getTracks();
-      setTracks(data);
-    } catch (error) {
-      console.error("Failed to load tracks:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTracks();
-  }, []);
 
   // Filter and Sort Logic
   const displayedTracks = useMemo(() => {

@@ -17,7 +17,7 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
 } from "../../ui/context-menu";
-import { usePlaylistStore } from "@/stores/playlist-store";
+import { useLibraryStore } from "@/stores/library-store";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
@@ -41,8 +41,8 @@ const MusicListItem = memo(function MusicListItem({
   const status = usePlayerStatus();
 
   // Playlist store - playlists fetched once in App.tsx
-  const playlists = usePlaylistStore((s) => s.playlists);
-  const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
+  const playlists = useLibraryStore((s) => s.playlists);
+  const addToPlaylist = useLibraryStore((s) => s.addToPlaylist);
 
   // Get actions directly from store (stable references)
   const play = useAudioStore((s) => s.play);

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { getAlbums, Album, getAlbumTracks } from "@/lib/api";
+import { getAlbumTracks } from "@/lib/api";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.jpg";
@@ -13,31 +12,16 @@ import { Play, Shuffle, ListPlus, Disc } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useAudioStore } from "@/stores/audio-store";
 import { toast } from "react-hot-toast";
+import { useLibraryStore } from "@/stores/library-store";
 
 export default function AlbumsPage() {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const albums = useLibraryStore((s) => s.albums);
+  const isLoading = useLibraryStore((s) => s.isLoading);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
 
   const play = useAudioStore((s) => s.play);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
-
-  useEffect(() => {
-    const loadAlbums = async () => {
-      try {
-        const data = await getAlbums();
-        setAlbums(data);
-      } catch (error) {
-        console.error("Failed to load albums:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAlbums();
-    loadAlbums();
-  }, []);
 
   const handlePlayAlbum = async (albumId: number, shuffle: boolean = false) => {
     try {

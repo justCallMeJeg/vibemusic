@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { usePlaylistStore } from "@/stores/playlist-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -114,7 +114,8 @@ export default function PlaylistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const play = useAudioStore((s) => s.play);
-  const { fetchPlaylists, reorderPlaylist } = usePlaylistStore();
+  const reorderPlaylist = useLibraryStore((s) => s.reorderPlaylist);
+  const refreshPlaylists = useLibraryStore((s) => s.refreshPlaylists);
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -166,7 +167,7 @@ export default function PlaylistDetailPage() {
     try {
       await deletePlaylist(playlistId);
       toast.success("Playlist deleted");
-      await fetchPlaylists();
+      await refreshPlaylists();
       goBack();
     } catch (e) {
       console.error(e);

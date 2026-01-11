@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { Button } from "@/components/ui/button";
 import { Plus, ListMusic, Play, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { usePlaylistStore } from "@/stores/playlist-store";
+import { useLibraryStore } from "@/stores/library-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { deletePlaylist, getPlaylistTracks, Playlist } from "@/lib/api";
+import { getPlaylistTracks, Playlist } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import {
   Dialog,
@@ -46,8 +46,10 @@ export default function PlaylistsPage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
 
   // Use global store
-  const { playlists, isLoading, fetchPlaylists, createPlaylist } =
-    usePlaylistStore();
+  const playlists = useLibraryStore((s) => s.playlists);
+  const isLoading = useLibraryStore((s) => s.isLoading);
+  const createPlaylist = useLibraryStore((s) => s.createPlaylist);
+  const deletePlaylist = useLibraryStore((s) => s.deletePlaylist);
 
   // Audio Store
   const play = useAudioStore((s) => s.play);
@@ -69,10 +71,6 @@ export default function PlaylistsPage() {
 
   const scrollRef = useScrollMask();
 
-  useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPlaylistName.trim()) return;
@@ -92,11 +90,9 @@ export default function PlaylistsPage() {
     setIsDeleting(true);
     try {
       await deletePlaylist(playlistToDelete.id);
-      toast.success("Playlist deleted");
-      await fetchPlaylists();
+      // toast is handled in store
     } catch (error) {
       console.error("Failed to delete playlist:", error);
-      toast.error("Failed to delete playlist");
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
