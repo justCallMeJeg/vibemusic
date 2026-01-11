@@ -23,7 +23,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { Loader2, Upload, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import { usePlaylistStore } from "@/stores/playlist-store";
-import { Textarea } from "./ui/textarea";
+import { Textarea } from "../ui/textarea";
 import { ImageCropDialog } from "./image-crop-dialog";
 
 interface PlaylistEditDialogProps {

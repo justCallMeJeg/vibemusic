@@ -42,7 +42,7 @@ export function TitleBar() {
       {/* Content Layer */}
       <div className="flex items-center gap-2 pointer-events-none relative z-10">
         <div className="w-3 h-3 rounded-full bg-indigo-500" />
-        <span className="text-xs font-medium text-white/50">vibemusic</span>
+        <span className="text-xs font-medium text-white/50">Vibe</span>
       </div>
 
       <div className="flex items-center gap-1 relative z-50">

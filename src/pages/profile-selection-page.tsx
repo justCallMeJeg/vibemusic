@@ -23,7 +23,7 @@ import {
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Camera, Pencil } from "lucide-react";
-import { ImageCropDialog } from "@/components/image-crop-dialog";
+import { ImageCropDialog } from "@/components/dialogs/image-crop-dialog";
 import { useProfileStore, Profile } from "@/stores/profile-store";
 
 const AVATAR_COLORS = [

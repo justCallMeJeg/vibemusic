@@ -5,7 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export function SettingsLibrary() {
   const { libraryPaths, addLibraryPath, removeLibraryPath } =

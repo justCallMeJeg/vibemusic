@@ -11,7 +11,7 @@ import { useNavigationStore } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.jpg";
-import MusicListItem from "@/components/ui/music-list";
+import MusicListItem from "@/components/shared/item/music-list";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Play } from "lucide-react";
 import {
@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { usePlaylistStore } from "@/stores/playlist-store";
-import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Pencil } from "lucide-react";
 import { Playlist } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shared/empty-state";
 
 export default function HomePage() {
   const [albums, setAlbums] = useState<Album[]>([]);

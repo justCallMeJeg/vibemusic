@@ -7,7 +7,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "./context-menu";
+} from "../../ui/context-menu";
 import { useAudioStore, usePlayerStatus } from "@/stores/audio-store";
 
 interface QueueItemProps {

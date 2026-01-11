@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { Button } from "./button";
+import { Button } from "./ui/button";
 import {
   useAudioStore,
   useCurrentTrack,
@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import QueueItem from "./queue-item";
+import QueueItem from "./shared/item/queue-item";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.jpg";
 

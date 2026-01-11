@@ -16,7 +16,7 @@ import {
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-} from "./context-menu";
+} from "../../ui/context-menu";
 import { usePlaylistStore } from "@/stores/playlist-store";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";

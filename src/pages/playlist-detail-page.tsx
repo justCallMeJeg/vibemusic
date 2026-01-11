@@ -11,7 +11,7 @@ import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { ChevronLeft, Play, Trash2, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MusicListItem from "@/components/ui/music-list";
+import MusicListItem from "@/components/shared/item/music-list";
 import { formatDistanceToNow } from "date-fns";
 import toast from "react-hot-toast";
 import {
@@ -28,8 +28,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { usePlaylistStore } from "@/stores/playlist-store";
-import { EmptyState } from "@/components/empty-state";
-import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Pencil, GripVertical } from "lucide-react";
 import {
@@ -49,7 +49,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { TrackSelectDialog } from "@/components/track-select-dialog";
+import { TrackSelectDialog } from "@/components/dialogs/track-select-dialog";
 
 interface SortableTrackItemProps {
   track: Track;

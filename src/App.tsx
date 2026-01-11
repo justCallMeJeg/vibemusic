@@ -1,13 +1,13 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
-import MusicController from "./components/ui/music-controller";
+import MusicController from "./components/music-controller";
 import { useEffect, useState } from "react";
 import { useAudioStore } from "./stores/audio-store";
 import { usePlaylistStore } from "./stores/playlist-store";
-import NavigationMenu from "./components/ui/navigation-menu";
-import QueueMenu from "./components/ui/queue-menu";
+import NavigationMenu from "./components/navigation-menu";
+import QueueMenu from "./components/queue-menu";
 import MainContent from "./components/main-content";
-import { GlobalSearch } from "./components/ui/global-search";
+import { GlobalSearch } from "./components/dialogs/global-search";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 // import type { Track } from "@/lib/api";
@@ -18,7 +18,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 
-import { TitleBar } from "./components/ui/title-bar";
+import { TitleBar } from "./components/titlebar";
 import {
   AlertDialog,
   AlertDialogAction,

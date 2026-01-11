@@ -13,8 +13,8 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { Button } from "./button";
-import { Slider } from "./slider";
+import { Button } from "./ui/button";
+import { Slider } from "./ui/slider";
 import {
   useAudioStore,
   useCurrentTrack,

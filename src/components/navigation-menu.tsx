@@ -7,7 +7,7 @@ import {
   Settings,
   TvMinimal,
 } from "lucide-react";
-import { Button } from "./button";
+import { Button } from "./ui/button";
 import {
   useCurrentPage,
   useNavigationStore,

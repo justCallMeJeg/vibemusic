@@ -11,7 +11,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "./context-menu";
+} from "../../ui/context-menu";
 
 import placeholderArt from "@/assets/placeholder-art.jpg";
 
