@@ -16,8 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -197,29 +206,32 @@ export default function PlaylistsPage() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className="bg-neutral-900 border-neutral-800 text-white">
-            <DialogHeader>
-              <DialogTitle>Delete Playlist?</DialogTitle>
-              <DialogDescription>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-400">
                 This action cannot be undone. This will permanently delete the
                 playlist "{playlistToDelete?.name}".
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <DialogClose asChild>
-                <Button variant="ghost">Cancel</Button>
-              </DialogClose>
-              <Button
-                variant="destructive"
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-500 hover:bg-red-600 text-white border-none"
                 onClick={confirmDelete}
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 scroll-mask-y">

@@ -15,15 +15,16 @@ import MusicListItem from "@/components/ui/music-list";
 import { formatDistanceToNow } from "date-fns";
 import toast from "react-hot-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { usePlaylistStore } from "@/stores/playlist-store";
 import { PlaylistEditDialog } from "@/components/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -332,11 +333,11 @@ export default function PlaylistDetailPage() {
               <Pencil size={20} />
             </Button>
 
-            <Dialog
+            <AlertDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
             >
-              <DialogTrigger asChild>
+              <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon-lg"
@@ -345,29 +346,29 @@ export default function PlaylistDetailPage() {
                 >
                   <Trash2 size={20} />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-neutral-900 border-neutral-800 text-white">
-                <DialogHeader>
-                  <DialogTitle>Delete Playlist?</DialogTitle>
-                  <DialogDescription>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-gray-400">
                     This action cannot be undone. This will permanently delete
                     the playlist "{playlist.name}".
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <DialogClose asChild>
-                    <Button variant="ghost">Cancel</Button>
-                  </DialogClose>
-                  <Button
-                    variant="destructive"
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2 sm:gap-0">
+                  <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-500 hover:bg-red-600 text-white border-none"
                     onClick={handleDelete}
                     disabled={isDeleting}
                   >
                     {isDeleting ? "Deleting..." : "Delete"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <PlaylistEditDialog
               playlist={playlist}
