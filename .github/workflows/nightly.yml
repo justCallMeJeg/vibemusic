@@ -7,19 +7,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  nightly:
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest] # Add macos-latest, ubuntu-22.04 if needed
+        platform: [windows-latest]
 
     runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Needed for git-cliff
 
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -39,6 +42,66 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Download ffmpeg binaries (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+          $binariesDir = "src-tauri/binaries"
+
+          Invoke-WebRequest -Uri $ffmpegUrl -OutFile "ffmpeg.zip"
+          Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg-temp" -Force
+
+          $extractedFolder = Get-ChildItem -Path "ffmpeg-temp" -Directory | Select-Object -First 1
+
+          Copy-Item -Path "$($extractedFolder.FullName)/bin/ffmpeg.exe" -Destination "$binariesDir/ffmpeg-x86_64-pc-windows-msvc.exe"
+          Copy-Item -Path "$($extractedFolder.FullName)/bin/ffprobe.exe" -Destination "$binariesDir/ffprobe-x86_64-pc-windows-msvc.exe"
+
+          Remove-Item -Path "ffmpeg.zip" -Force
+          Remove-Item -Path "ffmpeg-temp" -Recurse -Force
+        shell: pwsh
+
+      - name: Bump patch version
+        id: version
+        run: |
+          # Read current version from package.json
+          $pkg = Get-Content package.json | ConvertFrom-Json
+          $currentVersion = $pkg.version
+
+          # Parse and increment patch version
+          $parts = $currentVersion -split '\.'
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2] + 1
+          $newVersion = "$major.$minor.$patch"
+
+          echo "CURRENT_VERSION=$currentVersion" >> $env:GITHUB_OUTPUT
+          echo "NEW_VERSION=$newVersion" >> $env:GITHUB_OUTPUT
+          echo "DISPLAY_VERSION=$newVersion-nightly" >> $env:GITHUB_OUTPUT
+
+          # Update package.json
+          $pkg.version = $newVersion
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content package.json
+
+          # Update tauri.conf.json
+          $tauriConf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $tauriConf.version = $newVersion
+          $tauriConf | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
+
+          # Update Cargo.toml
+          (Get-Content src-tauri/Cargo.toml) -replace '^version = ".*"', "version = `"$newVersion`"" | Set-Content src-tauri/Cargo.toml
+
+          Write-Host "Bumped version: $currentVersion -> $newVersion"
+        shell: pwsh
+
+      - name: Generate changelog (since last stable release)
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --strip header
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
       - name: Build and upload Nightly
         uses: tauri-apps/tauri-action@v0
         env:
@@ -47,9 +110,31 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: nightly
-          releaseName: "Vibe Music Nightly"
-          body: "This is the rolling nightly release. It contains the latest changes from the main branch."
+          releaseName: "Vibe Music ${{ steps.version.outputs.DISPLAY_VERSION }}"
+          releaseBody: |
+            🌙 **Nightly Build** - Version `${{ steps.version.outputs.NEW_VERSION }}`
+
+            This is a rolling nightly release with the latest changes from the `dev` branch.
+
+            ⚠️ **Warning**: Nightly builds may be unstable and contain bugs.
+
+            ---
+
+            ### 📋 Changes since last stable release:
+
+            ${{ steps.changelog.outputs.content }}
+
+            ---
+
+            When this version is promoted to stable, it will be released as `v${{ steps.version.outputs.NEW_VERSION }}`.
           draft: false
           prerelease: true
-          # This forces the action to overwrite the 'nightly' tag
           args: --target x86_64-pc-windows-msvc
+
+      - name: Commit version bump
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+          git commit -m "chore: bump version to ${{ steps.version.outputs.NEW_VERSION }} [skip ci]" || echo "No changes to commit"
+          git push origin dev
