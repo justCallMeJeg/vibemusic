@@ -34,4 +34,23 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-markdown"],
+          "ui-vendor": [
+            "@radix-ui/react-slider",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-context-menu",
+            "@radix-ui/react-switch",
+            "class-variance-authority",
+            "lucide-react",
+          ],
+          "utils-vendor": ["date-fns", "clsx", "tailwind-merge", "uuid"],
+        },
+      },
+    },
+  },
 }));

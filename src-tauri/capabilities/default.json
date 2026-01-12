@@ -5,6 +5,42 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "core:app:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-unmaximize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-destroy",
+    "core:tray:default",
+    "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$APPLOCALDATA/logs" },
+        { "path": "$APPLOCALDATA/logs/**" }
+      ]
+    },
+    "core:path:default",
+    "log:default",
+    "updater:default",
+    "process:default",
+    "fs:scope",
+    "sql:default",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "store:default",
+    "dialog:default",
+    "fs:default",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-appdata-write",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$APPDATA/**", "$APPLOCALDATA/**"]
+    }
   ]
 }

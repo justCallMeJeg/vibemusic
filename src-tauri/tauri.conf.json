@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "vibemusic",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "identifier": "com.music.vibe",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,12 +13,28 @@
     "windows": [
       {
         "title": "vibemusic",
-        "width": 800,
-        "height": 600
+        "width": 1280,
+        "height": 720,
+        "decorations": false,
+        "maximized": true,
+        "minWidth": 1280,
+        "minHeight": 720
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://asset.localhost;",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/justCallMeJeg/vibemusic/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzNjQwRjJFQTcxOUYxNzgKUldSNDhSbW5MZzlrMHhiM1V1dlJDSllDK3NBTmFjdDh4ZzNqSmd3NUR2UU1ZeE9tVVlXREUvQ3AK"
     }
   },
   "bundle": {
@@ -30,6 +46,8 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "licenseFile": "LICENSE.txt",
+    "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"]
   }
 }

@@ -4,15 +4,22 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(100% 0 0deg);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Instrument Sans", sans-serif;
+  height: 100%;
+  overflow: hidden;
+
+  --background: oklch(100% 0.0001 271.152deg);
   --foreground: oklch(14.5% 0 0deg);
   --card: oklch(100% 0 0deg);
   --card-foreground: oklch(14.5% 0 0deg);
   --popover: oklch(100% 0 0deg);
   --popover-foreground: oklch(14.5% 0 0deg);
-  --primary: oklch(20.5% 0 0deg);
+  --primary: oklch(20.463% 0 271.152deg);
   --primary-foreground: oklch(98.5% 0 0deg);
-  --secondary: oklch(97% 0 0deg);
+  --secondary: oklch(97.015% 0.0001 271.152deg);
   --secondary-foreground: oklch(20.5% 0 0deg);
   --muted: oklch(97% 0 0deg);
   --muted-foreground: oklch(55.6% 0 0deg);
@@ -120,5 +127,64 @@
 
   body {
     @apply bg-background text-foreground;
+
+    height: 100%;
+    overflow: hidden;
   }
+}
+
+.debug {
+  outline: 1px solid red;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 15s linear infinite;
+  min-width: 100%;
+}
+
+.mask-linear-fade {
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  mask-image: linear-gradient(to left, black 85%, transparent 100%);
+}
+
+@utility scroll-mask-y {
+  --scroll-mask-top: 1; /* Default to visible (no mask) */
+
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / var(--scroll-mask-top)) 0,
+    black 24px,
+    black calc(100% - 24px),
+    transparent 100%
+  );
 }
