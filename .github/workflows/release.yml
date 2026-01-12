@@ -118,7 +118,7 @@ jobs:
 
             ---
             See the assets below to download and install.
-          draft: false
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           args: --target x86_64-pc-windows-msvc
