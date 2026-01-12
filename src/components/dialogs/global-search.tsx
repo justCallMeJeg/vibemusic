@@ -28,7 +28,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 // Maximum items per category for performance
 const MAX_ITEMS = 20;

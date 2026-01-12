@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_updater::UpdaterExt;
 use serde::Serialize;
 
@@ -9,6 +9,13 @@ pub struct UpdateMetadata {
     pub current_version: String,
     pub body: Option<String>,
     pub date: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadProgress {
+    pub downloaded: u64,
+    pub total: Option<u64>,
 }
 
 #[tauri::command]
@@ -58,8 +65,21 @@ pub async fn install_update<R: Runtime>(
     let updater = builder.build().map_err(|e| e.to_string())?;
     
     if let Some(update) = updater.check().await.map_err(|e| e.to_string())? {
-        update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+        let app_handle = app.clone();
+        
+        update.download_and_install(
+            move |downloaded, total| {
+                let _ = app_handle.emit("update-download-progress", DownloadProgress {
+                    downloaded: downloaded as u64,
+                    total: total.map(|t| t as u64),
+                });
+            },
+            || {
+                // Download complete, about to install
+            }
+        ).await.map_err(|e| e.to_string())?;
     }
     
     Ok(())
 }
+

@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { getPlaylistTracks, Playlist } from "@/lib/api";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,

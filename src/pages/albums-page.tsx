@@ -11,7 +11,7 @@ import {
 import { Play, Shuffle, ListPlus, Disc } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useAudioStore } from "@/stores/audio-store";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useLibraryStore } from "@/stores/library-store";
 
 export default function AlbumsPage() {

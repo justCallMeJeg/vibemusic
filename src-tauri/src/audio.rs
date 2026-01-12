@@ -264,10 +264,16 @@ impl AudioWorker {
         app_handle: AppHandle,
     ) -> Self {
         let host = cpal::default_host();
-        let device = host
+        
+        // Gracefully handle missing audio devices
+        let (sample_rate, channels) = host
             .default_output_device()
-            .expect("No output device found");
-        let config = device.default_output_config().expect("No default config");
+            .and_then(|device| device.default_output_config().ok())
+            .map(|config| (config.sample_rate().0, config.channels()))
+            .unwrap_or_else(|| {
+                error!("No audio output device found, using default config (44100Hz, stereo)");
+                (44100, 2) // Default fallback
+            });
 
         Self {
             receiver,
@@ -283,8 +289,8 @@ impl AudioWorker {
             secondary_process: None,
             crossfade_setting: Duration::from_secs(0),
             crossfade_state: CrossfadeState::None,
-            device_sample_rate: config.sample_rate().0,
-            device_channels: config.channels(),
+            device_sample_rate: sample_rate,
+            device_channels: channels,
             selected_device_name: None,
             current_file_path: None,
             duration_ms: 0,
@@ -481,13 +487,24 @@ impl AudioWorker {
                     devices.find(|d| d.name().map(|n| n == *name).unwrap_or(false))
                 })
                 .or_else(|| host.default_output_device())
-                .expect("No output device found")
         } else {
             host.default_output_device()
-                .expect("No output device found")
         };
 
-        let config: StreamConfig = device.default_output_config().unwrap().into();
+        let Some(device) = device else {
+            error!("No audio output device available");
+            self.app_handle.emit(EVENT_PLAYBACK_ERROR, "No audio output device available").ok();
+            return;
+        };
+
+        let config: StreamConfig = match device.default_output_config() {
+            Ok(c) => c.into(),
+            Err(e) => {
+                error!("Failed to get audio config: {}", e);
+                self.app_handle.emit(EVENT_PLAYBACK_ERROR, format!("Audio device error: {}", e)).ok();
+                return;
+            }
+        };
 
         self.device_sample_rate = config.sample_rate.0;
         self.device_channels = config.channels;
@@ -503,35 +520,45 @@ impl AudioWorker {
         let mut consumer = consumer;
         let channels = self.device_channels as usize;
 
-        let stream = device
-            .build_output_stream(
-                &config,
-                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    if !is_playing.load(Ordering::Relaxed) {
-                        data.fill(0.0);
-                        return;
-                    }
+        let stream = match device.build_output_stream(
+            &config,
+            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                if !is_playing.load(Ordering::Relaxed) {
+                    data.fill(0.0);
+                    return;
+                }
 
-                    let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
-                    for frame in data.chunks_mut(channels) {
-                        for sample in frame.iter_mut() {
-                            if let Some(s) = consumer.try_pop() {
-                                *sample = s * vol;
-                            } else {
-                                *sample = 0.0;
-                            }
+                let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
+                for frame in data.chunks_mut(channels) {
+                    for sample in frame.iter_mut() {
+                        if let Some(s) = consumer.try_pop() {
+                            *sample = s * vol;
+                        } else {
+                            *sample = 0.0;
                         }
                     }
-                },
-                move |err| {
-                    error!("CPAL Error: {}", err);
-                    device_error.store(true, Ordering::Relaxed);
-                },
-                None,
-            )
-            .expect("Failed to build CPAL stream");
+                }
+            },
+            move |err| {
+                error!("CPAL Error: {}", err);
+                device_error.store(true, Ordering::Relaxed);
+            },
+            None,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Failed to build audio stream: {}", e);
+                self.app_handle.emit(EVENT_PLAYBACK_ERROR, format!("Failed to initialize audio: {}", e)).ok();
+                return;
+            }
+        };
 
-        stream.play().expect("Failed to play CPAL stream");
+        if let Err(e) = stream.play() {
+            error!("Failed to play audio stream: {}", e);
+            self.app_handle.emit(EVENT_PLAYBACK_ERROR, format!("Failed to start playback: {}", e)).ok();
+            return;
+        }
+        
         self._current_stream = Some(stream);
     }
 

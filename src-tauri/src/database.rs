@@ -19,6 +19,9 @@ impl DbHelper {
         }
         let conn = Connection::open(path)?;
 
+        // Enable WAL mode for better concurrent read performance during scans
+        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")?;
+
         // Robustness check: Ensure schema exists
         // Critical for profile-specific databases which aren't covered by the main plugin migrations
         let table_exists: bool = conn

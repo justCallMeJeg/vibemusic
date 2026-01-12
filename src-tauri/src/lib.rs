@@ -140,8 +140,6 @@ pub fn run() {
             audio::audio_stop,
             audio::audio_seek,
             audio::audio_set_volume,
-            audio::audio_set_volume,
-            audio::audio_set_volume,
             audio::audio_get_state,
             audio::audio_get_devices,
             audio::audio_set_device,

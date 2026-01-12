@@ -13,7 +13,7 @@ import { ChevronLeft, Play, Trash2, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
 import { formatDistanceToNow } from "date-fns";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,

@@ -1,7 +1,7 @@
 {
   "name": "vibemusic",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "license": "MIT",
   "authors": [
@@ -70,7 +70,6 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-easy-crop": "^5.5.6",
-    "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",

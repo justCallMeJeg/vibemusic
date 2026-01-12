@@ -2,11 +2,19 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Update } from "@tauri-apps/plugin-updater";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { logger } from "@/lib/logger";
 
+interface DownloadProgress {
+  downloaded: number;
+  total: number | null;
+}
+
 interface UpdateStore {
   isChecking: boolean;
+  isDownloading: boolean;
+  downloadProgress: DownloadProgress | null;
   isUpdateAvailable: boolean;
   updateManifest: Update | null;
   error: string | null;
@@ -25,6 +33,8 @@ export const useUpdateStore = create<UpdateStore>()(
     (set, get) => ({
       channel: "stable",
       isChecking: false,
+      isDownloading: false,
+      downloadProgress: null,
       isUpdateAvailable: false,
       updateManifest: null,
       error: null,
@@ -81,32 +91,46 @@ export const useUpdateStore = create<UpdateStore>()(
       },
 
       install: async () => {
-        const { updateManifest } = get();
+        const { updateManifest, channel } = get();
         if (!updateManifest) return;
 
+        let unlisten: UnlistenFn | null = null;
+
         try {
-          set({ isChecking: true }); // Use isChecking to show spinner
-          await updateManifest.downloadAndInstall();
+          set({ isDownloading: true, downloadProgress: null, error: null });
+
+          // Listen for download progress events from Rust
+          unlisten = await listen<DownloadProgress>(
+            "update-download-progress",
+            (event) => {
+              set({ downloadProgress: event.payload });
+            }
+          );
+
+          // Start the download and install
+          await invoke("install_update", { channel });
+
           logger.info("Update installed, relaunching...");
-          // Relaunch is handled by Rust command or we can call it here if needed
-          // But our install_update command doesn't relaunch automatically?
-          // Wait, let's check updater.rs. It just finishes.
-          // We should explicit relaunch here for clarity or let Rust do it.
-          // The JS plugin usually relaunches.
-          // Let's call relaunch() here just in case, or check if Rust implementation does it.
-          // My Rust implementation: update.download_and_install(...).await?
-          // The tauri-plugin-updater doesn't auto-relaunch anymore in v2 I think?
-          // Actually, let's keep the relaunch() call from the store.
           await relaunch();
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           logger.error("Failed to install update:", message);
-          set({ error: message, isChecking: false });
+          set({ error: message });
+        } finally {
+          if (unlisten) {
+            unlisten();
+          }
+          set({ isDownloading: false, downloadProgress: null });
         }
       },
 
       reset: () => {
-        set({ error: null, isChecking: false });
+        set({
+          error: null,
+          isChecking: false,
+          isDownloading: false,
+          downloadProgress: null,
+        });
       },
     }),
     {

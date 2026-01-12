@@ -12,7 +12,7 @@ import {
   reorderPlaylist,
   deletePlaylist,
 } from "@/lib/api";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface LibraryState {
   tracks: Track[];
