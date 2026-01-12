@@ -175,8 +175,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
     setCrossfadeDuration: async (durationMs) => {
       set({ crossfadeDuration: durationMs });
-      // Backend likely expects seconds (float), so convert ms to s
-      await invoke("audio_set_crossfade", { durationSecs: durationMs / 1000 });
+      // Send milliseconds directly to backend
+      await invoke("audio_set_crossfade", { durationMs });
       const store = await getStore();
       await store.set("crossfadeDuration", durationMs);
       await store.save();
@@ -314,7 +314,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         }
         if (typeof crossfadeDuration === "number") {
           await invoke("audio_set_crossfade", {
-            durationSecs: crossfadeDuration / 1000,
+            durationMs: crossfadeDuration,
           });
         }
 

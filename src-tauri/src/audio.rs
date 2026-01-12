@@ -924,9 +924,9 @@ pub fn audio_set_device(
 #[tauri::command]
 pub fn audio_set_crossfade(
     state: tauri::State<AudioState>,
-    duration_secs: u64,
+    duration_ms: u64,
 ) -> Result<(), AppError> {
-    state.0.set_crossfade(duration_secs);
+    state.0.set_crossfade(duration_ms);
     Ok(())
 }
 
