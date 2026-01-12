@@ -66,7 +66,7 @@ enum AudioCommand {
     Seek(u64),
     SetVolume(f32),
     SetDevice(String),
-    SetCrossfade(u64), // Duration in seconds
+    SetCrossfade(u64), // Duration in milliseconds
 }
 
 pub struct AudioEngine {
@@ -199,9 +199,9 @@ impl AudioEngine {
             .ok();
     }
 
-    pub fn set_crossfade(&self, duration_secs: u64) {
+    pub fn set_crossfade(&self, duration_ms: u64) {
         self.command_tx
-            .send(AudioCommand::SetCrossfade(duration_secs))
+            .send(AudioCommand::SetCrossfade(duration_ms))
             .ok();
     }
 
@@ -337,8 +337,8 @@ impl AudioWorker {
                 self.selected_device_name = Some(name);
                 self.handle_device_change();
             }
-            AudioCommand::SetCrossfade(secs) => {
-                self.crossfade_setting = Duration::from_secs(secs);
+            AudioCommand::SetCrossfade(ms) => {
+                self.crossfade_setting = Duration::from_millis(ms);
             }
         }
     }
