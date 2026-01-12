@@ -120,6 +120,7 @@ jobs:
             See the assets below to download and install.
           draft: false
           prerelease: false
+          includeUpdaterJson: true
           args: --target x86_64-pc-windows-msvc
 
       - name: Update CHANGELOG.md in repo

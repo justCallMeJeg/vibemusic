@@ -132,6 +132,7 @@ jobs:
             When this version is promoted to stable, it will be released as `v${{ steps.version.outputs.NEW_VERSION }}`.
           draft: false
           prerelease: true
+          includeUpdaterJson: true
           args: --target x86_64-pc-windows-msvc
 
       - name: Commit version bump
