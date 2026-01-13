@@ -133,7 +133,13 @@ pub fn run() {
             scanner::scan_folder,
             scanner::scan_music_library,
             scanner::check_files_exist,
+            scanner::check_files_exist,
             scanner::prune_library,
+            // Artist commands
+            library::get_all_artists,
+            library::get_artist_by_id,
+            library::get_artist_albums,
+            library::get_artist_tracks,
             // Audio commands
             audio::audio_play,
             audio::audio_pause,

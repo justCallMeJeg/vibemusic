@@ -2,6 +2,7 @@ import {
   Disc,
   Import,
   ListMusic,
+  Users,
   Music2,
   Settings,
   Search,
@@ -41,6 +42,7 @@ export default function NavigationMenu({
     songs: <Music2 />,
     albums: <Disc />,
     playlists: <ListMusic />,
+    artists: <Users />,
     settings: <Settings />,
   };
 
@@ -50,6 +52,7 @@ export default function NavigationMenu({
     songs: "Songs",
     albums: "Albums",
     playlists: "Playlists",
+    artists: "Artists",
     settings: "Settings",
   };
 

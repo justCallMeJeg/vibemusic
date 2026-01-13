@@ -4,6 +4,8 @@ import AlbumsPage from "@/pages/albums-page";
 import AlbumDetailPage from "@/pages/album-detail-page";
 import PlaylistsPage from "@/pages/playlists-page";
 import PlaylistDetailPage from "@/pages/playlist-detail-page";
+import ArtistsPage from "@/pages/artists-page";
+import ArtistDetailPage from "@/pages/artist-detail-page";
 import HomePage from "@/pages/home-page";
 import SettingsPage from "@/pages/settings-page";
 
@@ -19,6 +21,9 @@ export default function MainContent() {
     if (detailView.type === "playlist") {
       return <PlaylistDetailPage />;
     }
+    if (detailView.type === "artist") {
+      return <ArtistDetailPage />;
+    }
   }
 
   // Handle main pages
@@ -31,6 +36,8 @@ export default function MainContent() {
       return <AlbumsPage />;
     case "playlists":
       return <PlaylistsPage />;
+    case "artists":
+      return <ArtistsPage />;
     case "settings":
     case "about":
       return <SettingsPage />;

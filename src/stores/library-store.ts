@@ -3,9 +3,11 @@ import {
   Track,
   Album,
   Playlist,
+  Artist,
   getTracks,
   getAlbums,
   getPlaylists,
+  getArtists,
   createPlaylist,
   updatePlaylist,
   addTrackToPlaylist,
@@ -18,6 +20,7 @@ interface LibraryState {
   tracks: Track[];
   albums: Album[];
   playlists: Playlist[];
+  artists: Artist[];
   isLoading: boolean;
   isInitialized: boolean;
 
@@ -28,6 +31,7 @@ interface LibraryState {
   refreshTracks: () => Promise<void>;
   refreshAlbums: () => Promise<void>;
   refreshPlaylists: () => Promise<void>;
+  refreshArtists: () => Promise<void>;
 
   // Playlist Management
   createPlaylist: (name: string, description?: string) => Promise<boolean>;
@@ -46,18 +50,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   tracks: [],
   albums: [],
   playlists: [],
+  artists: [],
   isLoading: false,
   isInitialized: false,
 
   fetchLibrary: async () => {
     set({ isLoading: true });
     try {
-      const [tracks, albums, playlists] = await Promise.all([
+      const [tracks, albums, playlists, artists] = await Promise.all([
         getTracks(),
         getAlbums(),
         getPlaylists(),
+        getArtists(),
       ]);
-      set({ tracks, albums, playlists, isLoading: false, isInitialized: true });
+      set({
+        tracks,
+        albums,
+        playlists,
+        artists,
+        isLoading: false,
+        isInitialized: true,
+      });
     } catch (error) {
       console.error("Failed to fetch library:", error);
       set({ isLoading: false });
@@ -89,6 +102,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ playlists });
     } catch (error) {
       console.error("Failed to refresh playlists:", error);
+    }
+  },
+
+  refreshArtists: async () => {
+    try {
+      const artists = await getArtists();
+      set({ artists });
+    } catch (error) {
+      console.error("Failed to refresh artists:", error);
     }
   },
 

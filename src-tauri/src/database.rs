@@ -568,4 +568,139 @@ impl DbHelper {
         // Optional: Reorder positions? Not strictly necessary for basic functionality.
         Ok(())
     }
+    pub fn get_all_artists(&self) -> Result<Vec<crate::library::Artist>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                a.id, 
+                a.name, 
+                COUNT(DISTINCT al.id) as album_count,
+                COUNT(DISTINCT t.id) as track_count,
+                (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
+            FROM artists a
+            LEFT JOIN albums al ON al.artist_id = a.id
+            LEFT JOIN tracks t ON t.artist_id = a.id
+            GROUP BY a.id
+            ORDER BY a.name ASC",
+        )?;
+
+        let artist_iter = stmt.query_map([], |row| {
+            Ok(crate::library::Artist {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                album_count: row.get(2)?,
+                track_count: row.get(3)?,
+                artwork_path: row.get(4)?,
+            })
+        })?;
+
+        let mut artists = Vec::new();
+        for artist in artist_iter {
+            artists.push(artist?);
+        }
+        Ok(artists)
+    }
+
+    pub fn get_artist_by_id(&self, id: i64) -> Result<Option<crate::library::Artist>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                a.id, 
+                a.name, 
+                COUNT(DISTINCT al.id) as album_count,
+                COUNT(DISTINCT t.id) as track_count,
+                (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
+            FROM artists a
+            LEFT JOIN albums al ON al.artist_id = a.id
+            LEFT JOIN tracks t ON t.artist_id = a.id
+            WHERE a.id = ?
+            GROUP BY a.id",
+        )?;
+
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(crate::library::Artist {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                album_count: row.get(2)?,
+                track_count: row.get(3)?,
+                artwork_path: row.get(4)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_artist_albums(&self, artist_id: i64) -> Result<Vec<crate::library::LibraryAlbum>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                al.id,
+                al.title,
+                al.artist_id,
+                ar.name as artist_name,
+                al.year,
+                al.artwork_path,
+                COUNT(t.id) as track_count,
+                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+            FROM albums al
+            LEFT JOIN artists ar ON al.artist_id = ar.id
+            LEFT JOIN tracks t ON t.album_id = al.id
+            WHERE al.artist_id = ?
+            GROUP BY al.id
+            ORDER BY al.year DESC, al.title ASC",
+        )?;
+
+        let album_iter = stmt.query_map(params![artist_id], |row| {
+            Ok(crate::library::LibraryAlbum {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist_id: row.get(2)?,
+                artist_name: row.get(3)?,
+                year: row.get(4)?,
+                artwork_path: row.get(5)?,
+                track_count: row.get(6)?,
+                total_duration_ms: row.get(7)?,
+            })
+        })?;
+
+        let mut albums = Vec::new();
+        for album in album_iter {
+            albums.push(album?);
+        }
+        Ok(albums)
+    }
+
+    pub fn get_artist_tracks(&self, artist_id: i64) -> Result<Vec<crate::library::LibraryTrack>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                t.id, 
+                t.title, 
+                ar.name as artist, 
+                al.title as album, 
+                t.duration_ms, 
+                t.file_path, 
+                al.artwork_path 
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN albums al ON t.album_id = al.id
+            WHERE t.artist_id = ?
+            ORDER BY t.created_at DESC", 
+        )?;
+
+        let track_iter = stmt.query_map(params![artist_id], |row| {
+            Ok(crate::library::LibraryTrack {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                album: row.get(3)?,
+                duration_ms: row.get(4)?,
+                file_path: row.get(5)?,
+                artwork_path: row.get(6)?,
+            })
+        })?;
+
+        let mut tracks = Vec::new();
+        for track in track_iter {
+            tracks.push(track?);
+        }
+        Ok(tracks)
+    }
 }

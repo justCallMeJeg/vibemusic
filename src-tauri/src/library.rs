@@ -14,6 +14,16 @@ pub struct LibraryTrack {
     pub artwork_path: Option<String>,
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Artist {
+    pub id: i64,
+    pub name: String,
+    pub album_count: i64,
+    pub track_count: i64,
+    pub artwork_path: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryAlbum {
     pub id: i64,
@@ -64,4 +74,36 @@ pub fn delete_track(app: AppHandle, track_id: i64) -> Result<(), String> {
     let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
     db.delete_track(track_id)
         .map_err(|e| format!("Failed to delete track: {}", e))
+}
+
+#[command]
+pub fn get_all_artists(app: AppHandle) -> Result<Vec<Artist>, String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.get_all_artists()
+        .map_err(|e| format!("Failed to fetch artists: {}", e))
+}
+
+#[command]
+pub fn get_artist_by_id(app: AppHandle, id: i64) -> Result<Option<Artist>, String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.get_artist_by_id(id)
+        .map_err(|e| format!("Failed to fetch artist: {}", e))
+}
+
+#[command]
+pub fn get_artist_albums(app: AppHandle, id: i64) -> Result<Vec<LibraryAlbum>, String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.get_artist_albums(id)
+        .map_err(|e| format!("Failed to fetch artist albums: {}", e))
+}
+
+#[command]
+pub fn get_artist_tracks(app: AppHandle, id: i64) -> Result<Vec<LibraryTrack>, String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.get_artist_tracks(id)
+        .map_err(|e| format!("Failed to fetch artist tracks: {}", e))
 }

@@ -31,12 +31,36 @@ export interface Playlist {
   created_at: string;
 }
 
+export interface Artist {
+  id: number;
+  name: string;
+  album_count: number;
+  track_count: number;
+  artwork_path: string | null;
+}
+
 export async function getTracks(): Promise<Track[]> {
   return await invoke("get_all_tracks");
 }
 
 export async function getAlbums(): Promise<Album[]> {
   return await invoke("get_all_albums");
+}
+
+export async function getArtists(): Promise<Artist[]> {
+  return await invoke("get_all_artists");
+}
+
+export async function getArtistById(id: number): Promise<Artist | null> {
+  return await invoke("get_artist_by_id", { id });
+}
+
+export async function getArtistAlbums(id: number): Promise<Album[]> {
+  return await invoke("get_artist_albums", { id });
+}
+
+export async function getArtistTracks(id: number): Promise<Track[]> {
+  return await invoke("get_artist_tracks", { id });
 }
 
 export async function getAlbumById(id: number): Promise<Album | null> {

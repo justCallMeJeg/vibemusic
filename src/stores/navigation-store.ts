@@ -7,12 +7,14 @@ export type Page =
   | "songs"
   | "albums"
   | "playlists"
+  | "artists"
   | "settings"
   | "about";
 
 export type DetailView =
   | { type: "album"; id: number }
   | { type: "playlist"; id: number }
+  | { type: "artist"; id: number }
   | null;
 
 interface NavigationState {
@@ -27,6 +29,7 @@ interface NavigationActions {
   toggleSearch: () => void;
   openAlbumDetail: (albumId: number) => void;
   openPlaylistDetail: (playlistId: number) => void;
+  openArtistDetail: (artistId: number) => void;
   goBack: () => void;
 }
 
@@ -53,6 +56,12 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
       detailView: { type: "playlist", id: playlistId },
     }),
 
+  openArtistDetail: (artistId) =>
+    set({
+      currentPage: "artists",
+      detailView: { type: "artist", id: artistId },
+    }),
+
   goBack: () => set({ detailView: null }),
 }));
 
@@ -67,6 +76,7 @@ export const getNavigationActions = () => {
     setPage: s.setPage,
     openAlbumDetail: s.openAlbumDetail,
     openPlaylistDetail: s.openPlaylistDetail,
+    openArtistDetail: s.openArtistDetail,
     goBack: s.goBack,
   };
 };
