@@ -143,6 +143,23 @@ jobs:
           includeUpdaterJson: true
           args: --target x86_64-pc-windows-msvc
 
+      - name: Update release metadata
+        run: |
+          $title = "Vibe Music ${{ steps.version.outputs.DISPLAY_VERSION }}"
+          $body = @"
+          🌙 **Nightly Build** - Version ``${{ steps.version.outputs.NEW_VERSION }}``
+
+          > ⚠️ This is a rolling nightly release with the latest changes from the ``dev`` branch. Nightly builds may be unstable. For stable releases, switch to the **stable** update channel.
+
+          ### Changelog
+          ${{ steps.changelog.outputs.content }}
+          "@
+
+          gh release edit nightly --title "$title" --notes "$body"
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Commit version bump
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
