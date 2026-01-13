@@ -14,17 +14,7 @@ import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useLibraryStore } from "@/stores/library-store";
@@ -368,42 +358,27 @@ export default function PlaylistDetailPage() {
               <Pencil size={20} />
             </Button>
 
-            <AlertDialog
+            <Button
+              variant="outline"
+              size="icon-lg"
+              className="text-red-400 hover:text-red-300 hover:border-red-900/50"
+              title="Delete Playlist"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 size={20} />
+            </Button>
+
+            <ConfirmDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
-            >
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon-lg"
-                  className="text-red-400 hover:text-red-300 hover:border-red-900/50"
-                  title="Delete Playlist"
-                >
-                  <Trash2 size={20} />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-gray-400">
-                    This action cannot be undone. This will permanently delete
-                    the playlist "{playlist.name}".
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="gap-2 sm:gap-0">
-                  <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-600 text-white border-none"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              title="Delete Playlist?"
+              description={`This action cannot be undone. This will permanently delete the playlist "${playlist.name}".`}
+              confirmText="Delete"
+              variant="destructive"
+              onConfirm={handleDelete}
+              isLoading={isDeleting}
+              loadingText="Deleting..."
+            />
 
             <PlaylistEditDialog
               playlist={playlist}

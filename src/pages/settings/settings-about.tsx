@@ -7,16 +7,7 @@ import { useEffect, useState } from "react";
 import { UpdateDialog } from "@/components/dialogs/update-dialog";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -132,41 +123,18 @@ export function SettingsAbout() {
           </div>
         </div>
 
-        <AlertDialog open={warningOpen} onOpenChange={setWarningOpen}>
-          <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Switch to Dev Channel?</AlertDialogTitle>
-              <AlertDialogDescription className="text-neutral-400">
-                The content in the <strong>Dev</strong> channel is experimental.
-                Using it might cause the app to behave unexpectedly or break
-                features.
-                <br />
-                <br />
-                Because we're testing new features, the database structure might
-                change, which could lead to{" "}
-                <strong>loss of your playlists or library data</strong>.
-                <br />
-                <br />
-                We recommend sticking to the <strong>Stable</strong> channel for
-                daily use.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-500 hover:bg-red-600 text-white border-none"
-                onClick={() => {
-                  useUpdateStore.getState().setChannel("dev");
-                  setWarningOpen(false);
-                }}
-              >
-                Switch Anyway
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={warningOpen}
+          onOpenChange={setWarningOpen}
+          title="Switch to Dev Channel?"
+          description="The Dev channel is experimental. Using it might cause the app to behave unexpectedly, break features, or cause loss of your playlists or library data. We recommend sticking to the Stable channel for daily use."
+          confirmText="Switch Anyway"
+          variant="destructive"
+          onConfirm={() => {
+            useUpdateStore.getState().setChannel("dev");
+            setWarningOpen(false);
+          }}
+        />
 
         <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
           <div>

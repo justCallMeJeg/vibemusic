@@ -13,16 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/empty-state";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
@@ -139,32 +130,17 @@ export default function PlaylistsPage() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog
+        <ConfirmDialog
           open={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
-        >
-          <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-400">
-                This action cannot be undone. This will permanently delete the
-                playlist "{playlistToDelete?.name}".
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="gap-2 sm:gap-0">
-              <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-500 hover:bg-red-600 text-white border-none"
-                onClick={confirmDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          title="Delete Playlist?"
+          description={`This action cannot be undone. This will permanently delete the playlist "${playlistToDelete?.name}".`}
+          confirmText="Delete"
+          variant="destructive"
+          onConfirm={confirmDelete}
+          isLoading={isDeleting}
+          loadingText="Deleting..."
+        />
       </div>
 
       <div

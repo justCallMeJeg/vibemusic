@@ -1,14 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useSettingsStore } from "@/stores/settings-store";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -360,30 +351,15 @@ export default function ProfileSelectionPage() {
           So ProfileSelectionPage doesn't need to render QuitDialog.
       */}
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-      >
-        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Profile?</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              This will permanently delete this profile and all its data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white border-none"
-              onClick={confirmDelete}
-            >
-              Delete Profile
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete Profile?"
+        description="This will permanently delete this profile and all its data."
+        confirmText="Delete Profile"
+        variant="destructive"
+        onConfirm={confirmDelete}
+      />
 
       <ImageCropDialog
         imageSrc={selectedImageSrc}

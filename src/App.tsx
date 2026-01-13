@@ -20,16 +20,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 
 import { TitleBar } from "./components/titlebar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useProfileStore } from "@/stores/profile-store";
 import ProfileSelectionPage from "@/pages/profile-selection-page";
 
@@ -250,28 +241,15 @@ export default function App() {
   };
 
   const quitDialog = (
-    <AlertDialog open={isQuitDialogOpen} onOpenChange={setIsQuitDialogOpen}>
-      <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure you want to quit?</AlertDialogTitle>
-          <AlertDialogDescription className="text-gray-400">
-            Playback will stop. You can enable "Close to Tray" in settings to
-            keep music playing in the background.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
-            onClick={() => getCurrentWindow().destroy()}
-          >
-            Quit
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={isQuitDialogOpen}
+      onOpenChange={setIsQuitDialogOpen}
+      title="Are you sure you want to quit?"
+      description='Playback will stop. You can enable "Close to Tray" in settings to keep music playing in the background.'
+      confirmText="Quit"
+      variant="destructive"
+      onConfirm={() => getCurrentWindow().destroy()}
+    />
   );
 
   if (isProfilesLoading) {
