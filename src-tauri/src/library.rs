@@ -4,11 +4,14 @@ use serde::{Deserialize, Serialize};
 use tauri::{command, AppHandle}; // Removed Manager import if not used
 
 #[derive(Debug, Serialize, Deserialize)]
+
 pub struct LibraryTrack {
     pub id: i64,
     pub title: String,
     pub artist: Option<String>,
+    pub artist_id: Option<i64>,
     pub album: Option<String>,
+    pub album_id: Option<i64>,
     pub duration_ms: u64,
     pub file_path: String,
     pub artwork_path: Option<String>,

@@ -9,6 +9,7 @@ import {
   ContextMenuTrigger,
 } from "../../ui/context-menu";
 import { useAudioStore, usePlayerStatus } from "@/stores/audio-store";
+import { useNavigationStore } from "@/stores/navigation-store";
 
 interface QueueItemProps {
   track: Track;
@@ -22,6 +23,7 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
   const resume = useAudioStore((s) => s.resume);
   const queue = useAudioStore((s) => s.queue);
   const status = usePlayerStatus();
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   const {
     attributes,
@@ -56,6 +58,13 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
       // if newQueue passed, use it. else queue=[track].
       // We should pass the *current* queue to preserve it!
       play(track, queue);
+    }
+  };
+
+  const handleArtistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (track.artist_id) {
+      openArtistDetail(track.artist_id);
     }
   };
 
@@ -111,7 +120,14 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
             >
               {track.title}
             </p>
-            <p className="text-xs text-neutral-400 truncate">
+            <p
+              className={`text-xs text-neutral-400 truncate ${
+                track.artist_id
+                  ? "hover:underline hover:text-white cursor-pointer"
+                  : ""
+              }`}
+              onClick={handleArtistClick}
+            >
               {track.artist || "Unknown Artist"}
             </p>
           </div>

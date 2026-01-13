@@ -4,7 +4,9 @@ export interface Track {
   id: number;
   title: string;
   artist: string | null;
+  artist_id: number | null;
   album: string | null;
+  album_id: number | null;
   duration_ms: number;
   file_path: string;
   artwork_path: string | null;

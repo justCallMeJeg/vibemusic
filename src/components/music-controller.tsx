@@ -31,6 +31,7 @@ import {
   usePosition,
   useDuration,
 } from "@/stores/audio-store";
+import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 
@@ -46,6 +47,7 @@ export default function MusicControler() {
   const isQueueOpen = useQueueOpen();
   const position = usePosition();
   const duration = useDuration();
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   // Get actions directly (stable references)
   const pause = useAudioStore((s) => s.pause);
@@ -88,6 +90,16 @@ export default function MusicControler() {
     }
   };
 
+  const handleArtistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentTrack?.artist_id) {
+      openArtistDetail(currentTrack.artist_id);
+      if (isCompact) {
+        // Optional: Expand player or keep it compact? Keeping as is.
+      }
+    }
+  };
+
   const handleSeekChange = (value: number[]) => {
     setIsDragging(true);
     setDraggingSlider(true);
@@ -126,7 +138,14 @@ export default function MusicControler() {
             <p className="text-white text-sm font-bold line-clamp-1">
               {currentTrack?.title || ""}
             </p>
-            <p className="text-gray-400 text-xs font-normal line-clamp-1">
+            <p
+              className={`text-gray-400 text-xs font-normal line-clamp-1 ${
+                currentTrack?.artist_id
+                  ? "hover:underline hover:text-white cursor-pointer"
+                  : ""
+              }`}
+              onClick={handleArtistClick}
+            >
               {currentTrack?.artist || "Unknown Artist"}
             </p>
           </div>
@@ -275,7 +294,14 @@ export default function MusicControler() {
               <p className="text-white text-base font-bold line-clamp-1">
                 {currentTrack.title}
               </p>
-              <p className="text-gray-400 text-xs font-normal line-clamp-1">
+              <p
+                className={`text-gray-400 text-xs font-normal line-clamp-1 ${
+                  currentTrack?.artist_id
+                    ? "hover:underline hover:text-white cursor-pointer"
+                    : ""
+                }`}
+                onClick={handleArtistClick}
+              >
                 {currentTrack.artist || "Unknown Artist"}
               </p>
             </div>

@@ -4,6 +4,7 @@ import {
   getArtistById,
   getArtistAlbums,
   getArtistTracks,
+  getAlbumTracks,
   Artist,
   Album,
   Track,
@@ -12,6 +13,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   ArrowLeft,
   Users,
+  Shuffle,
   Play,
   ChevronLeft,
   ChevronRight,
@@ -19,6 +21,7 @@ import {
 import { useAudioStore } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 import placeholderArt from "@/assets/placeholder-art.png";
 
 export default function ArtistDetailPage() {
@@ -60,10 +63,30 @@ export default function ArtistDetailPage() {
     );
   }
 
-  const handlePlayArtist = () => {
+  const handleShuffleArtist = () => {
     if (tracks.length > 0) {
-      play(tracks[0], tracks);
+      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+      play(shuffled[0], shuffled);
     }
+  };
+
+  const handlePlayAlbum = async (e: React.MouseEvent, albumId: number) => {
+    e.stopPropagation();
+    try {
+      const albumTracks = await getAlbumTracks(albumId);
+      if (albumTracks.length > 0) {
+        const sorted = albumTracks.sort(
+          (a, b) => (a.track_number || 0) - (b.track_number || 0)
+        );
+        play(sorted[0], sorted);
+      }
+    } catch (err) {
+      console.error("Failed to play album", err);
+    }
+  };
+
+  const handleAlbumClick = (albumId: number) => {
+    openAlbumDetail(albumId);
   };
 
   const scrollAlbums = (direction: "left" | "right") => {
@@ -99,7 +122,7 @@ export default function ArtistDetailPage() {
 
       {/* Artist Info Header */}
       <div className="flex gap-6 mb-8 px-8">
-        <div className="w-40 h-40 rounded-lg overflow-hidden bg-neutral-800 shrink-0 shadow-lg">
+        <div className="w-40 h-40 rounded-full overflow-hidden bg-neutral-800 shrink-0 shadow-lg">
           {artworkSrc ? (
             <img
               src={artworkSrc}
@@ -135,17 +158,17 @@ export default function ArtistDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handlePlayArtist}
+              onClick={handleShuffleArtist}
               className="gap-2"
             >
-              <Play size={14} />
-              Play Artist
+              <Shuffle size={14} />
+              Shuffle
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="px-8 pb-32 space-y-10 w-full">
+      <div className="px-8 pb-48 space-y-10 w-full">
         {/* Albums Section (Horizontal Row) */}
         {albums.length > 0 && (
           <section>
@@ -179,27 +202,43 @@ export default function ArtistDetailPage() {
               {albums.map((album) => (
                 <div
                   key={album.id}
-                  onClick={() => openAlbumDetail(album.id)}
-                  className="flex flex-col rounded-lg p-3 hover:bg-white/5 cursor-pointer transition-colors group min-w-[160px] w-[160px]"
+                  className="flex flex-col w-[160px] min-w-[160px] gap-2"
                 >
-                  <img
-                    className="aspect-square w-full rounded-lg object-cover bg-neutral-800 mb-3 group-hover:scale-[1.02] transition-transform shadow-md"
-                    src={
-                      album.artwork_path
-                        ? convertFileSrc(album.artwork_path)
-                        : placeholderArt
-                    }
-                    alt={album.title}
-                    onError={(e) => {
-                      e.currentTarget.src = placeholderArt;
-                    }}
-                  />
-                  <p className="text-white text-sm font-bold line-clamp-1">
-                    {album.title}
-                  </p>
-                  <p className="text-gray-400 text-xs line-clamp-1">
-                    {album.year || "Unknown Year"}
-                  </p>
+                  <div
+                    className="relative aspect-square w-full rounded-lg overflow-hidden group cursor-pointer shadow-md"
+                    onClick={(e) => handlePlayAlbum(e, album.id)}
+                  >
+                    <img
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      src={
+                        album.artwork_path
+                          ? convertFileSrc(album.artwork_path)
+                          : placeholderArt
+                      }
+                      alt={album.title}
+                      onError={(e) => {
+                        e.currentTarget.src = placeholderArt;
+                      }}
+                    />
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="bg-white rounded-full p-3 text-black transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
+                        <Play size={24} fill="currentColor" className="ml-1" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex flex-col gap-0.5">
+                    <ScrollingText
+                      className="text-white text-sm font-bold hover:[&_span]:underline cursor-pointer w-full text-left"
+                      onClick={() => handleAlbumClick(album.id)}
+                    >
+                      {album.title}
+                    </ScrollingText>
+                    <p className="text-gray-400 text-xs line-clamp-1">
+                      {album.year || "Unknown Year"}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

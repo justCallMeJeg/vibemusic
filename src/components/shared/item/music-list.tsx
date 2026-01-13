@@ -7,6 +7,7 @@ import {
   useCurrentTrack,
   usePlayerStatus,
 } from "@/stores/audio-store";
+import { useNavigationStore } from "@/stores/navigation-store";
 
 import {
   ContextMenu,
@@ -39,6 +40,7 @@ const MusicListItem = memo(function MusicListItem({
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   // Playlist store - playlists fetched once in App.tsx
   const playlists = useLibraryStore((s) => s.playlists);
@@ -64,6 +66,13 @@ const MusicListItem = memo(function MusicListItem({
       }
     } else {
       play(track);
+    }
+  };
+
+  const handleArtistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (track.artist_id) {
+      openArtistDetail(track.artist_id);
     }
   };
 
@@ -121,7 +130,14 @@ const MusicListItem = memo(function MusicListItem({
                 <p className="text-white text-base font-bold line-clamp-1">
                   {track.title}
                 </p>
-                <p className="text-gray-400 text-xs font-normal line-clamp-1">
+                <p
+                  className={`text-gray-400 text-xs font-normal line-clamp-1 ${
+                    track.artist_id
+                      ? "hover:underline hover:text-white cursor-pointer"
+                      : ""
+                  }`}
+                  onClick={handleArtistClick}
+                >
                   {track.artist || "Unknown Artist"}
                 </p>
               </div>

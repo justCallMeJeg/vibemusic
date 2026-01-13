@@ -284,7 +284,9 @@ impl DbHelper {
                 t.id, 
                 t.title, 
                 ar.name as artist, 
+                t.artist_id,
                 al.title as album, 
+                t.album_id,
                 t.duration_ms, 
                 t.file_path, 
                 al.artwork_path 
@@ -299,10 +301,12 @@ impl DbHelper {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
-                album: row.get(3)?,
-                duration_ms: row.get(4)?,
-                file_path: row.get(5)?,
-                artwork_path: row.get(6)?,
+                artist_id: row.get(3)?,
+                album: row.get(4)?,
+                album_id: row.get(5)?,
+                duration_ms: row.get(6)?,
+                file_path: row.get(7)?,
+                artwork_path: row.get(8)?,
             })
         })?;
 
@@ -394,7 +398,9 @@ impl DbHelper {
                 t.id, 
                 t.title, 
                 ar.name as artist, 
+                t.artist_id,
                 al.title as album, 
+                t.album_id,
                 t.duration_ms, 
                 t.file_path, 
                 al.artwork_path 
@@ -410,10 +416,12 @@ impl DbHelper {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
-                album: row.get(3)?,
-                duration_ms: row.get(4)?,
-                file_path: row.get(5)?,
-                artwork_path: row.get(6)?,
+                artist_id: row.get(3)?,
+                album: row.get(4)?,
+                album_id: row.get(5)?,
+                duration_ms: row.get(6)?,
+                file_path: row.get(7)?,
+                artwork_path: row.get(8)?,
             })
         })?;
 
@@ -512,7 +520,9 @@ impl DbHelper {
                 t.id, 
                 t.title, 
                 ar.name as artist, 
+                t.artist_id,
                 al.title as album, 
+                t.album_id,
                 t.duration_ms, 
                 t.file_path, 
                 al.artwork_path 
@@ -529,10 +539,12 @@ impl DbHelper {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
-                album: row.get(3)?,
-                duration_ms: row.get(4)?,
-                file_path: row.get(5)?,
-                artwork_path: row.get(6)?,
+                artist_id: row.get(3)?,
+                album: row.get(4)?,
+                album_id: row.get(5)?,
+                duration_ms: row.get(6)?,
+                file_path: row.get(7)?,
+                artwork_path: row.get(8)?,
             })
         })?;
 
@@ -674,7 +686,9 @@ impl DbHelper {
                 t.id, 
                 t.title, 
                 ar.name as artist, 
+                t.artist_id,
                 al.title as album, 
+                t.album_id,
                 t.duration_ms, 
                 t.file_path, 
                 al.artwork_path 
@@ -690,10 +704,12 @@ impl DbHelper {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
-                album: row.get(3)?,
-                duration_ms: row.get(4)?,
-                file_path: row.get(5)?,
-                artwork_path: row.get(6)?,
+                artist_id: row.get(3)?,
+                album: row.get(4)?,
+                album_id: row.get(5)?,
+                duration_ms: row.get(6)?,
+                file_path: row.get(7)?,
+                artwork_path: row.get(8)?,
             })
         })?;
 
