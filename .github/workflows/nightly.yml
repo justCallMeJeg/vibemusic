@@ -105,24 +105,8 @@ jobs:
         env:
           GITHUB_REPO: ${{ github.repository }}
 
-      - name: Clean old nightly assets
-        run: |
-          # Get all assets from the nightly release and delete them
-          $assets = gh release view nightly --json assets --jq '.assets[].name' 2>$null
-          if ($LASTEXITCODE -eq 0 -and $assets) {
-            foreach ($asset in $assets) {
-              Write-Host "Deleting asset: $asset"
-              gh release delete-asset nightly $asset --yes
-            }
-            Write-Host "Cleaned all old nightly assets"
-          } else {
-            Write-Host "No existing nightly release or assets to clean"
-          }
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and upload Nightly
+      - name: Build Nightly
+        id: build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -142,6 +126,34 @@ jobs:
           prerelease: true
           includeUpdaterJson: true
           args: --target x86_64-pc-windows-msvc
+
+      - name: Clean old nightly assets
+        run: |
+          # Get all assets from the nightly release except the ones we just uploaded
+          $newAssets = @()
+          $artifactPaths = '${{ steps.build.outputs.artifactPaths }}'
+          if ($artifactPaths) {
+            $newAssets = ($artifactPaths | ConvertFrom-Json) | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+          }
+
+          $allAssets = gh release view nightly --json assets --jq '.assets[].name' 2>$null
+          if ($LASTEXITCODE -eq 0 -and $allAssets) {
+            foreach ($asset in $allAssets) {
+              # Only delete old assets (not the ones we just uploaded)
+              if ($asset -notin $newAssets) {
+                Write-Host "Deleting old asset: $asset"
+                gh release delete-asset nightly $asset --yes
+              } else {
+                Write-Host "Keeping new asset: $asset"
+              }
+            }
+            Write-Host "Cleaned old nightly assets"
+          } else {
+            Write-Host "No existing nightly release or assets to clean"
+          }
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update release metadata
         run: |
