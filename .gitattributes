@@ -1,0 +1,12 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Ensure Husky hooks always use LF line endings (critical for cross-platform)
+.husky/* text eol=lf
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# Batch files should use CRLF (Windows native)
+*.bat text eol=crlf
+*.cmd text eol=crlf
