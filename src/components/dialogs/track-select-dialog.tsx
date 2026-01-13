@@ -101,7 +101,7 @@ export function TrackSelectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-neutral-900 border-neutral-800 text-white max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden outline-none">
+      <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden outline-none">
         <DialogHeader className="p-4 pb-2 shrink-0">
           <DialogTitle>Add Songs to Playlist</DialogTitle>
           <div className="relative mt-2">

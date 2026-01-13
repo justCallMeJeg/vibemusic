@@ -382,7 +382,7 @@ export default function PlaylistDetailPage() {
                   <Trash2 size={20} />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+              <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
                   <AlertDialogDescription className="text-gray-400">

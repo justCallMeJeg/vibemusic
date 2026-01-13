@@ -133,7 +133,7 @@ export function SettingsAbout() {
         </div>
 
         <AlertDialog open={warningOpen} onOpenChange={setWarningOpen}>
-          <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+          <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
             <AlertDialogHeader>
               <AlertDialogTitle>Switch to Dev Channel?</AlertDialogTitle>
               <AlertDialogDescription className="text-neutral-400">
@@ -152,11 +152,11 @@ export function SettingsAbout() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="border-neutral-700 hover:bg-neutral-800 hover:text-white text-neutral-300">
+              <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700 text-white border-none"
+                className="bg-red-500 hover:bg-red-600 text-white border-none"
                 onClick={() => {
                   useUpdateStore.getState().setChannel("dev");
                   setWarningOpen(false);

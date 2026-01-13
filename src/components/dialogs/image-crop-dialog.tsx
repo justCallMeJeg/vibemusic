@@ -153,10 +153,18 @@ export function ImageCropDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="text-gray-400 hover:text-white hover:bg-white/10"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isProcessing}>
+          <Button
+            onClick={handleSave}
+            disabled={isProcessing}
+            className="bg-white text-black hover:bg-gray-200"
+          >
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Crop
           </Button>

@@ -166,21 +166,21 @@ export default function AlbumDetailPage() {
           {/* Action buttons */}
           <div className="flex gap-2 mt-4">
             <Button
-              variant="outline"
-              size="sm"
+              variant="default"
+              size="lg"
               onClick={handlePlay}
-              className="gap-2"
+              className="gap-2 rounded-full px-8 bg-white text-black hover:bg-white/90"
             >
-              <Play size={14} />
+              <Play size={20} fill="currentColor" />
               Play
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={handleShuffle}
-              className="gap-2"
+              className="gap-2 rounded-full"
             >
-              <Shuffle size={14} />
+              <Shuffle size={20} />
               Shuffle
             </Button>
           </div>

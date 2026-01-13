@@ -28,7 +28,7 @@ export function UpdateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-neutral-900 border-neutral-800 text-white">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-neutral-900 border-white/10 text-white">
         <DialogHeader>
           <DialogTitle className="text-xl">New Version Available</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -68,7 +68,7 @@ export function UpdateDialog({
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isDownloading}
-              className="hover:bg-white/10"
+              className="text-gray-400 hover:text-white hover:bg-white/10"
             >
               Later
             </Button>

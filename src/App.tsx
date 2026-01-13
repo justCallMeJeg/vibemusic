@@ -251,7 +251,7 @@ export default function App() {
 
   const quitDialog = (
     <AlertDialog open={isQuitDialogOpen} onOpenChange={setIsQuitDialogOpen}>
-      <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+      <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to quit?</AlertDialogTitle>
           <AlertDialogDescription className="text-gray-400">

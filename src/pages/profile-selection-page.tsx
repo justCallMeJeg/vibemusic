@@ -272,7 +272,7 @@ export default function ProfileSelectionPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-neutral-900 border-neutral-800 text-white sm:max-w-md">
+        <DialogContent className="bg-neutral-900 border-white/10 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingProfileId ? "Edit Profile" : "Add Profile"}
@@ -338,7 +338,7 @@ export default function ProfileSelectionPage() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-gray-400 hover:text-white"
+              className="text-gray-400 hover:text-white hover:bg-white/10"
             >
               Cancel
             </Button>
@@ -364,7 +364,7 @@ export default function ProfileSelectionPage() {
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
       >
-        <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+        <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Profile?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">

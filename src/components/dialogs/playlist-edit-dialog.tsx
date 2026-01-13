@@ -221,10 +221,18 @@ export function PlaylistEditDialog({
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="text-gray-400 hover:text-white hover:bg-white/10"
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-white text-black hover:bg-gray-200"
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>

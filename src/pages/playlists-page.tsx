@@ -165,7 +165,7 @@ export default function PlaylistsPage() {
               Create Playlist
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-neutral-900 border-neutral-800 text-white">
+          <DialogContent className="sm:max-w-[425px] bg-neutral-900 border-white/10 text-white">
             <form onSubmit={handleCreate}>
               <DialogHeader>
                 <DialogTitle>Create Playlist</DialogTitle>
@@ -211,7 +211,7 @@ export default function PlaylistsPage() {
           open={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
         >
-          <AlertDialogContent className="bg-neutral-900 border-neutral-800 text-white">
+          <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Playlist?</AlertDialogTitle>
               <AlertDialogDescription className="text-gray-400">
