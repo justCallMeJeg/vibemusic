@@ -1,97 +1,62 @@
 import { useLibraryStore } from "@/stores/library-store";
-import { useNavigationStore } from "@/stores/navigation-store";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { Music2, Play } from "lucide-react";
-import { useMemo } from "react";
-import placeholderArt from "@/assets/placeholder-art.png";
-import { useAudioStore } from "@/stores/audio-store";
-import { getArtistTracks } from "@/lib/api";
-import { ScrollingText } from "@/components/shared/scrolling-text";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { Music2 } from "lucide-react";
+import ArtistCard from "@/components/shared/item/artist-card";
 
 export default function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
-  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
-  const play = useAudioStore((s) => s.play);
+  const isLoading = useLibraryStore((s) => s.isLoading);
+  const scrollRef = useScrollMask();
 
-  const sortedArtists = useMemo(() => {
-    return [...artists].sort((a, b) => a.name.localeCompare(b.name));
-  }, [artists]);
+  // Sort artists alphabetically by name
+  const sortedArtists = [...artists].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
-  const handleShufflePlay = async (e: React.MouseEvent, artistId: number) => {
-    e.stopPropagation();
-    try {
-      const tracks = await getArtistTracks(artistId);
-      if (tracks.length > 0) {
-        const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-        play(shuffled[0], shuffled);
-      }
-    } catch (err) {
-      console.error("Failed to play artist", err);
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col pt-8 px-8 pb-4 overflow-y-auto no-scrollbar">
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Artists</h1>
-          <p className="text-neutral-400">
-            {artists.length} {artists.length === 1 ? "artist" : "artists"}
-          </p>
+  if (isLoading) {
+    return (
+      <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+        <div className="mt-8 flex items-center justify-between mb-6 px-2">
+          <h1 className="text-3xl font-bold">Artists</h1>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-32">
-        {sortedArtists.map((artist) => (
-          <div
-            key={artist.id}
-            className="flex flex-col rounded-lg p-3 hover:bg-white/5 transition-colors group gap-3"
-          >
-            <div
-              className="relative aspect-square w-full bg-neutral-800 rounded-full flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition-transform shadow-sm cursor-pointer"
-              onClick={(e) => handleShufflePlay(e, artist.id)}
-            >
-              <img
-                className="w-full h-full object-cover"
-                src={
-                  artist.artwork_path
-                    ? convertFileSrc(artist.artwork_path)
-                    : placeholderArt
-                }
-                onError={(e) => {
-                  e.currentTarget.src = placeholderArt;
-                }}
-                alt={artist.name}
-              />
-              {/* Shuffle Overlay */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="bg-white rounded-full p-3 text-black transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
-                  <Play size={24} fill="currentColor" />
-                </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-2">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
+              <Skeleton className="aspect-square w-full rounded-full bg-white/5" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4 bg-white/10" />
+                <Skeleton className="h-3 w-1/2 bg-white/5" />
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-            <div className="min-w-0">
-              <ScrollingText
-                className="font-semibold text-white hover:[&_span]:underline cursor-pointer w-full text-left"
-                onClick={() => openArtistDetail(artist.id)}
-              >
-                {artist.name}
-              </ScrollingText>
-              <p className="text-xs text-gray-500 mt-1">
-                {artist.album_count}{" "}
-                {artist.album_count === 1 ? "Album" : "Albums"} •{" "}
-                {artist.track_count}{" "}
-                {artist.track_count === 1 ? "Song" : "Songs"}
-              </p>
-            </div>
-          </div>
-        ))}
+  return (
+    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+      <div className="mt-8 flex items-center justify-between mb-6 px-2">
+        <h1 className="text-3xl font-bold">Artists</h1>
+      </div>
 
-        {artists.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center py-20 text-neutral-500">
-            <Music2 className="w-16 h-16 mb-4 opacity-20" />
-            <p className="text-lg">No artists found</p>
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-2 scroll-mask-y"
+      >
+        {sortedArtists.length === 0 ? (
+          <EmptyState
+            icon={Music2}
+            title="No artists found"
+            description="Import music to see your artists here."
+          />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-42">
+            {sortedArtists.map((artist) => (
+              <ArtistCard key={artist.id} artist={artist} />
+            ))}
           </div>
         )}
       </div>

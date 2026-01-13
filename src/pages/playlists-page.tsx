@@ -1,13 +1,8 @@
 import { useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { useNavigationStore } from "@/stores/navigation-store";
 import { Button } from "@/components/ui/button";
-import { Plus, ListMusic, Play, Trash2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Plus, ListMusic } from "lucide-react";
 import { useLibraryStore } from "@/stores/library-store";
-import { useAudioStore } from "@/stores/audio-store";
-import { getPlaylistTracks, Playlist } from "@/lib/api";
-import { toast } from "sonner";
+import { Playlist } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -30,31 +25,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
-import { Pencil } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import PlaylistCard from "@/components/shared/item/playlist-card";
 
 export default function PlaylistsPage() {
-  const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
-
   // Use global store
   const playlists = useLibraryStore((s) => s.playlists);
   const isLoading = useLibraryStore((s) => s.isLoading);
   const createPlaylist = useLibraryStore((s) => s.createPlaylist);
   const deletePlaylist = useLibraryStore((s) => s.deletePlaylist);
-
-  // Audio Store
-  const play = useAudioStore((s) => s.play);
-  const addToQueue = useAudioStore((s) => s.addToQueue);
-  const playNext = useAudioStore((s) => s.playNext);
 
   // Create Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,7 +71,6 @@ export default function PlaylistsPage() {
     setIsDeleting(true);
     try {
       await deletePlaylist(playlistToDelete.id);
-      // toast is handled in store
     } catch (error) {
       console.error("Failed to delete playlist:", error);
     } finally {
@@ -100,57 +80,9 @@ export default function PlaylistsPage() {
     }
   };
 
-  const handlePlayPlaylist = async (
-    playlistId: number,
-    shuffle: boolean = false
-  ) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) {
-        toast.error("Playlist is empty");
-        return;
-      }
-
-      let trackToPlay = tracks[0];
-      let queue = tracks;
-
-      if (shuffle) {
-        queue = [...tracks].sort(() => Math.random() - 0.5);
-        trackToPlay = queue[0];
-      }
-
-      play(trackToPlay, queue);
-    } catch (e) {
-      console.error("Failed to play playlist:", e);
-      toast.error("Failed to play playlist");
-    }
-  };
-
-  const handlePlayNext = async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-
-      // Reverse to maintain order when inserting next
-      [...tracks].reverse().forEach((track) => playNext(track));
-      toast.success("Playing playlist next");
-    } catch (e) {
-      console.error("Failed to play playlist next:", e);
-      toast.error("Failed to play next");
-    }
-  };
-
-  const handleAddToQueue = async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-
-      tracks.forEach((track) => addToQueue(track));
-      toast.success("Added playlist to queue");
-    } catch (e) {
-      console.error("Failed to add playlist to queue:", e);
-      toast.error("Failed to add to queue");
-    }
+  const handleDeleteRequest = (playlist: Playlist) => {
+    setPlaylistToDelete(playlist);
+    setIsDeleteDialogOpen(true);
   };
 
   return (
@@ -197,7 +129,7 @@ export default function PlaylistsPage() {
                 <Button
                   type="submit"
                   disabled={isCreating || !newPlaylistName.trim()}
-                  className="bg-white text-black hover:bg-neutral-200"
+                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {isCreating ? "Creating..." : "Create Playlist"}
                 </Button>
@@ -258,77 +190,14 @@ export default function PlaylistsPage() {
             description="Create your first playlist to organize your music."
           />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-42">
             {playlists.map((playlist) => (
-              <ContextMenu key={playlist.id}>
-                <ContextMenuTrigger>
-                  <div
-                    onClick={() => openPlaylistDetail(playlist.id)}
-                    className="flex flex-col rounded-lg p-3 hover:bg-white/5 cursor-pointer transition-colors group gap-3"
-                  >
-                    {/* Playlist Cover Placeholder */}
-                    <div className="aspect-square w-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 rounded-md flex items-center justify-center text-white/50 text-4xl font-bold select-none group-hover:scale-[1.02] transition-transform overflow-hidden">
-                      {playlist.artwork_path ? (
-                        <img
-                          src={convertFileSrc(playlist.artwork_path)}
-                          alt={playlist.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        playlist.name.slice(0, 2).toUpperCase()
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3
-                        className="font-semibold text-white truncate"
-                        title={playlist.name}
-                      >
-                        {playlist.name}
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {playlist.track_count} tracks •{" "}
-                        {formatDistanceToNow(new Date(playlist.created_at), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem
-                    onSelect={() => handlePlayPlaylist(playlist.id, false)}
-                  >
-                    <Play className="mr-2 h-4 w-4" /> Play
-                  </ContextMenuItem>
-                  <ContextMenuItem onSelect={() => handlePlayNext(playlist.id)}>
-                    <ListMusic className="mr-2 h-4 w-4" /> Play Next
-                  </ContextMenuItem>
-                  <ContextMenuItem
-                    onSelect={() => handleAddToQueue(playlist.id)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add to Queue
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem
-                    onSelect={() => setEditingPlaylist(playlist)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                  </ContextMenuItem>
-                  <ContextMenuItem
-                    className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                    onSelect={() => {
-                      setPlaylistToDelete(playlist);
-                      setIsDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+              <PlaylistCard
+                key={playlist.id}
+                playlist={playlist}
+                onEdit={setEditingPlaylist}
+                onDelete={handleDeleteRequest}
+              />
             ))}
           </div>
         )}
