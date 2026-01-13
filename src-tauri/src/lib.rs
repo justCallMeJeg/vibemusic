@@ -76,6 +76,7 @@ pub fn run() {
             // Manage state manually since we are in setup
             app.manage(state);
             app.manage(ProfileState(Mutex::new(None)));
+            app.manage(updater::PendingUpdate::default());
 
             // Initialize media events
             engine.init_media_events(app.handle().clone());
@@ -159,7 +160,9 @@ pub fn run() {
             profile::save_profile_avatar_bytes,
             // Updater
             updater::check_update,
-            updater::install_update
+            updater::download_update,
+            updater::install_update,
+            updater::download_and_install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

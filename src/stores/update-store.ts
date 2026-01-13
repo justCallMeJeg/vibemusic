@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 interface DownloadProgress {
   downloaded: number;
@@ -12,18 +13,21 @@ interface DownloadProgress {
 }
 
 interface UpdateStore {
+  // State
   isChecking: boolean;
   isDownloading: boolean;
+  isReadyToInstall: boolean;
   downloadProgress: DownloadProgress | null;
   isUpdateAvailable: boolean;
   updateManifest: Update | null;
   error: string | null;
   lastChecked: Date | null;
-
   channel: "stable" | "dev";
-  setChannel: (channel: "stable" | "dev") => void;
 
+  // Actions
+  setChannel: (channel: "stable" | "dev") => void;
   check: (silent?: boolean) => Promise<boolean>;
+  download: () => Promise<void>;
   install: () => Promise<void>;
   reset: () => void;
 }
@@ -31,9 +35,11 @@ interface UpdateStore {
 export const useUpdateStore = create<UpdateStore>()(
   persist(
     (set, get) => ({
+      // Initial state
       channel: "stable",
       isChecking: false,
       isDownloading: false,
+      isReadyToInstall: false,
       downloadProgress: null,
       isUpdateAvailable: false,
       updateManifest: null,
@@ -47,15 +53,12 @@ export const useUpdateStore = create<UpdateStore>()(
         const { channel } = get();
 
         try {
-          // Call Rust command
           const update = await invoke<{
             version: string;
             currentVersion: string;
             body?: string;
             date?: string;
-          } | null>("check_update", {
-            channel,
-          });
+          } | null>("check_update", { channel });
 
           if (update) {
             set({
@@ -63,7 +66,8 @@ export const useUpdateStore = create<UpdateStore>()(
               updateManifest: {
                 ...update,
                 downloadAndInstall: async () => {
-                  await invoke("install_update", { channel });
+                  // Legacy compatibility
+                  await invoke("download_and_install_update", { channel });
                 },
               } as Update,
               lastChecked: new Date(),
@@ -90,37 +94,78 @@ export const useUpdateStore = create<UpdateStore>()(
         }
       },
 
-      install: async () => {
-        const { updateManifest, channel } = get();
+      download: async () => {
+        const { updateManifest } = get();
         if (!updateManifest) return;
 
-        let unlisten: UnlistenFn | null = null;
+        let unlistenProgress: UnlistenFn | null = null;
+        let unlistenComplete: UnlistenFn | null = null;
 
         try {
           set({ isDownloading: true, downloadProgress: null, error: null });
 
-          // Listen for download progress events from Rust
-          unlisten = await listen<DownloadProgress>(
+          // Listen for download progress events
+          unlistenProgress = await listen<DownloadProgress>(
             "update-download-progress",
             (event) => {
               set({ downloadProgress: event.payload });
             }
           );
 
-          // Start the download and install
-          await invoke("install_update", { channel });
+          // Listen for download complete event
+          unlistenComplete = await listen("update-download-complete", () => {
+            set({
+              isDownloading: false,
+              isReadyToInstall: true,
+              downloadProgress: null,
+            });
+            toast.success("Update ready to install", {
+              description: `Version ${updateManifest.version} has been downloaded.`,
+              action: {
+                label: "Install Now",
+                onClick: () => {
+                  useUpdateStore.getState().install();
+                },
+              },
+              duration: 10000,
+            });
+          });
 
-          logger.info("Update installed, relaunching...");
+          // Start the download (does not install)
+          await invoke("download_update");
+
+          logger.info("Update download complete");
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          logger.error("Failed to download update:", message);
+          set({ error: message, isDownloading: false });
+          toast.error("Download failed", {
+            description: message,
+          });
+        } finally {
+          if (unlistenProgress) unlistenProgress();
+          if (unlistenComplete) unlistenComplete();
+        }
+      },
+
+      install: async () => {
+        try {
+          set({ error: null });
+
+          logger.info("Installing update, app will restart...");
+
+          // Install the update (will trigger app restart)
+          await invoke("install_update");
+
+          // Relaunch the app
           await relaunch();
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           logger.error("Failed to install update:", message);
           set({ error: message });
-        } finally {
-          if (unlisten) {
-            unlisten();
-          }
-          set({ isDownloading: false, downloadProgress: null });
+          toast.error("Installation failed", {
+            description: message,
+          });
         }
       },
 
@@ -129,6 +174,7 @@ export const useUpdateStore = create<UpdateStore>()(
           error: null,
           isChecking: false,
           isDownloading: false,
+          isReadyToInstall: false,
           downloadProgress: null,
         });
       },

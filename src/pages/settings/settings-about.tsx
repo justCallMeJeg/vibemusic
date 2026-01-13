@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { useUpdateStore } from "@/stores/update-store";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { useAudioStore } from "@/stores/audio-store";
+import { Loader2, CheckCircle2, Download } from "lucide-react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useState } from "react";
 import { UpdateDialog } from "@/components/dialogs/update-dialog";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -25,10 +27,21 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
 
+// Helper to format bytes
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
-  const { check, isUpdateAvailable } = useUpdateStore();
+  const { check, isUpdateAvailable, install, updateManifest } =
+    useUpdateStore();
   const isChecking = useUpdateStore((s) => s.isChecking);
+  const isDownloading = useUpdateStore((s) => s.isDownloading);
+  const isReadyToInstall = useUpdateStore((s) => s.isReadyToInstall);
+  const downloadProgress = useUpdateStore((s) => s.downloadProgress);
   const lastChecked = useUpdateStore((s) => s.lastChecked);
   const channel = useUpdateStore((s) => s.channel);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -39,11 +52,35 @@ export function SettingsAbout() {
   }, []);
 
   const handleCheck = async () => {
+    if (isUpdateAvailable) {
+      setDialogOpen(true);
+      return;
+    }
     const hasUpdate = await check();
     if (hasUpdate) {
       setDialogOpen(true);
     }
   };
+
+  const handleInstall = async () => {
+    // Stop audio playback before installing
+    try {
+      const audioStore = useAudioStore.getState();
+      if (audioStore.status === "playing") {
+        await audioStore.stop();
+      }
+    } catch (e) {
+      console.error("Failed to stop audio:", e);
+    }
+
+    // Install the update
+    await install();
+  };
+
+  // Calculate download percentage
+  const downloadPercentage = downloadProgress?.total
+    ? (downloadProgress.downloaded / downloadProgress.total) * 100
+    : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -137,35 +174,78 @@ export function SettingsAbout() {
             <p className="text-sm text-white/50">Version {appVersion}</p>
           </div>
           <div className="text-right">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={handleCheck}
-                  disabled={isChecking}
-                  className="bg-white/5 border-white/10 hover:bg-white/10 text-white min-w-[140px]"
-                >
-                  {isChecking ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Checking...
-                    </>
-                  ) : isUpdateAvailable ? (
-                    "View Update"
-                  ) : (
-                    "Check for Updates"
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Check for updates on{" "}
-                {channel === "stable" ? "Stable" : "Nightly"} channel
-              </TooltipContent>
-            </Tooltip>
-            {lastChecked && !isChecking && !isUpdateAvailable && (
-              <p className="text-xs text-white/30 mt-2 flex items-center justify-end gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                Up to date
+            {/* Download Progress */}
+            {isDownloading && downloadProgress && (
+              <div className="mb-3 w-48">
+                <div className="flex justify-between text-xs text-white/50 mb-1">
+                  <span>Downloading...</span>
+                  <span>
+                    {formatBytes(downloadProgress.downloaded)}
+                    {downloadProgress.total &&
+                      ` / ${formatBytes(downloadProgress.total)}`}
+                  </span>
+                </div>
+                <Progress value={downloadPercentage} max={100} />
+                <p className="text-xs text-white/40 mt-1 text-right">
+                  {Math.round(downloadPercentage)}%
+                </p>
+              </div>
+            )}
+
+            {/* Ready to Install Button */}
+            {isReadyToInstall && !isDownloading && (
+              <Button
+                onClick={handleInstall}
+                className="bg-green-600 hover:bg-green-700 text-white min-w-[140px] mb-2"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Install Update
+              </Button>
+            )}
+
+            {/* Check/View Update Button */}
+            {!isReadyToInstall && !isDownloading && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={handleCheck}
+                    disabled={isChecking}
+                    className="bg-white/5 border-white/10 hover:bg-white/10 text-white min-w-[140px]"
+                  >
+                    {isChecking ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : isUpdateAvailable ? (
+                      "View Update"
+                    ) : (
+                      "Check for Updates"
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Check for updates on{" "}
+                  {channel === "stable" ? "Stable" : "Nightly"} channel
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {lastChecked &&
+              !isChecking &&
+              !isUpdateAvailable &&
+              !isDownloading &&
+              !isReadyToInstall && (
+                <p className="text-xs text-white/30 mt-2 flex items-center justify-end gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Up to date
+                </p>
+              )}
+
+            {isReadyToInstall && (
+              <p className="text-xs text-green-400 mt-1">
+                v{updateManifest?.version} ready to install
               </p>
             )}
           </div>

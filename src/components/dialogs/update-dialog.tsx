@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useUpdateStore } from "@/stores/update-store";
-import { Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export function UpdateDialog({
@@ -18,11 +18,12 @@ export function UpdateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { updateManifest, isChecking, install, error } = useUpdateStore();
+  const { updateManifest, download, error } = useUpdateStore();
+  const isDownloading = useUpdateStore((s) => s.isDownloading);
 
-  const handleInstall = async () => {
-    await install();
-    // Dialog stays open to show spinner/error
+  const handleDownload = async () => {
+    onOpenChange(false); // Close dialog immediately
+    await download(); // Start background download
   };
 
   return (
@@ -31,12 +32,24 @@ export function UpdateDialog({
         <DialogHeader>
           <DialogTitle className="text-xl">New Version Available</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Version {updateManifest?.version} is ready to install.
+            Version {updateManifest?.version} is ready to download.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto my-4 p-4 rounded-md bg-neutral-950 border border-neutral-800">
-          <div className="prose prose-invert prose-sm max-w-none">
+          <div
+            className="prose prose-invert prose-sm max-w-none
+            prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-white/10 prose-headings:pb-2 prose-headings:mb-3
+            prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+            prose-p:text-gray-300 prose-p:leading-relaxed
+            prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-white prose-strong:font-semibold
+            prose-code:text-indigo-300 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+            prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10
+            prose-ul:text-gray-300 prose-ol:text-gray-300
+            prose-li:marker:text-indigo-400
+            prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-gray-300 prose-blockquote:not-italic prose-blockquote:py-1"
+          >
             {updateManifest?.body ? (
               <ReactMarkdown>{updateManifest.body}</ReactMarkdown>
             ) : (
@@ -54,24 +67,18 @@ export function UpdateDialog({
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              disabled={isChecking}
+              disabled={isDownloading}
               className="hover:bg-white/10"
             >
               Later
             </Button>
             <Button
-              onClick={handleInstall}
-              disabled={isChecking}
-              className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px]"
             >
-              {isChecking ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Now"
-              )}
+              <Download className="mr-2 h-4 w-4" />
+              Download Update
             </Button>
           </div>
         </DialogFooter>
