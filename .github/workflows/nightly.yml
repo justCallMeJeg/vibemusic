@@ -105,6 +105,23 @@ jobs:
         env:
           GITHUB_REPO: ${{ github.repository }}
 
+      - name: Clean old nightly assets
+        run: |
+          # Get all assets from the nightly release and delete them
+          $assets = gh release view nightly --json assets --jq '.assets[].name' 2>$null
+          if ($LASTEXITCODE -eq 0 -and $assets) {
+            foreach ($asset in $assets) {
+              Write-Host "Deleting asset: $asset"
+              gh release delete-asset nightly $asset --yes
+            }
+            Write-Host "Cleaned all old nightly assets"
+          } else {
+            Write-Host "No existing nightly release or assets to clean"
+          }
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and upload Nightly
         uses: tauri-apps/tauri-action@v0
         env:
@@ -117,19 +134,10 @@ jobs:
           releaseBody: |
             🌙 **Nightly Build** - Version `${{ steps.version.outputs.NEW_VERSION }}`
 
-            This is a rolling nightly release with the latest changes from the `dev` branch.
+            > ⚠️ This is a rolling nightly release with the latest changes from the `dev` branch. Nightly builds may be unstable. For stable releases, switch to the **stable** update channel.
 
-            ⚠️ **Warning**: Nightly builds may be unstable and contain bugs.
-
-            ---
-
-            ### 📋 Changes since last stable release:
-
+            ### Changelog
             ${{ steps.changelog.outputs.content }}
-
-            ---
-
-            When this version is promoted to stable, it will be released as `v${{ steps.version.outputs.NEW_VERSION }}`.
           releaseDraft: false
           prerelease: true
           includeUpdaterJson: true
