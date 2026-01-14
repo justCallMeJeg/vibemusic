@@ -24,7 +24,8 @@
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint:css:fix": "stylelint \"src/**/*.css\" --fix",
     "prepare": "husky && husky install",
-    "setup:ffmpeg": "node scripts/download-ffmpeg.mjs"
+    "setup:ffmpeg": "node scripts/download-ffmpeg.mjs",
+    "cleanup": "powershell -ExecutionPolicy Bypass -File ./scripts/cleanup.ps1"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
