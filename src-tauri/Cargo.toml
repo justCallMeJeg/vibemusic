@@ -1,6 +1,6 @@
 [package]
 name = "vibemusic"
-version = "0.0.11"
+version = "0.0.12"
 description = "A modern, cross-platform desktop music player built with Tauri, React, and TypeScript."
 authors = ["justCallMeJeg", "ItsMikhaeli"]
 edition = "2021"
