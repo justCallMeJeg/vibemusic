@@ -1,7 +1,7 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
 import MusicController from "./components/music-controller";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAudioStore } from "./stores/audio-store";
 
 import NavigationMenu from "./components/navigation-menu";
@@ -42,6 +42,7 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
+  const hasCheckedForUpdate = useRef(false);
 
   const {
     resolvedTheme,
@@ -107,21 +108,24 @@ export default function App() {
       }
 
       // Check for updates
-      const updateStore = useUpdateStore.getState();
-      updateStore.check(true).then((hasUpdate) => {
-        if (hasUpdate) {
-          toast.info("Update Available", {
-            description: "A new version of vibemusic is available.",
-            action: {
-              label: "View",
-              onClick: () => {
-                useNavigationStore.getState().setPage("about"); // Navigate to settings/about
+      if (!hasCheckedForUpdate.current) {
+        hasCheckedForUpdate.current = true;
+        const updateStore = useUpdateStore.getState();
+        updateStore.check(true).then((hasUpdate) => {
+          if (hasUpdate) {
+            toast.info("Update Available", {
+              description: "A new version of vibemusic is available.",
+              action: {
+                label: "View",
+                onClick: () => {
+                  useNavigationStore.getState().setPage("about"); // Navigate to settings/about
+                },
               },
-            },
-            duration: 10000,
-          });
-        }
-      });
+              duration: 10000,
+            });
+          }
+        });
+      }
     }
   }, [isSettingsLoading, activeProfileId, fetchLibrary]);
 
