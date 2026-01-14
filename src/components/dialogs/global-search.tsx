@@ -188,7 +188,7 @@ export function GlobalSearch() {
       primary: string,
       secondary: string,
       onSelect: () => void,
-      keywords: string[] = []
+      _keywords: string[] = []
     ) => {
       return (
         <ContextMenu key={id}>
