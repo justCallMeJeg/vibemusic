@@ -70,6 +70,12 @@ jobs:
         if: steps.check_release.outputs.SKIP != 'true'
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo Dependencies
+        if: steps.check_release.outputs.SKIP != 'true'
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04' && steps.check_release.outputs.SKIP != 'true'
         run: |

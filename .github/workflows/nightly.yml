@@ -39,6 +39,11 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo Dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
       - name: Install frontend dependencies
         run: npm install
 
