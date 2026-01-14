@@ -40,6 +40,9 @@ interface SettingsState {
   // Sorting
   songsSortKey: string;
   songsSortDirection: string;
+
+  // Mini Player
+  miniPlayerStyle: "square" | "wide" | "bar";
 }
 
 interface SettingsActions {
@@ -71,6 +74,8 @@ interface SettingsActions {
   // Sorting Actions
   setSongsSort: (key: string, direction: string) => void;
 
+  setMiniPlayerStyle: (style: "square" | "wide" | "bar") => void;
+
   loadSettings: (profileId?: string) => Promise<void>;
 }
 
@@ -87,6 +92,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     closeToTray: false,
     scanOnStartup: false,
     autoplay: false,
+    miniPlayerStyle: "square",
 
     // Sidebar Defaults
     sidebarItems: [
@@ -230,6 +236,13 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setMiniPlayerStyle: async (style) => {
+      set({ miniPlayerStyle: style });
+      const store = await getStore();
+      await store.set("miniPlayerStyle", style);
+      await store.save();
+    },
+
     loadSettings: async (profileId?: string) => {
       // If no profileId provided, verify if we already have one loaded or just stop?
       // Actually, we should REQUIRE profileId now, or use a default.
@@ -272,6 +285,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         const songsSortKey = await getVal<string>("songsSortKey");
         const songsSortDirection = await getVal<string>("songsSortDirection");
+        const miniPlayerStyle = await getVal<"square" | "wide" | "bar">(
+          "miniPlayerStyle"
+        );
 
         // Update Store State
         set({
@@ -296,6 +312,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           defaultPage: defaultPage ?? "home",
           songsSortKey: songsSortKey ?? "date_added",
           songsSortDirection: songsSortDirection ?? "desc",
+          miniPlayerStyle: miniPlayerStyle ?? "square",
           isLoading: false,
         });
 

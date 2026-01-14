@@ -30,9 +30,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { useUpdateStore } from "./stores/update-store";
 
+import MiniPlayer from "./components/mini-player";
 // ... (imports)
 
 export default function App() {
+  const isMiniPlayer = useNavigationStore((s) => s.isMiniPlayer);
   const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
@@ -281,82 +283,86 @@ export default function App() {
   return (
     <main
       id="app"
-      className={`selection:bg-white/10 h-dvh w-dvw px-6 overflow-hidden flex flex-col gap-4 relative ${
-        theme === "dark" || theme === "system" ? "dark" : ""
-      }`}
+      className={`selection:bg-white/10 h-dvh w-dvw overflow-hidden flex flex-col relative ${
+        !isMiniPlayer ? "px-6 gap-4" : "p-0"
+      } ${theme === "dark" || theme === "system" ? "dark" : ""}`}
     >
       {/* Custom Title Bar */}
-      <TitleBar />
+      {!isMiniPlayer && <TitleBar />}
 
-      {/* Background Gradient */}
-      <div
-        className="fixed top-0 left-0 right-0 h-96 pointer-events-none transition-colors duration-1000 ease-in-out z-0 opacity-25"
-        style={{
-          backgroundColor: dynamicGradient ? gradientColor : "transparent",
-          maskImage: "linear-gradient(to bottom, black, transparent)",
-          WebkitMaskImage: "linear-gradient(to bottom, black, transparent)",
-        }}
-      />
-
-      <div className="flex flex-1 gap-6 min-h-0 relative z-10 pt-10">
-        {/* Sidebar */}
-        <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
+      {isMiniPlayer ? (
+        <MiniPlayer />
+      ) : (
+        <>
+          {/* Background Gradient */}
           <div
-            id="user_profile"
-            onClick={() => selectProfile(null)} // Click to switch profile
-            className={`aspect-square w-full shrink-0 rounded-lg overflow-hidden ${
-              !activeProfile?.avatarPath &&
-              (activeProfile?.color || "bg-gray-600")
-            } flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform relative`}
-            title={`Current: ${
-              activeProfile?.name || "User"
-            } (Click to switch)`}
-          >
-            {activeProfile?.avatarPath ? (
-              <img
-                src={convertFileSrc(activeProfile.avatarPath)}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              activeProfile?.name?.[0]?.toUpperCase()
-            )}
+            className="fixed top-0 left-0 right-0 h-96 pointer-events-none transition-colors duration-1000 ease-in-out z-0 opacity-25"
+            style={{
+              backgroundColor: dynamicGradient ? gradientColor : "transparent",
+              maskImage: "linear-gradient(to bottom, black, transparent)",
+              WebkitMaskImage: "linear-gradient(to bottom, black, transparent)",
+            }}
+          />
 
-            {/* Hover overlay hint? Optional */}
+          <div className="flex flex-1 gap-6 min-h-0 relative z-10 pt-10">
+            {/* Sidebar */}
+            <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
+              <div
+                id="user_profile"
+                onClick={() => selectProfile(null)} // Click to switch profile
+                className={`aspect-square w-full shrink-0 rounded-lg overflow-hidden ${
+                  !activeProfile?.avatarPath &&
+                  (activeProfile?.color || "bg-gray-600")
+                } flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform relative`}
+                title={`Current: ${
+                  activeProfile?.name || "User"
+                } (Click to switch)`}
+              >
+                {activeProfile?.avatarPath ? (
+                  <img
+                    src={convertFileSrc(activeProfile.avatarPath)}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  activeProfile?.name?.[0]?.toUpperCase()
+                )}
+              </div>
+              <div className="flex justify-center h-full">
+                <NavigationMenu
+                  onImport={handleFolderImport}
+                  isScanning={isScanning}
+                />
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 min-w-0 min-h-0 flex">
+              <MainContent />
+
+              {/* Queue Menu */}
+              <div
+                className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
+                  isQueueOpen ? "w-96 p-1" : "w-0 p-0"
+                } ${isPlayerVisible ? "pb-39" : "pb-6"}`}
+              >
+                <QueueMenu />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-center h-full">
-            <NavigationMenu
-              onImport={handleFolderImport}
-              isScanning={isScanning}
-            />
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 min-w-0 min-h-0 flex">
-          <MainContent />
-
-          {/* Queue Menu */}
+          {/* Music Controller */}
           <div
-            className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
-              isQueueOpen ? "w-96 p-1" : "w-0 p-0"
-            } ${isPlayerVisible ? "pb-39" : "pb-6"}`}
+            className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
+              isPlayerVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-full opacity-0"
+            }`}
           >
-            <QueueMenu />
+            <MusicController />
           </div>
-        </div>
-      </div>
-
-      {/* Music Controller */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
-          isPlayerVisible
-            ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0"
-        }`}
-      >
-        <MusicController />
-      </div>
+        </>
+      )}
       <GlobalSearch />
 
       {quitDialog}

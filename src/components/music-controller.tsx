@@ -61,6 +61,7 @@ export default function MusicControler() {
   const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
   const setDraggingSlider = useAudioStore((s) => s.setDraggingSlider);
+  const toggleMiniPlayer = useNavigationStore((s) => s.toggleMiniPlayer);
 
   const isPlaying = status === "playing";
   const [sliderValue, setSliderValue] = useState([0]);
@@ -459,7 +460,10 @@ export default function MusicControler() {
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              onClick={() => setIsCompact(true)}
+              onClick={() => {
+                console.log("Toggle Mini Player Clicked");
+                toggleMiniPlayer();
+              }}
               className="text-gray-400 hover:text-white"
             >
               <Minimize2 size={20} />

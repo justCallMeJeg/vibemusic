@@ -81,6 +81,41 @@ export function SettingsAppearance() {
             onCheckedChange={setDynamicGradient}
           />
         </div>
+        {/* Mini Player Layout */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="space-y-1">
+            <div className="font-medium">Mini Player Layout</div>
+            <div className="text-sm text-gray-400">
+              Choose the layout for the mini player window
+            </div>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-32 justify-between">
+                <span className="capitalize">
+                  {useSettingsStore().miniPlayerStyle}
+                </span>
+                <ChevronDown className="w-4 h-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup
+                value={useSettingsStore().miniPlayerStyle}
+                onValueChange={(v) =>
+                  useSettingsStore
+                    .getState()
+                    .setMiniPlayerStyle(v as "square" | "wide" | "bar")
+                }
+              >
+                <DropdownMenuRadioItem value="square">
+                  Square
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="wide">Wide</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="bar">Bar</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Sidebar Layout */}
         <div className="flex flex-col gap-4 p-4 rounded-xl bg-white/5 border border-white/10">

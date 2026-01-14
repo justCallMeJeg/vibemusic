@@ -1,4 +1,12 @@
 import { create } from "zustand";
+import {
+  getCurrentWindow,
+  LogicalSize,
+  currentMonitor,
+  PhysicalPosition,
+} from "@tauri-apps/api/window";
+import { useSettingsStore } from "./settings-store";
+import { toast } from "sonner";
 
 // --- Types ---
 // --- Types ---
@@ -21,6 +29,9 @@ interface NavigationState {
   currentPage: Page;
   detailView: DetailView;
   isSearchOpen: boolean;
+  isMiniPlayer: boolean;
+  previousWindowSize: { width: number; height: number } | null;
+  previousWindowPosition: { x: number; y: number } | null;
 }
 
 interface NavigationActions {
@@ -29,8 +40,10 @@ interface NavigationActions {
   toggleSearch: () => void;
   openAlbumDetail: (albumId: number) => void;
   openPlaylistDetail: (playlistId: number) => void;
+
   openArtistDetail: (artistId: number) => void;
   goBack: () => void;
+  toggleMiniPlayer: () => Promise<void>;
 }
 
 type NavigationStore = NavigationState & NavigationActions;
@@ -41,6 +54,9 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
   currentPage: "home",
   detailView: null,
   isSearchOpen: false,
+  isMiniPlayer: false,
+  previousWindowSize: null,
+  previousWindowPosition: null,
 
   // Actions
   setPage: (page) => set({ currentPage: page, detailView: null }),
@@ -63,6 +79,125 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
     }),
 
   goBack: () => set({ detailView: null }),
+
+  toggleMiniPlayer: async () => {
+    try {
+      const state = useNavigationStore.getState();
+      const appWindow = getCurrentWindow();
+      const settings = useSettingsStore.getState();
+
+      if (state.isMiniPlayer) {
+        // EXITING MINI PLAYER
+        console.log("Exiting Mini Player...");
+        await appWindow.setAlwaysOnTop(false);
+
+        // Restore min size constraints for main app
+        await appWindow.setMinSize(new LogicalSize(1280, 720));
+        await appWindow.setMaxSize(null); // Unset max size
+
+        // Restore Size
+        if (state.previousWindowSize) {
+          await appWindow.setSize(
+            new LogicalSize(
+              state.previousWindowSize.width,
+              state.previousWindowSize.height
+            )
+          );
+        } else {
+          await appWindow.setSize(new LogicalSize(1280, 720));
+        }
+
+        // Restore Position
+        if (state.previousWindowPosition) {
+          await appWindow.setPosition(
+            new PhysicalPosition(
+              state.previousWindowPosition.x,
+              state.previousWindowPosition.y
+            )
+          );
+        } else {
+          // Default to top-left if no previous position
+          await appWindow.setPosition(new PhysicalPosition(50, 50));
+        }
+
+        set({
+          isMiniPlayer: false,
+          previousWindowSize: null,
+          previousWindowPosition: null,
+        });
+      } else {
+        // ENTERING MINI PLAYER
+        console.log("Entering Mini Player...");
+        const factor = await appWindow.scaleFactor();
+        const size = await appWindow.innerSize();
+        const logicalSize = size.toLogical(factor);
+        const position = await appWindow.outerPosition();
+
+        set({
+          previousWindowSize: {
+            width: logicalSize.width,
+            height: logicalSize.height,
+          },
+          previousWindowPosition: {
+            x: position.x,
+            y: position.y,
+          },
+        });
+
+        await appWindow.setAlwaysOnTop(true);
+
+        let width = 300;
+        let height = 350;
+
+        // "square" | "wide" | "bar"
+        switch (settings.miniPlayerStyle) {
+          case "wide":
+            width = 400;
+            height = 240;
+            break;
+          case "bar":
+            width = 300;
+            height = 90;
+            break;
+          case "square":
+          default:
+            width = 300;
+            height = 360;
+            break;
+        }
+
+        // Lock window size
+        await appWindow.setMinSize(new LogicalSize(width, height));
+        await appWindow.setMaxSize(new LogicalSize(width, height));
+        await appWindow.setSize(new LogicalSize(width, height));
+
+        // Position at bottom right
+        const monitor = await currentMonitor();
+        if (monitor) {
+          const padding = 20 * factor; // 20px padding from right
+          const taskbarPadding = 60 * factor; // ~60px estimated taskbar/bottom spacing
+          const windowWidthPhysical = width * factor;
+          const windowHeightPhysical = height * factor;
+
+          const x = Math.round(
+            monitor.size.width - windowWidthPhysical - padding
+          );
+          const y = Math.round(
+            monitor.size.height - windowHeightPhysical - taskbarPadding
+          );
+
+          await appWindow.setPosition(new PhysicalPosition(x, y));
+        }
+
+        set({ isMiniPlayer: true });
+      }
+    } catch (e) {
+      console.error("Failed to toggle mini player:", e);
+      toast.error("Failed to toggle Mini Player", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  },
 }));
 
 // --- Selectors ---

@@ -45,6 +45,7 @@ interface AudioState {
   _isDraggingSlider: boolean;
   _listenersInitialized: boolean;
   _lastProgressUpdate: number; // For throttling
+  _lastSeekTime: number; // To ignore legacy progress events after seeking
   _isTransitioning: boolean;
 }
 
@@ -172,6 +173,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _isDraggingSlider: false,
     _listenersInitialized: false,
     _lastProgressUpdate: 0,
+    _lastSeekTime: 0,
     _isTransitioning: false,
 
     // Player Actions
@@ -238,7 +240,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     },
 
     seek: async (positionMs) => {
-      set({ position: positionMs });
+      set({ position: positionMs, _lastSeekTime: Date.now() });
       await invoke("audio_seek", { positionMs });
     },
 
@@ -400,6 +402,9 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           // Throttle: only update if at least 500ms has passed
           const now = Date.now();
           if (now - state._lastProgressUpdate < 500) return;
+
+          // Ignore updates shortly after seeking to prevent jumping back
+          if (now - state._lastSeekTime < 1000) return;
 
           const s = event.payload;
           set({
