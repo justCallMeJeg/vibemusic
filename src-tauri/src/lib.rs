@@ -131,6 +131,7 @@ pub fn run() {
             library::get_album_by_id,
             library::get_album_tracks,
             library::delete_track,
+            library::remove_location,
             scanner::get_file_metadata,
             scanner::scan_folder,
             scanner::scan_music_library,

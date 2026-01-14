@@ -80,6 +80,14 @@ pub fn delete_track(app: AppHandle, track_id: i64) -> Result<(), String> {
 }
 
 #[command]
+pub fn remove_location(app: AppHandle, path: String) -> Result<usize, String> {
+    let db_path = get_library_db_path(&app)?;
+    let mut db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    db.remove_folder(&path)
+        .map_err(|e| format!("Failed to remove folder: {}", e))
+}
+
+#[command]
 pub fn get_all_artists(app: AppHandle) -> Result<Vec<Artist>, String> {
     let db_path = get_library_db_path(&app)?;
     let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;

@@ -69,16 +69,35 @@ fn is_audio_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+use regex::Regex;
+use std::sync::OnceLock;
+
 /// Parse an artist string into individual artists
 fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
     match artist_str {
         None => Vec::new(),
         Some(s) => {
-            let mut artists = Vec::new();
-            let splitters = [',', '&'];
 
-            for part in s.split(&splitters[..]) {
-                let trimmed = part.trim();
+            
+            // NOTE: We are NOT splitting by single '&' implicitly anymore to protect "Kool & The Gang".
+            // However, the regex above includes `&`. We should remove it or make it context sensitive.
+            // User specifically asked to stop splitting by `&`.
+            // Updated Regex below:
+            
+             static SAFE_SPLIT_RE: OnceLock<Regex> = OnceLock::new();
+             let safe_re = SAFE_SPLIT_RE.get_or_init(|| {
+                // Split by:
+                // 1. Semicolon ;
+                // 2. " feat. ", " ft. " etc (surrounded by bounds or spaces)
+                // 3. " via ", " pres. "
+                 Regex::new(r"(?i)\s*(?:;|[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|vs\.?)\s+|(?:\s+)(?:feat\.?|ft\.?|featuring|with|vs\.?)(?:\s+))\s*").unwrap()
+             });
+
+            let mut artists = Vec::new();
+            
+            for part in safe_re.split(s) {
+                 // Cleanup
+                let trimmed = part.trim_matches(|c| c == '(' || c == ')' || c == '[' || c == ']' || c == ' ').trim();
                 if !trimmed.is_empty() {
                     artists.push(trimmed.to_string());
                 }
@@ -90,6 +109,29 @@ fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
             artists
         }
     }
+}
+
+/// Extract featured artists from title
+/// Returns (Cleaned Title, List of Featured Artists)
+fn extract_features_from_title(title: &str) -> (String, Vec<String>) {
+     static FEAT_RE: OnceLock<Regex> = OnceLock::new();
+     let re = FEAT_RE.get_or_init(|| {
+        // Matches " (feat. Artist)" or " [ft. Artist]" at the end of string
+        Regex::new(r"(?i)\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|vs\.?)\s+(.+?)[\)\]]?\s*$").unwrap()
+     });
+
+    if let Some(caps) = re.captures(title) {
+        if let Some(feat_part) = caps.get(1) {
+            let features = parse_artists(Some(feat_part.as_str()));
+            // Remove the match from title
+            let range = caps.get(0).unwrap().range();
+            let mut new_title = title.to_string();
+            new_title.replace_range(range, "");
+            return (new_title.trim().to_string(), features);
+        }
+    }
+    
+    (title.to_string(), Vec::new())
 }
 
 /// Extract metadata from a single audio file
@@ -148,6 +190,15 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
             }
 
             let tag_data = if let Some(tag) = tag {
+                let raw_title_opt = tag.title().map(|s| s.to_string());
+                let (final_title, featured_artists) = match raw_title_opt {
+                    Some(ref t) => {
+                        let (c, f) = extract_features_from_title(t);
+                        (Some(c), f)
+                    },
+                    None => (None, Vec::new()),
+                };
+
                 let artist_str = tag
                     .artist()
                     .map(|s| s.to_string())
@@ -168,7 +219,12 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                     );
                 }
 
-                let artists = parse_artists(artist_str.as_deref());
+                let mut artists = parse_artists(artist_str.as_deref());
+                artists.extend(featured_artists);
+                
+                // Remove duplicates while preserving order
+                let mut seen = std::collections::HashSet::new();
+                artists.retain(|x| seen.insert(x.clone()));
 
                 let artwork_path = tag
                     .pictures()
@@ -186,7 +242,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
                 }
 
                 (
-                    tag.title().map(|s| s.to_string()),
+                    final_title,
                     artist_str,
                     artists,
                     tag.album().map(|s| s.to_string()),

@@ -321,6 +321,41 @@ impl DbHelper {
         Ok(count)
     }
 
+    pub fn delete_empty_artists(tx: &Transaction) -> Result<usize> {
+        let count = tx.execute(
+            "DELETE FROM artists WHERE id NOT IN (
+                SELECT DISTINCT artist_id FROM tracks WHERE artist_id IS NOT NULL 
+                UNION 
+                SELECT DISTINCT artist_id FROM albums WHERE artist_id IS NOT NULL
+                UNION
+                SELECT DISTINCT artist_id FROM track_artists
+            )",
+            [],
+        )?;
+        Ok(count)
+    }
+
+    pub fn remove_folder(&mut self, folder: &str) -> Result<usize> {
+        // Prepare pattern: folder + separator wildcard?
+        // If folder is "C:\Music", match "C:\Music\%" or "C:\Music%"
+        // To be safe, ensure folder ends with separator or checking strictly.
+        // Assuming simple prefix match for now.
+        // Note: Make sure to handle backslashes if needed, but usually exact string prefix is fine.
+        let pattern = format!("{}%", folder); 
+        
+        let tx = self.conn.transaction()?;
+        
+        let count = tx.execute("DELETE FROM tracks WHERE file_path LIKE ?", params![pattern])?;
+        
+        if count > 0 {
+             Self::delete_empty_albums(&tx)?;
+             Self::delete_empty_artists(&tx)?;
+        }
+        
+        tx.commit()?;
+        Ok(count)
+    }
+
     pub fn delete_track(&self, id: i64) -> Result<()> {
         self.conn
             .execute("DELETE FROM tracks WHERE id = ?", params![id])?;

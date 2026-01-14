@@ -9,7 +9,6 @@ use tauri::{AppHandle, Manager};
 pub struct WatcherState {
     watcher: Arc<Mutex<Option<notify::RecommendedWatcher>>>,
     watched_paths: Arc<Mutex<HashSet<String>>>,
-    debouncer_thread: Arc<Mutex<Option<std::thread::JoinHandle<()>>>>,
 }
 
 impl WatcherState {
@@ -17,7 +16,6 @@ impl WatcherState {
         Self {
             watcher: Arc::new(Mutex::new(None)),
             watched_paths: Arc::new(Mutex::new(HashSet::new())),
-            debouncer_thread: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -30,7 +28,7 @@ pub fn init() -> WatcherState {
 #[tauri::command]
 pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
     let state = app.state::<WatcherState>();
-    let mut current_watcher = state.watcher.lock().map_err(|e| e.to_string())?;
+    let current_watcher = state.watcher.lock().map_err(|e| e.to_string())?;
     let mut watched_paths = state.watched_paths.lock().map_err(|e| e.to_string())?;
 
     // Check if paths actually changed

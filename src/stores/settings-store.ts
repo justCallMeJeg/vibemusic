@@ -186,12 +186,26 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     removeLibraryPath: async (path) => {
+      // Remove from Database first
+      try {
+        await invoke("remove_location", { path });
+      } catch (e) {
+        console.error("Failed to remove location from DB:", e);
+      }
+
       const { libraryPaths } = get();
       const newPaths = libraryPaths.filter((p) => p !== path);
       set({ libraryPaths: newPaths });
+
       const store = await getStore();
       await store.set("libraryPaths", newPaths);
       await store.save();
+
+      // Update watcher
+      invoke("watch_paths", { folders: newPaths }).catch(console.error);
+
+      // Refresh UI to reflect removal
+      useLibraryStore.getState().fetchLibrary();
     },
 
     setAudioDevice: async (device) => {
