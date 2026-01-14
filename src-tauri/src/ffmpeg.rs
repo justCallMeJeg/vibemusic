@@ -61,10 +61,23 @@ impl FFmpegProcess {
            .arg("-acodec").arg("pcm_f32le")
            .arg("pipe:1")                // Output to stdout
            .stdout(Stdio::piped())
-           .stderr(Stdio::null());       // Silence stderr logs
+           .stderr(Stdio::piped());       // Capture stderr for debugging
 
-        let child = cmd.spawn().map_err(|e| format!("Failed to spawn ffmpeg: {}", e))?;
+        let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn ffmpeg: {}", e))?;
         
+        let stderr = child.stderr.take();
+        if let Some(mut stderr) = stderr {
+            std::thread::spawn(move || {
+                let mut buffer = String::new();
+                if stderr.read_to_string(&mut buffer).is_ok() {
+                    // Only log if there's actual output and it's not just basic info
+                    if !buffer.trim().is_empty() {
+                         log::warn!("FFmpeg Stderr: {}", buffer);
+                    }
+                }
+            });
+        }
+
         Ok(Self { child })
     }
 
@@ -265,11 +278,12 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
 
     // Platform detection
     let (url, zip_name) = if cfg!(target_os = "windows") {
-        ("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-win-64.zip", "ffmpeg.zip")
+        ("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip", "ffmpeg.zip")
     } else if cfg!(target_os = "macos") {
-        ("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-osx-64.zip", "ffmpeg.zip")
+        // Just ffmpeg binary zipped
+        ("https://evermeet.cx/ffmpeg/ffmpeg.zip", "ffmpeg.zip")
     } else {
-        // Linux logic (more complex, maybe generic linux-64)
+        // Fallback or keep old logic for Linux for now
         ("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-64.zip", "ffmpeg.zip")
     };
 
@@ -301,48 +315,53 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
     let file = std::fs::File::open(&zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
 
+    // Target binary name
+    let binary_name = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
+    let mut found = false;
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
-        let outpath = match file.enclosed_name() {
-             Some(path) => binaries_dir.join(path),
-             None => continue,
+        
+        // Simple search: Does the filename match?
+        // Note: zip::read::ZipFile::name() returns the full path in the zip
+        // We want to verify it ends with /ffmpeg.exe or is exactly ffmpeg.exe
+        let path_in_zip = file.name();
+        
+        let matches = if cfg!(target_os = "windows") {
+             path_in_zip.ends_with("ffmpeg.exe") && !path_in_zip.contains("__MACOSX")
+        } else {
+             path_in_zip.ends_with("ffmpeg") && !path_in_zip.contains("__MACOSX") && !path_in_zip.ends_with(".c") // avoid potential source files if any
         };
 
-        if file.name().ends_with('/') {
-            std::fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
-        } else {
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    std::fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+        if matches {
+             info!("Found binary in zip: {}", path_in_zip);
+             let final_path = binaries_dir.join(binary_name);
+             let mut outfile = std::fs::File::create(&final_path).map_err(|e| e.to_string())?;
+             std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+             
+             #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Ok(metadata) = outfile.metadata() {
+                    let mut perms = metadata.permissions();
+                    perms.set_mode(0o755);
+                    std::fs::set_permissions(&final_path, perms).ok();
                 }
             }
-            let mut outfile = std::fs::File::create(&outpath).map_err(|e| e.to_string())?;
-            std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
-        }
-        
-        // Unix permissions
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Ok(metadata) = outfile.metadata() {
-                let mut perms = metadata.permissions();
-                perms.set_mode(0o755);
-                std::fs::set_permissions(&outpath, perms).ok();
-            }
+            found = true;
+            break;
         }
     }
 
     // Cleanup
     let _ = std::fs::remove_file(&zip_path);
 
-    // Return the final path
-    let binary_name = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
     let final_path = binaries_dir.join(binary_name);
     
-    if final_path.exists() {
+    if found && final_path.exists() {
         Ok(final_path.to_string_lossy().to_string())
     } else {
-        Err("Extraction failed or file not found".to_string())
+        Err("Extraction failed or ffmpeg binary not found in zip".to_string())
     }
 }
 
