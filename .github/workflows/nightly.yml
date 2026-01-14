@@ -130,10 +130,11 @@ jobs:
       - name: Clean old nightly assets
         run: |
           # Get all assets from the nightly release except the ones we just uploaded
-          $newAssets = @()
+          # Note: tauri-action also uploads latest.json but doesn't include it in artifactPaths
+          $newAssets = @("latest.json")
           $artifactPaths = '${{ steps.build.outputs.artifactPaths }}'
           if ($artifactPaths) {
-            $newAssets = ($artifactPaths | ConvertFrom-Json) | ForEach-Object { [System.IO.Path]::GetFileName($_) }
+            $newAssets += ($artifactPaths | ConvertFrom-Json) | ForEach-Object { [System.IO.Path]::GetFileName($_) }
           }
 
           $allAssets = gh release view nightly --json assets --jq '.assets[].name' 2>$null
