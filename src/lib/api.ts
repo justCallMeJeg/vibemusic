@@ -126,3 +126,13 @@ export async function reorderPlaylist(
 ): Promise<void> {
   return await invoke("reorder_playlist", { id, newOrder });
 }
+
+export interface SearchResults {
+  tracks: Track[];
+  albums: Album[];
+  playlists: Playlist[];
+}
+
+export async function search(query: string): Promise<SearchResults> {
+  return await invoke("search", { query });
+}

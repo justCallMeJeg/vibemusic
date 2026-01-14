@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -68,10 +68,10 @@ function CommandDialog({
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
+>(({ className, value, onValueChange, ...props }, ref) => (
   <div
     data-slot="command-input-wrapper"
-    className="flex h-9 items-center gap-2 border-b px-3"
+    className="flex h-12 items-center gap-2 border-b px-3"
   >
     <SearchIcon className="size-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
@@ -80,8 +80,16 @@ const CommandInput = React.forwardRef<
         "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
+      value={value}
+      onValueChange={onValueChange}
       {...props}
     />
+    {value && (
+      <X
+        className="size-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer"
+        onClick={() => onValueChange?.("")}
+      />
+    )}
   </div>
 ));
 

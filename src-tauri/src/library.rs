@@ -110,3 +110,25 @@ pub fn get_artist_tracks(app: AppHandle, id: i64) -> Result<Vec<LibraryTrack>, S
     db.get_artist_tracks(id)
         .map_err(|e| format!("Failed to fetch artist tracks: {}", e))
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResults {
+    pub tracks: Vec<LibraryTrack>,
+    pub albums: Vec<LibraryAlbum>,
+    pub playlists: Vec<crate::playlists::Playlist>,
+}
+
+#[command]
+pub fn search(app: AppHandle, query: String) -> Result<SearchResults, String> {
+    let db_path = get_library_db_path(&app)?;
+    let db = DbHelper::new(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let (tracks, albums, playlists) = db.search(&query)
+        .map_err(|e| format!("Failed to search: {}", e))?;
+
+    Ok(SearchResults {
+        tracks,
+        albums,
+        playlists,
+    })
+}

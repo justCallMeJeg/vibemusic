@@ -11,16 +11,23 @@ import {
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import {
-  getTracks,
-  getAlbums,
-  getPlaylists,
   getAlbumTracks,
   getPlaylistTracks,
   Track,
   Album,
   Playlist,
+  search,
+  SearchResults,
 } from "@/lib/api";
-import { Disc, ListMusic, Music, Play, Shuffle, Plus } from "lucide-react";
+import {
+  Disc,
+  ListMusic,
+  Music,
+  Play,
+  Shuffle,
+  Plus,
+  Loader2,
+} from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -30,17 +37,17 @@ import {
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
 
-// Maximum items per category for performance
-const MAX_ITEMS = 20;
-
 export function GlobalSearch() {
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
   const setSearchOpen = useNavigationStore((s) => s.setSearchOpen);
 
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [results, setResults] = useState<SearchResults>({
+    tracks: [],
+    albums: [],
+    playlists: [],
+  });
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
@@ -67,24 +74,29 @@ export function GlobalSearch() {
     }
   }, [isSearchOpen]);
 
-  // Pre-fetch data on mount to avoid lag when opening
+  // Debounced Search
   useEffect(() => {
-    Promise.all([getTracks(), getAlbums(), getPlaylists()])
-      .then(([t, a, p]) => {
-        setTracks(t);
-        setAlbums(a);
-        setPlaylists(p);
-      })
-      .catch((e) => console.error("Failed to fetch:", e));
-  }, []); // Run once on mount
+    if (!isSearchOpen) return;
+
+    const handler = setTimeout(() => {
+      setLoading(true);
+      search(searchQuery)
+        .then(setResults)
+        .catch((e) => console.error("Search failed:", e))
+        .finally(() => setLoading(false));
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchQuery, isSearchOpen]);
 
   // Actions
   const handlePlayTrack = useCallback(
     (track: Track) => {
-      play(track, tracks);
+      play(track, results.tracks); // Play within context of search results? Or just track?
+      // Better to pass just the track for now, or the track + search results as context
       setSearchOpen(false);
     },
-    [play, tracks, setSearchOpen]
+    [play, results.tracks, setSearchOpen]
   );
 
   const handlePlayAlbum = useCallback(
@@ -165,14 +177,6 @@ export function GlobalSearch() {
     [playNext]
   );
 
-  // Limited items for performance
-  const displayTracks = useMemo(() => tracks.slice(0, MAX_ITEMS), [tracks]);
-  const displayAlbums = useMemo(() => albums.slice(0, MAX_ITEMS), [albums]);
-  const displayPlaylists = useMemo(
-    () => playlists.slice(0, MAX_ITEMS),
-    [playlists]
-  );
-
   // Item renderer
   const renderItem = useCallback(
     (
@@ -189,8 +193,7 @@ export function GlobalSearch() {
         <ContextMenu key={id}>
           <ContextMenuTrigger asChild>
             <CommandItem
-              value={id}
-              keywords={keywords}
+              value={id} // Unique ID for cmdk
               onSelect={onSelect}
               className="py-1.5"
             >
@@ -254,12 +257,11 @@ export function GlobalSearch() {
     ]
   );
 
-  // Sections with unique IDs and search keywords
   const songsSection = useMemo(
     () =>
-      displayTracks.length > 0 && (
+      results.tracks.length > 0 && (
         <CommandGroup heading="Songs">
-          {displayTracks.map((t) =>
+          {results.tracks.map((t) =>
             renderItem(
               `track-${t.id}`,
               "track",
@@ -267,20 +269,19 @@ export function GlobalSearch() {
               <Music className="mr-2 h-3 w-3 opacity-70 shrink-0" />,
               t.title,
               t.artist ?? "Unknown",
-              () => handlePlayTrack(t),
-              [t.title, t.artist ?? ""]
+              () => handlePlayTrack(t)
             )
           )}
         </CommandGroup>
       ),
-    [displayTracks, renderItem, handlePlayTrack]
+    [results.tracks, renderItem, handlePlayTrack]
   );
 
   const albumsSection = useMemo(
     () =>
-      displayAlbums.length > 0 && (
+      results.albums.length > 0 && (
         <CommandGroup heading="Albums">
-          {displayAlbums.map((a) =>
+          {results.albums.map((a) =>
             renderItem(
               `album-${a.id}`,
               "album",
@@ -291,20 +292,19 @@ export function GlobalSearch() {
               () => {
                 openAlbumDetail(a.id);
                 setSearchOpen(false);
-              },
-              [a.title, a.artist_name ?? ""]
+              }
             )
           )}
         </CommandGroup>
       ),
-    [displayAlbums, renderItem, openAlbumDetail, setSearchOpen]
+    [results.albums, renderItem, openAlbumDetail, setSearchOpen]
   );
 
   const playlistsSection = useMemo(
     () =>
-      displayPlaylists.length > 0 && (
+      results.playlists.length > 0 && (
         <CommandGroup heading="Playlists">
-          {displayPlaylists.map((p) =>
+          {results.playlists.map((p) =>
             renderItem(
               `playlist-${p.id}`,
               "playlist",
@@ -315,20 +315,21 @@ export function GlobalSearch() {
               () => {
                 openPlaylistDetail(p.id);
                 setSearchOpen(false);
-              },
-              [p.name]
+              }
             )
           )}
         </CommandGroup>
       ),
-    [displayPlaylists, renderItem, openPlaylistDetail, setSearchOpen]
+    [results.playlists, renderItem, openPlaylistDetail, setSearchOpen]
   );
 
   return (
     <CommandDialog
       open={isSearchOpen}
       onOpenChange={setSearchOpen}
-      commandProps={{}}
+      commandProps={{
+        shouldFilter: false, // DISABLE CLIENT SIDE FILTERING!
+      }}
     >
       <CommandInput
         placeholder="Search tracks, albums, or playlists..."
@@ -336,22 +337,32 @@ export function GlobalSearch() {
         onValueChange={setSearchQuery}
       />
       <CommandList className="max-h-[300px]">
-        <CommandEmpty>No results found.</CommandEmpty>
-        {searchQuery.length > 0 ? (
+        {loading && (
+          <div className="flex items-center justify-center py-6 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Searching...
+          </div>
+        )}
+        {!loading &&
+        searchQuery.length > 0 &&
+        results.tracks.length === 0 &&
+        results.albums.length === 0 &&
+        results.playlists.length === 0 ? (
+          <CommandEmpty>No results found.</CommandEmpty>
+        ) : null}
+
+        {!loading && (
           <>
             {songsSection}
-            <CommandSeparator />
+            {results.tracks.length > 0 &&
+              (results.albums.length > 0 || results.playlists.length > 0) && (
+                <CommandSeparator />
+              )}
             {albumsSection}
-            <CommandSeparator />
+            {results.albums.length > 0 && results.playlists.length > 0 && (
+              <CommandSeparator />
+            )}
             {playlistsSection}
-          </>
-        ) : (
-          <>
-            {albumsSection}
-            <CommandSeparator />
-            {playlistsSection}
-            <CommandSeparator />
-            {songsSection}
           </>
         )}
       </CommandList>

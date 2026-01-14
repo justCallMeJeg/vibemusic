@@ -727,4 +727,120 @@ impl DbHelper {
         }
         Ok(tracks)
     }
+    pub fn search(&self, query: &str) -> Result<(Vec<crate::library::LibraryTrack>, Vec<crate::library::LibraryAlbum>, Vec<crate::playlists::Playlist>)> {
+        let pattern = format!("%{}%", query);
+        let limit = 20;
+
+        // Search Tracks
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                t.id, 
+                t.title, 
+                ar.name as artist, 
+                t.artist_id,
+                al.title as album, 
+                t.album_id,
+                t.duration_ms, 
+                t.file_path, 
+                al.artwork_path 
+            FROM tracks t
+            LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN albums al ON t.album_id = al.id
+            WHERE t.title LIKE ? OR ar.name LIKE ?
+            ORDER BY t.created_at DESC
+            LIMIT ?",
+        )?;
+
+        let track_iter = stmt.query_map(params![&pattern, &pattern, limit], |row| {
+            Ok(crate::library::LibraryTrack {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist: row.get(2)?,
+                artist_id: row.get(3)?,
+                album: row.get(4)?,
+                album_id: row.get(5)?,
+                duration_ms: row.get(6)?,
+                file_path: row.get(7)?,
+                artwork_path: row.get(8)?,
+            })
+        })?;
+
+        let mut tracks = Vec::new();
+        for track in track_iter {
+            tracks.push(track?);
+        }
+
+        // Search Albums
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                al.id,
+                al.title,
+                al.artist_id,
+                ar.name as artist_name,
+                al.year,
+                al.artwork_path,
+                COUNT(t.id) as track_count,
+                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+            FROM albums al
+            LEFT JOIN artists ar ON al.artist_id = ar.id
+            LEFT JOIN tracks t ON t.album_id = al.id
+            WHERE al.title LIKE ? OR ar.name LIKE ?
+            GROUP BY al.id
+            ORDER BY al.title ASC
+            LIMIT ?",
+        )?;
+
+        let album_iter = stmt.query_map(params![&pattern, &pattern, limit], |row| {
+            Ok(crate::library::LibraryAlbum {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artist_id: row.get(2)?,
+                artist_name: row.get(3)?,
+                year: row.get(4)?,
+                artwork_path: row.get(5)?,
+                track_count: row.get(6)?,
+                total_duration_ms: row.get(7)?,
+            })
+        })?;
+
+        let mut albums = Vec::new();
+        for album in album_iter {
+            albums.push(album?);
+        }
+
+        // Search Playlists
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                p.id, 
+                p.name, 
+                p.description, 
+                p.artwork_path,
+                p.created_at,
+                COUNT(pt.id) as track_count
+            FROM playlists p
+            LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
+            WHERE p.name LIKE ?
+            GROUP BY p.id
+            ORDER BY p.name ASC
+            LIMIT ?",
+        )?;
+
+        let playlist_iter = stmt.query_map(params![&pattern, limit], |row| {
+            Ok(crate::playlists::Playlist {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                artwork_path: row.get(3)?,
+                created_at: row.get(4)?,
+                track_count: row.get(5)?,
+            })
+        })?;
+
+        let mut playlists = Vec::new();
+        for playlist in playlist_iter {
+            playlists.push(playlist?);
+        }
+
+        Ok((tracks, albums, playlists))
+    }
 }

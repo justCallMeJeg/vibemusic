@@ -140,6 +140,7 @@ pub fn run() {
             library::get_artist_by_id,
             library::get_artist_albums,
             library::get_artist_tracks,
+            library::search,
             // Audio commands
             audio::audio_play,
             audio::audio_pause,
