@@ -162,7 +162,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         set({ libraryPaths: newPaths });
         const store = await getStore();
         await store.set("libraryPaths", newPaths);
+        await store.set("libraryPaths", newPaths);
         await store.save();
+        invoke("watch_paths", { folders: newPaths }).catch(console.error);
 
         // Auto-scan the new path
         try {
@@ -365,6 +367,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
             durationMs: crossfadeDuration,
           });
         }
+
+        invoke("watch_paths", { folders: libraryPaths ?? [] }).catch(
+          console.error
+        );
 
         get().refreshAudioDevices();
 

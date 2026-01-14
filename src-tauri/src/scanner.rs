@@ -41,6 +41,7 @@ pub struct TrackMetadata {
     pub bit_rate: Option<u32>,
     pub channels: Option<u8>,
     pub artwork_path: Option<String>,
+    pub modification_time: u64,
 }
 
 /// Progress event emitted during scanning
@@ -97,6 +98,13 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
 
     let metadata =
         std::fs::metadata(path).map_err(|e| format!("Failed to read file metadata: {}", e))?;
+
+    let mtime = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
 
     let file_name = path
         .file_name()
@@ -321,6 +329,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
         bit_rate,
         channels,
         artwork_path,
+        modification_time: mtime,
     })
 }
 
@@ -375,9 +384,22 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
     let progress_counter = AtomicUsize::new(0);
     let (tx, rx) = mpsc::sync_channel::<Result<TrackMetadata, String>>(100);
 
-    // Get database path using profile helper
+    // Get database path
     let db_path = get_library_db_path(&app)?;
-    info!("Scanner using database at: {:?}", db_path);
+    
+    // Fetch existing metadata for (dumb) incremental scan
+    // We open a temporary connection here just to read the current state
+    let existing_map = {
+        let db = DbHelper::new(&db_path).map_err(|e| e.to_string())?;
+        let list = db.get_existing_metadata().map_err(|e| e.to_string())?;
+        let mut map = std::collections::HashMap::with_capacity(list.len());
+        for (path, size, mtime) in list {
+            map.insert(path, (size, mtime));
+        }
+        map
+    };
+    
+    info!("Scanner found {} existing tracks in DB", existing_map.len());
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let cache_dir = app_data_dir.join("covers");
@@ -446,17 +468,45 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
 
     all_files.par_iter().for_each(|file_path| {
         let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
-        let _ = app.emit(
-            "scan-progress",
-            ScanProgress {
-                current,
-                total,
-                current_file: file_path.clone(),
-                status: "scanning".to_string(),
-            },
-        );
+        
+        // Throttling: Emit event only every 50 files to prevent IPC flood
+        if current % 50 == 0 || current == total {
+            let _ = app.emit(
+                "scan-progress",
+                ScanProgress {
+                    current,
+                    total,
+                    current_file: file_path.clone(),
+                    status: "scanning".to_string(),
+                },
+            );
+        }
 
-        let metadata = extract_metadata(Path::new(file_path), &cache_dir)
+        // Check for existing file (incremental scan)
+        let path = Path::new(file_path);
+        let metadata = match std::fs::metadata(path) {
+            Ok(m) => m,
+            Err(_) => return, // File likely deleted during scan
+        };
+
+        let fs_size = metadata.len();
+        let fs_mtime = metadata
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        // Optimization: Skip if file hasn't changed
+        if let Some((db_size, db_mtime)) = existing_map.get(file_path) {
+            if *db_size == fs_size && *db_mtime == fs_mtime {
+                // File unchanged, skip extraction and DB write
+                return;
+            }
+        }
+
+        // Proceed with full extraction
+        let metadata = extract_metadata(path, &cache_dir)
             .map_err(|e| format!("{}: {}", file_path, e));
         let _ = tx.send(metadata);
     });

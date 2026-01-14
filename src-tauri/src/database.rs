@@ -51,6 +51,23 @@ impl DbHelper {
                 // We ignore error here just in case, but usually it should work
                 let _ = conn.execute("ALTER TABLE playlists ADD COLUMN artwork_path TEXT", []);
             }
+
+            // Check for modification_time in tracks
+            let has_mtime: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('tracks') WHERE name='modification_time'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            if has_mtime == 0 {
+                warn!("Applying missing column modification_time to tracks...");
+                let _ = conn.execute(
+                    "ALTER TABLE tracks ADD COLUMN modification_time INTEGER DEFAULT 0",
+                    [],
+                );
+            }
             }
 
             // Ensure performance indexes exist (idempotent)
@@ -167,10 +184,10 @@ impl DbHelper {
                     track_number = ?, disc_number = ?, duration_ms = ?, 
                     file_size = ?, file_format = ?, sample_rate = ?, 
                     bit_rate = ?, channels = ?, genre = ?, year = ?, 
-                    updated_at = CURRENT_TIMESTAMP 
+                    modification_time = ?, updated_at = CURRENT_TIMESTAMP 
                 WHERE id = ?",
                 params![
-                    metadata.title.as_deref().unwrap_or(&metadata.file_name), // Fallback to filename if title is None
+                    metadata.title.as_deref().unwrap_or(&metadata.file_name),
                     artist_id,
                     album_id,
                     metadata.album_artist,
@@ -184,6 +201,7 @@ impl DbHelper {
                     metadata.channels,
                     metadata.genre,
                     metadata.year,
+                    metadata.modification_time,
                     id
                 ],
             )?;
@@ -194,8 +212,8 @@ impl DbHelper {
                     title, artist_id, album_id, album_artist, 
                     track_number, disc_number, duration_ms, 
                     file_path, file_size, file_format, sample_rate, 
-                    bit_rate, channels, genre, year
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    bit_rate, channels, genre, year, modification_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 params![
                     metadata.title.as_deref().unwrap_or(&metadata.file_name),
                     artist_id,
@@ -211,7 +229,8 @@ impl DbHelper {
                     metadata.bit_rate,
                     metadata.channels,
                     metadata.genre,
-                    metadata.year
+                    metadata.year,
+                    metadata.modification_time
                 ],
             )?;
             tx.last_insert_rowid()
@@ -255,6 +274,25 @@ impl DbHelper {
             paths.push(row?);
         }
         Ok(paths)
+    }
+
+    pub fn get_existing_metadata(&self) -> Result<Vec<(String, u64, u64)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT file_path, file_size, modification_time FROM tracks")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get(0)?,
+                row.get::<_, Option<u64>>(1)?.unwrap_or(0),
+                row.get::<_, Option<u64>>(2)?.unwrap_or(0),
+            ))
+        })?;
+
+        let mut data = Vec::new();
+        for row in rows {
+            data.push(row?);
+        }
+        Ok(data)
     }
 
     pub fn delete_tracks(tx: &Transaction, ids: &[i64]) -> Result<()> {

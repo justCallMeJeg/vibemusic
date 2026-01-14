@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS tracks (
     channels INTEGER,
     genre TEXT,
     year INTEGER,
+    modification_time INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE SET NULL,

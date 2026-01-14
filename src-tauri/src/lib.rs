@@ -10,6 +10,7 @@ mod playlists;
 mod profile;
 mod scanner;
 mod updater;
+mod watcher;
 
 use audio::{AudioEngine, AudioState};
 use profile::ProfileState;
@@ -77,6 +78,7 @@ pub fn run() {
             app.manage(state);
             app.manage(ProfileState(Mutex::new(None)));
             app.manage(updater::PendingUpdate::default());
+            app.manage(watcher::init());
 
             // Initialize media events
             engine.init_media_events(app.handle().clone());
@@ -169,7 +171,10 @@ pub fn run() {
             updater::check_update,
             updater::download_update,
             updater::install_update,
-            updater::download_and_install_update
+            updater::install_update,
+            updater::download_and_install_update,
+            // Watcher
+            watcher::watch_paths
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
