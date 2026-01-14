@@ -58,6 +58,12 @@ export default function HomePage() {
   const displayAlbums = albums.slice(0, 10);
   const displayPlaylists = playlists;
 
+  const isEmpty =
+    !isLoading &&
+    displayAlbums.length === 0 &&
+    displayPlaylists.length === 0 &&
+    recentTracks.length === 0;
+
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
       {/* Header */}
@@ -73,7 +79,8 @@ export default function HomePage() {
         ref={scrollRef}
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
-          (displayAlbums.length > 0 || displayPlaylists.length > 0) && "pb-42"
+          (displayAlbums.length > 0 || displayPlaylists.length > 0) && "pb-42",
+          isEmpty && "flex flex-col"
         )}
       >
         {/* Albums Section */}

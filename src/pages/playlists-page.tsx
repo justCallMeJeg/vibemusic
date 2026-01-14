@@ -145,7 +145,9 @@ export default function PlaylistsPage() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-2 scroll-mask-y"
+        className={`flex-1 overflow-y-auto px-2 scroll-mask-y ${
+          !isLoading && playlists.length === 0 ? "flex flex-col" : ""
+        }`}
       >
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">

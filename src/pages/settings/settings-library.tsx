@@ -148,9 +148,9 @@ export function SettingsLibrary() {
             <EmptyState
               icon={FolderOpen}
               title="No library folders"
-              description="No folders added yet."
+              description="Add a folder to start building your library."
               variant="default"
-              emptyClassName="py-8 bg-secondary/50 border-dashed"
+              emptyClassName="py-12 border-dashed border-border/50"
               className="h-auto"
             />
           )}
