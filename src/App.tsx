@@ -164,13 +164,18 @@ export default function App() {
 
   // Update gradient when track changes
   useEffect(() => {
+    if (status === "stopped") {
+      setGradientColor("transparent");
+      return;
+    }
+
     if (currentTrack?.artwork_path) {
       const src = convertFileSrc(currentTrack.artwork_path);
       getDominantColor(src).then((color) => setGradientColor(color));
     } else {
       setGradientColor("transparent");
     }
-  }, [currentTrack]);
+  }, [currentTrack, status]);
 
   // Initialize audio event listeners
   useEffect(() => {
