@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 
 import placeholderArt from "@/assets/placeholder-art.png";
 
@@ -134,12 +135,9 @@ const AlbumCard = memo(function AlbumCard({
 
           {/* Info */}
           <div className="min-w-0">
-            <p
-              className="text-foreground text-sm font-bold line-clamp-1"
-              title={album.title}
-            >
+            <ScrollingText className="text-foreground text-sm font-bold w-full">
               {album.title}
-            </p>
+            </ScrollingText>
             <p className="text-muted-foreground text-xs line-clamp-1">
               {album.artist_name || "Unknown Artist"}
             </p>

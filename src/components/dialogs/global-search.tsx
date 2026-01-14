@@ -36,6 +36,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 
 export function GlobalSearch() {
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
@@ -199,9 +200,9 @@ export function GlobalSearch() {
             >
               {icon}
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="truncate block font-medium group-data-[selected=true]:text-primary transition-colors">
+                <ScrollingText className="font-medium group-data-[selected=true]:text-primary transition-colors w-full">
                   {primary}
-                </span>
+                </ScrollingText>
                 <span className="text-xs text-neutral-500 truncate block">
                   {secondary}
                 </span>

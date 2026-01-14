@@ -19,6 +19,7 @@ import {
   ContextMenuSubTrigger,
 } from "../../ui/context-menu";
 import { useLibraryStore } from "@/stores/library-store";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 
 import placeholderArt from "@/assets/placeholder-art.png";
 
@@ -132,9 +133,9 @@ const MusicListItem = memo(function MusicListItem({
             <div className="flex w-full items-center justify-between">
               {/* ... rest of the component */}
               <div className="flex flex-col h-min w-full">
-                <p className="text-foreground text-base font-bold line-clamp-1">
+                <ScrollingText className="text-foreground text-base font-bold w-full">
                   {track.title}
-                </p>
+                </ScrollingText>
                 <p
                   className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
                     track.artist_id

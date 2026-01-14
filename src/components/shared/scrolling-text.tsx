@@ -13,7 +13,6 @@ export function ScrollingText({
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -33,18 +32,17 @@ export function ScrollingText({
     <div
       ref={containerRef}
       className={cn("relative overflow-hidden whitespace-nowrap", className)}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
       {...props}
     >
       <div
         ref={textRef}
         className={cn(
-          "inline-block transition-transform duration-1000 ease-linear will-change-transform",
-          isOverflowing && isHovering && "animate-scroll-text"
+          "inline-block transition-transform will-change-transform",
+          isOverflowing &&
+            "hover:animate-scroll-text group-hover:animate-scroll-text group-data-[selected=true]:animate-scroll-text"
         )}
         style={
-          isOverflowing && isHovering
+          isOverflowing
             ? {
                 animationDuration: `${children.length * 150}ms`,
               }
@@ -52,9 +50,7 @@ export function ScrollingText({
         }
       >
         <span className="inline-block pr-8">{children}</span>
-        {isOverflowing && isHovering && (
-          <span className="inline-block pr-8">{children}</span>
-        )}
+        {isOverflowing && <span className="inline-block pr-8">{children}</span>}
       </div>
     </div>
   );

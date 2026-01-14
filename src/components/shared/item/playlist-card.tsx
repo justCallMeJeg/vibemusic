@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 
 interface PlaylistCardProps {
   playlist: Playlist;
@@ -134,12 +135,9 @@ const PlaylistCard = memo(function PlaylistCard({
 
           {/* Info */}
           <div className="min-w-0">
-            <h3
-              className="font-semibold text-foreground truncate"
-              title={playlist.name}
-            >
+            <ScrollingText className="font-semibold text-foreground w-full">
               {playlist.name}
-            </h3>
+            </ScrollingText>
             <p className="text-xs text-muted-foreground mt-1">
               {playlist.track_count} tracks
               {!isCompact && (

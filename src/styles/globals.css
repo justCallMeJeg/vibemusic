@@ -199,6 +199,6 @@
   }
 }
 
-.animate-scroll-text {
+@utility animate-scroll-text {
   animation: scroll-text linear infinite;
 }
