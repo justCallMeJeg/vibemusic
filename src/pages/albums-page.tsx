@@ -2,13 +2,12 @@ import { Disc } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
 import AlbumCard from "@/components/shared/item/album-card";
+import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 
 export default function AlbumsPage() {
   const albums = useLibraryStore((s) => s.albums);
   const isLoading = useLibraryStore((s) => s.isLoading);
-  const scrollRef = useScrollMask();
 
   if (isLoading) {
     return (
@@ -37,24 +36,18 @@ export default function AlbumsPage() {
         <h1 className="text-3xl font-bold">Albums</h1>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-2 scroll-mask-y"
-      >
-        {albums.length === 0 ? (
+      <VirtualizedGrid
+        items={albums}
+        renderItem={(album) => <AlbumCard key={album.id} album={album} />}
+        itemHeight={220} // Similar height to artist cards
+        emptyState={
           <EmptyState
             icon={Disc}
             title="No albums found"
             description="Import music to see your albums here."
           />
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-42">
-            {albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }

@@ -16,30 +16,16 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useLibraryStore } from "@/stores/library-store";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Pencil, GripVertical } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
+import { arrayMove } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TrackSelectDialog } from "@/components/dialogs/track-select-dialog";
+import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
 
 interface SortableTrackItemProps {
   track: Track;
@@ -143,8 +129,6 @@ export default function PlaylistDetailPage() {
     loadData();
   }, [loadData]);
 
-  const scrollRef = useScrollMask();
-
   const handlePlay = () => {
     if (tracks.length > 0) {
       play(tracks[0], tracks);
@@ -165,35 +149,6 @@ export default function PlaylistDetailPage() {
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
-    }
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setTracks((items) => {
-        const oldIndex = items.findIndex((t) => t.id === active.id);
-        const newIndex = items.findIndex((t) => t.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-
-        // Optimistic update
-        const trackIds = newOrder.map((t) => t.id);
-        if (playlistId) {
-          reorderPlaylist(playlistId, trackIds).catch(() => {
-            loadData();
-          });
-        }
-
-        return newOrder;
-      });
     }
   };
 
@@ -275,138 +230,176 @@ export default function PlaylistDetailPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      {/* Header with back button */}
-      <div className="mt-8 flex items-center gap-2 mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goBack}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft size={24} />
-        </Button>
-        <span className="text-sm font-medium text-muted-foreground">
-          Back to Playlists
-        </span>
-      </div>
+      <VirtualizedSortableList
+        items={tracks}
+        getItemId={(item) => item.id}
+        onReorder={async (activeId, overId) => {
+          const oldIndex = tracks.findIndex((t) => t.id === activeId);
+          const newIndex = tracks.findIndex((t) => t.id === overId);
+          const newOrder = arrayMove(tracks, oldIndex, newIndex);
 
-      {/* Album info header */}
-      <div className="flex gap-6 mb-6 px-2">
-        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden">
-          {playlist.artwork_path && !imageError ? (
-            <img
-              src={convertFileSrc(playlist.artwork_path)}
-              alt={playlist.name}
-              className="w-full h-full object-cover"
-              onError={(_e) => {
-                setImageError(true);
-              }}
-            />
-          ) : (
-            playlist.name.slice(0, 2).toUpperCase()
-          )}
-        </div>
+          setTracks(newOrder);
 
-        <div className="flex flex-col justify-center min-w-0">
-          <h2 className="text-4xl font-bold text-foreground line-clamp-2 mb-2">
-            {playlist.name}
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            {playlist.description || "No description"}
-          </p>
-          <div className="text-muted-foreground text-sm flex gap-2 items-center mt-2">
-            <span>{tracks.length} songs</span>
-            <span>•</span>
-            <span>{formatDuration(totalDurationMs)}</span>
-            <span>•</span>
-            <span>
-              Created{" "}
-              {formatDistanceToNow(new Date(playlist.created_at), {
-                addSuffix: true,
-              })}
-            </span>
+          // Optimistic update
+          const trackIds = newOrder.map((t) => t.id);
+          if (playlistId) {
+            try {
+              await reorderPlaylist(playlistId, trackIds);
+            } catch {
+              loadData();
+            }
+          }
+        }}
+        renderItem={(track, index) => (
+          <SortableTrackItem
+            key={track.id}
+            track={track}
+            index={index}
+            onRemove={(e) => handleRemoveTrack(track.id, e)}
+          />
+        )}
+        header={
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* Header with back button */}
+            <div className="mt-8 flex items-center gap-2 mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goBack}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft size={24} />
+              </Button>
+              <span className="text-sm font-medium text-muted-foreground">
+                Back to Playlists
+              </span>
+            </div>
+
+            {/* Playlist info header */}
+            <div className="flex gap-6 mb-6 px-2">
+              <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden">
+                {playlist.artwork_path && !imageError ? (
+                  <img
+                    src={convertFileSrc(playlist.artwork_path)}
+                    alt={playlist.name}
+                    className="w-full h-full object-cover"
+                    onError={(_e) => {
+                      setImageError(true);
+                    }}
+                  />
+                ) : (
+                  playlist.name.slice(0, 2).toUpperCase()
+                )}
+              </div>
+
+              <div className="flex flex-col justify-center min-w-0">
+                <h2 className="text-4xl font-bold text-foreground line-clamp-2 mb-2">
+                  {playlist.name}
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  {playlist.description || "No description"}
+                </p>
+                <div className="text-muted-foreground text-sm flex gap-2 items-center mt-2">
+                  <span>{tracks.length} songs</span>
+                  <span>•</span>
+                  <span>{formatDuration(totalDurationMs)}</span>
+                  <span>•</span>
+                  <span>
+                    Created{" "}
+                    {formatDistanceToNow(new Date(playlist.created_at), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    onClick={handlePlay}
+                    className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Play size={20} fill="currentColor" />
+                    Play
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="gap-2 rounded-full"
+                    onClick={() => setIsAddSongOpen(true)}
+                  >
+                    <Plus size={20} />
+                    Add Songs
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="icon-lg"
+                    onClick={() => setIsEditOpen(true)}
+                    title="Edit Playlist"
+                  >
+                    <Pencil size={20} />
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="icon-lg"
+                    className="text-red-400 hover:text-red-300 hover:border-red-900/50"
+                    title="Delete Playlist"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                  >
+                    <Trash2 size={20} />
+                  </Button>
+
+                  <ConfirmDialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                    title="Delete Playlist?"
+                    description={`This action cannot be undone. This will permanently delete the playlist "${playlist.name}".`}
+                    confirmText="Delete"
+                    variant="destructive"
+                    onConfirm={handleDelete}
+                    isLoading={isDeleting}
+                    loadingText="Deleting..."
+                  />
+
+                  <PlaylistEditDialog
+                    playlist={playlist}
+                    open={isEditOpen}
+                    onOpenChange={(open) => {
+                      setIsEditOpen(open);
+                      if (!open) loadData();
+                    }}
+                  />
+
+                  {playlistId && (
+                    <TrackSelectDialog
+                      open={isAddSongOpen}
+                      onOpenChange={(open) => {
+                        setIsAddSongOpen(open);
+                        if (!open) loadData();
+                      }}
+                      playlistId={playlistId}
+                      existingTrackIds={new Set(tracks.map((t) => t.id))}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Header Row */}
+            <div className="flex items-center gap-4 px-4 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2">
+              <div className="w-8 text-center">#</div>
+              <div className="flex-1">Title</div>
+              <div className="p-2">
+                <div className="w-4" />
+              </div>
+            </div>
           </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-2 mt-6">
-            <Button
-              variant="default"
-              size="lg"
-              onClick={handlePlay}
-              className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Play size={20} fill="currentColor" />
-              Play
-            </Button>
-
-            <Button
-              variant="outline"
-              size="lg"
-              className="gap-2 rounded-full"
-              onClick={() => setIsAddSongOpen(true)}
-            >
-              <Plus size={20} />
-              Add Songs
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon-lg"
-              onClick={() => setIsEditOpen(true)}
-              title="Edit Playlist"
-            >
-              <Pencil size={20} />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon-lg"
-              className="text-red-400 hover:text-red-300 hover:border-red-900/50"
-              title="Delete Playlist"
-              onClick={() => setIsDeleteDialogOpen(true)}
-            >
-              <Trash2 size={20} />
-            </Button>
-
-            <ConfirmDialog
-              open={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
-              title="Delete Playlist?"
-              description={`This action cannot be undone. This will permanently delete the playlist "${playlist.name}".`}
-              confirmText="Delete"
-              variant="destructive"
-              onConfirm={handleDelete}
-              isLoading={isDeleting}
-              loadingText="Deleting..."
-            />
-
-            <PlaylistEditDialog
-              playlist={playlist}
-              open={isEditOpen}
-              onOpenChange={(open) => {
-                setIsEditOpen(open);
-                if (!open) loadData();
-              }}
-            />
-
-            {playlistId && (
-              <TrackSelectDialog
-                open={isAddSongOpen}
-                onOpenChange={(open) => {
-                  setIsAddSongOpen(open);
-                  if (!open) loadData();
-                }}
-                playlistId={playlistId}
-                existingTrackIds={new Set(tracks.map((t) => t.id))}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Track list */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-mask-y">
-        {tracks.length === 0 ? (
+        }
+        emptyState={
           <EmptyState
             icon={Music}
             title="This playlist is empty"
@@ -417,39 +410,8 @@ export default function PlaylistDetailPage() {
               </Button>
             }
           />
-        ) : (
-          <div className="flex flex-col gap-1 pb-42">
-            {/* Header Row */}
-            <div className="flex items-center gap-4 px-4 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2">
-              <div className="w-8 text-center">#</div>
-              <div className="flex-1">Title</div>
-              <div className="p-2">
-                <div className="w-4" />
-              </div>
-            </div>
-
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={tracks.map((t) => t.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {tracks.map((track, index) => (
-                  <SortableTrackItem
-                    key={track.id}
-                    track={track}
-                    index={index}
-                    onRemove={(e) => handleRemoveTrack(track.id, e)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }

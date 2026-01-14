@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
+import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   useAudioStore,
   useCurrentTrack,
@@ -7,20 +9,6 @@ import {
   useQueueOpen,
   usePlayerStatus,
 } from "@/stores/audio-store";
-import {
-  DndContext,
-  DragEndEvent,
-  closestCenter,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from "@dnd-kit/sortable";
 import QueueItem from "./shared/item/queue-item";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.png";
@@ -35,33 +23,6 @@ export default function QueueMenu() {
   // Get actions directly (stable references)
   const reorderQueue = useAudioStore((s) => s.reorderQueue);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = queue.findIndex((t) => t.id === active.id);
-      const newIndex = queue.findIndex((t) => t.id === over.id);
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        reorderQueue(arrayMove(queue, oldIndex, newIndex));
-      }
-    }
-  };
 
   if (!isQueueOpen) return null;
 
@@ -111,10 +72,10 @@ export default function QueueMenu() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
-        <div className="mb-2">
-          {/* Tracks list content */}
-          <div className="flex items-center justify-between mb-3">
+      <div className="flex-1 overflow-hidden h-full">
+        <div className="h-full flex flex-col">
+          {/* Tracks list header */}
+          <div className="flex items-center justify-between mb-3 shrink-0">
             <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
               Tracks
             </h2>
@@ -129,35 +90,29 @@ export default function QueueMenu() {
               </Button>
             )}
           </div>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={queue.map((t) => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-1">
-                {queue.length === 0 ? (
-                  <p className="text-muted-foreground text-sm italic p-2">
-                    Queue is empty
-                  </p>
-                ) : (
-                  queue.map((track) => {
-                    const isCurrent = currentTrack?.id === track.id;
-                    return (
-                      <QueueItem
-                        key={track.id}
-                        track={track}
-                        isActive={isCurrent}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <VirtualizedSortableList
+            items={queue}
+            getItemId={(track) => track.id}
+            onReorder={(activeId, overId) => {
+              const oldIndex = queue.findIndex((t) => t.id === activeId);
+              const newIndex = queue.findIndex((t) => t.id === overId);
+              if (oldIndex !== -1 && newIndex !== -1) {
+                reorderQueue(arrayMove(queue, oldIndex, newIndex));
+              }
+            }}
+            renderItem={(track) => {
+              const isCurrent = currentTrack?.id === track.id;
+              return (
+                <QueueItem key={track.id} track={track} isActive={isCurrent} />
+              );
+            }}
+            paddingBottom="0px"
+            emptyState={
+              <p className="text-muted-foreground text-sm italic p-2">
+                Queue is empty
+              </p>
+            }
+          />
         </div>
       </div>
     </div>

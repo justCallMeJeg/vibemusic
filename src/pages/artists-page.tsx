@@ -1,18 +1,19 @@
+import { useMemo } from "react";
 import { useLibraryStore } from "@/stores/library-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Music2 } from "lucide-react";
 import ArtistCard from "@/components/shared/item/artist-card";
+import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 
 export default function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
   const isLoading = useLibraryStore((s) => s.isLoading);
-  const scrollRef = useScrollMask();
 
   // Sort artists alphabetically by name
-  const sortedArtists = [...artists].sort((a, b) =>
-    a.name.localeCompare(b.name)
+  const sortedArtists = useMemo(
+    () => [...artists].sort((a, b) => a.name.localeCompare(b.name)),
+    [artists]
   );
 
   if (isLoading) {
@@ -42,24 +43,18 @@ export default function ArtistsPage() {
         <h1 className="text-3xl font-bold">Artists</h1>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-2 scroll-mask-y"
-      >
-        {sortedArtists.length === 0 ? (
+      <VirtualizedGrid
+        items={sortedArtists}
+        renderItem={(artist) => <ArtistCard key={artist.id} artist={artist} />}
+        itemHeight={220}
+        emptyState={
           <EmptyState
             icon={Music2}
             title="No artists found"
             description="Import music to see your artists here."
           />
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-42">
-            {sortedArtists.map((artist) => (
-              <ArtistCard key={artist.id} artist={artist} />
-            ))}
-          </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }
