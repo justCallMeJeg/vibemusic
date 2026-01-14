@@ -141,6 +141,9 @@ export default function App() {
       }
     });
 
+    // Show window once App is ready to prevent white flash
+    appWindow.show();
+
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
     };

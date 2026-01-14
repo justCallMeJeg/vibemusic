@@ -18,19 +18,15 @@
         "decorations": false,
         "maximized": true,
         "minWidth": 1280,
-        "minHeight": 720
+        "minHeight": 720,
+        "visible": false
       }
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost https://asset.localhost blob: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost https://asset.localhost;",
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "$APPDATA/**",
-          "$AUDIO/**",
-          "$HOME/**",
-          "$RESOURCE/**"
-        ]
+        "scope": ["$APPDATA/**", "$AUDIO/**", "$HOME/**", "$RESOURCE/**"]
       }
     }
   },
@@ -54,9 +50,6 @@
       "icons/icon.ico"
     ],
     "licenseFile": "LICENSE.txt",
-    "externalBin": [
-      "binaries/ffmpeg",
-      "binaries/ffprobe"
-    ]
+    "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"]
   }
 }
