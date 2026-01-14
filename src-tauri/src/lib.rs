@@ -175,7 +175,11 @@ pub fn run() {
             updater::install_update,
             updater::download_and_install_update,
             // Watcher
-            watcher::watch_paths
+            watcher::watch_paths,
+            // FFmpeg
+            ffmpeg::check_ffmpeg_status,
+            ffmpeg::download_ffmpeg,
+            ffmpeg::manual_set_ffmpeg_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

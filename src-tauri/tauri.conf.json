@@ -49,7 +49,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "licenseFile": "LICENSE.txt",
-    "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"]
+    "licenseFile": "LICENSE.txt"
   }
 }

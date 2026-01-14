@@ -30,6 +30,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { useUpdateStore } from "./stores/update-store";
 
+import { FFmpegSetupDialog } from "./components/dialogs/ffmpeg-setup-dialog";
 import MiniPlayer from "./components/mini-player";
 // ... (imports)
 
@@ -42,6 +43,7 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
+  const [isFFmpegReady, setIsFFmpegReady] = useState(false);
   const hasCheckedForUpdate = useRef(false);
 
   const {
@@ -93,7 +95,11 @@ export default function App() {
         useNavigationStore.getState().setPage(settings.defaultPage as Page);
       }
 
-      if (settings.scanOnStartup && settings.libraryPaths.length > 0) {
+      if (
+        isFFmpegReady &&
+        settings.scanOnStartup &&
+        settings.libraryPaths.length > 0
+      ) {
         logger.info(
           "Auto-scanning library paths on startup:",
           settings.libraryPaths
@@ -127,7 +133,7 @@ export default function App() {
         });
       }
     }
-  }, [isSettingsLoading, activeProfileId, fetchLibrary]);
+  }, [isSettingsLoading, activeProfileId, fetchLibrary, isFFmpegReady]);
 
   // Handle Close-to-Tray and Quit Confirmation
   useEffect(() => {
@@ -383,6 +389,10 @@ export default function App() {
         </>
       )}
       <GlobalSearch />
+
+      {!isFFmpegReady && (
+        <FFmpegSetupDialog onReady={() => setIsFFmpegReady(true)} />
+      )}
 
       {quitDialog}
       <Toaster />
