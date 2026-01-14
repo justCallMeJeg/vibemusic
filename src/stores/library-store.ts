@@ -44,6 +44,9 @@ interface LibraryState {
   deletePlaylist: (id: number) => Promise<boolean>;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   reorderPlaylist: (id: number, newOrder: number[]) => Promise<void>;
+
+  // Reset
+  resetLibrary: (isLoading?: boolean) => void;
 }
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
@@ -53,6 +56,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   artists: [],
   isLoading: false,
   isInitialized: false,
+
+  resetLibrary: (isLoading = false) => {
+    set({
+      tracks: [],
+      albums: [],
+      playlists: [],
+      artists: [],
+      isLoading,
+      isInitialized: false,
+    });
+  },
 
   fetchLibrary: async () => {
     set({ isLoading: true });

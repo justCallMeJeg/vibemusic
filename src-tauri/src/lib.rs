@@ -63,7 +63,7 @@ pub fn run() {
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
                 .max_file_size(2_000_000) // 2MB
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .level(log::LevelFilter::Error)
+                .level(log::LevelFilter::Info)
                 .build(),
         )
         .setup(move |app| {

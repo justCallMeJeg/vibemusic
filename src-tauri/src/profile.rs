@@ -6,6 +6,7 @@ pub struct ProfileState(pub Mutex<Option<String>>);
 
 #[tauri::command]
 pub fn set_active_profile(app: AppHandle, profile_id: Option<String>) {
+    log::info!("Setting active profile to: {:?}", profile_id);
     let state = app.state::<ProfileState>();
     let mut current = state.0.lock().unwrap();
     *current = profile_id;
@@ -22,8 +23,14 @@ pub fn get_library_db_path(app: &AppHandle) -> Result<PathBuf, String> {
         let current = state.0.lock().unwrap();
         if let Some(id) = &*current {
             db_name = format!("library_{}.db", id);
+        } else {
+            log::info!("No active profile set in state. Using default library.db");
         }
+    } else {
+        log::warn!("ProfileState not found! Using default library.db");
     }
+
+    log::info!("Resolved DB path: {:?}", db_name);
 
     Ok(app_data_dir.join(db_name))
 }
@@ -45,7 +52,23 @@ pub fn delete_profile_data(app: AppHandle, profile_id: String) -> Result<(), Str
             .map_err(|e| format!("Failed to delete settings: {}", e))?;
     }
 
-    // 3. Delete Store .lock? (Optional, store plugin might leave lock files)
+    // 3. Delete Avatar
+    let avatars_dir = app_data_dir.join("avatars");
+    if avatars_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&avatars_dir) {
+            for entry in entries.flatten() {
+                 let path = entry.path();
+                 if path.is_file() {
+                      if let Some(stem) = path.file_stem() {
+                          if stem.to_string_lossy() == profile_id {
+                               log::info!("Deleting profile avatar: {:?}", path);
+                               let _ = std::fs::remove_file(path);
+                          }
+                      }
+                 }
+            }
+        }
+    }
 
     Ok(())
 }

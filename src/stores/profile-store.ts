@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { load, Store } from "@tauri-apps/plugin-store";
 import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
+import { useLibraryStore } from "./library-store";
 
 export interface Profile {
   id: string;
@@ -52,8 +53,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const profiles = (await store.get<Profile[]>("profiles")) || [];
       const activeProfileId = await store.get<string>("activeProfileId");
 
-      set({ profiles, activeProfileId, isLoading: false });
-
       if (profiles.length === 0) {
         // Auto-create default profile
         const defaultProfile: Profile = {
@@ -67,16 +66,27 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         await store.set("activeProfileId", defaultProfile.id);
         await store.save();
 
-        set({ profiles: newProfiles, activeProfileId: defaultProfile.id });
+        // Notify backend FIRST
         await invoke("set_active_profile", { profileId: defaultProfile.id });
-      } else if (activeProfileId) {
-        await invoke("set_active_profile", { profileId: activeProfileId });
+        set({
+          profiles: newProfiles,
+          activeProfileId: defaultProfile.id,
+          isLoading: false,
+        });
+      } else {
+        // Notify backend FIRST if we have an ID
+        if (activeProfileId) {
+          await invoke("set_active_profile", { profileId: activeProfileId });
+        }
+        set({ profiles, activeProfileId, isLoading: false });
       }
     } catch (e) {
       console.error("Failed to load profiles:", e);
       set({ isLoading: false });
     }
   },
+
+  // ... (create/update/delete unchanged)
 
   createProfile: async (name, color, avatarPath, avatarBytes) => {
     const id = uuidv4();
@@ -184,12 +194,21 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   },
 
   selectProfile: async (id) => {
+    // 0. Reset UI State to prevent ghost data
+    // Use true to show skeletons immediately, preventing "Empty State" flash
+    useLibraryStore.getState().resetLibrary(true);
+
+    // 1. Notify backend FIRST
+    await invoke("set_active_profile", { profileId: id });
+
     set({ activeProfileId: id });
     const store = await getStore();
     await store.set("activeProfileId", id);
     await store.save();
 
-    // Notify backend
-    await invoke("set_active_profile", { profileId: id });
+    // Reload library data for the new profile
+    if (id) {
+      await useLibraryStore.getState().fetchLibrary();
+    }
   },
 }));
