@@ -12,16 +12,44 @@ import { Playlist } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 
 export default function HomePage() {
   const albums = useLibraryStore((s) => s.albums);
   const tracks = useLibraryStore((s) => s.tracks);
   const playlists = useLibraryStore((s) => s.playlists);
   const isLoading = useLibraryStore((s) => s.isLoading);
+  const deletePlaylist = useLibraryStore((s) => s.deletePlaylist);
 
   const setPage = useNavigationStore((s) => s.setPage);
 
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+
+  // Delete Dialog State
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(
+    null
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!playlistToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deletePlaylist(playlistToDelete.id);
+    } catch (error) {
+      console.error("Failed to delete playlist:", error);
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setPlaylistToDelete(null);
+    }
+  };
+
+  const handleDeleteRequest = (playlist: Playlist) => {
+    setPlaylistToDelete(playlist);
+    setIsDeleteDialogOpen(true);
+  };
 
   const scrollRef = useScrollMask();
 
@@ -160,6 +188,7 @@ export default function HomePage() {
                   playlist={playlist}
                   size="compact"
                   onEdit={setEditingPlaylist}
+                  onDelete={handleDeleteRequest}
                 />
               ))}
             </div>
@@ -212,6 +241,18 @@ export default function HomePage() {
           onOpenChange={(open) => !open && setEditingPlaylist(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Playlist?"
+        description={`This action cannot be undone. This will permanently delete the playlist "${playlistToDelete?.name}".`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
+        loadingText="Deleting..."
+      />
     </div>
   );
 }
