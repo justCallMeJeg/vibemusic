@@ -4,6 +4,10 @@ use std::io::Read;
 use tauri::{AppHandle, Manager, Runtime, Emitter};
 use log::info;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+
 #[derive(serde::Serialize, Clone, Debug)]
 #[serde(tag = "status", content = "path")]
 pub enum FFmpegStatus {
@@ -40,6 +44,9 @@ impl FFmpegProcess {
             .ok_or("FFmpeg binary not found")?;
 
         let mut cmd = Command::new(ffmpeg_path);
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000);
+
         
         if let Some(pos) = position_ms {
             let seconds = pos as f64 / 1000.0;
@@ -118,13 +125,19 @@ pub fn probe_file(path: &str) -> Result<MediaMetadata, String> {
         }
     };
 
-    let output = Command::new(effective_ffprobe)
-        .arg("-v").arg("quiet")
-        .arg("-print_format").arg("json")
-        .arg("-show_format")
-        .arg("-show_streams")
-        .arg(path)
-        .output()
+    let mut cmd = Command::new(effective_ffprobe);
+    cmd.args(&[
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        path
+    ]);
+
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let output = cmd.output()
         .map_err(|e| format!("Failed to run ffprobe: {}", e))?;
 
     if !output.status.success() {
@@ -336,9 +349,12 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
 /// Allows user to manually set FFmpeg path (validates version)
 #[tauri::command]
 pub fn manual_set_ffmpeg_path<R: Runtime>(app: AppHandle<R>, path: String) -> Result<String, String> {
-    let output = Command::new(&path)
-        .arg("-version")
-        .output()
+    let mut cmd = Command::new(&path);
+    cmd.arg("-version");
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let output = cmd.output()
         .map_err(|_| "Failed to execute binary".to_string())?;
     
     if output.status.success() {
