@@ -80,27 +80,6 @@ jobs:
         if: steps.check_release.outputs.SKIP != 'true'
         run: npm install
 
-      - name: Download ffmpeg binaries (Windows)
-        if: matrix.platform == 'windows-latest' && steps.check_release.outputs.SKIP != 'true'
-        run: |
-          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
-          $binariesDir = "src-tauri/binaries"
-
-          # Create binaries directory if it doesn't exist
-          New-Item -ItemType Directory -Path $binariesDir -Force | Out-Null
-
-          Invoke-WebRequest -Uri $ffmpegUrl -OutFile "ffmpeg.zip"
-          Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg-temp" -Force
-
-          $extractedFolder = Get-ChildItem -Path "ffmpeg-temp" -Directory | Select-Object -First 1
-
-          Copy-Item -Path "$($extractedFolder.FullName)/bin/ffmpeg.exe" -Destination "$binariesDir/ffmpeg-x86_64-pc-windows-msvc.exe"
-          Copy-Item -Path "$($extractedFolder.FullName)/bin/ffprobe.exe" -Destination "$binariesDir/ffprobe-x86_64-pc-windows-msvc.exe"
-
-          Remove-Item -Path "ffmpeg.zip" -Force
-          Remove-Item -Path "ffmpeg-temp" -Recurse -Force
-        shell: pwsh
-
       - name: Build and upload Stable Release
         if: steps.check_release.outputs.SKIP != 'true'
         uses: tauri-apps/tauri-action@v0
