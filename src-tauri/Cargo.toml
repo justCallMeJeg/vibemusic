@@ -64,3 +64,9 @@ lto = true        # Link Time Optimization
 strip = true      # Remove symbols to reduce size
 panic = "abort"   # Abort on panic (smaller binary)
 
+[profile.dev]
+incremental = true
+codegen-units = 256
+split-debuginfo = "unpacked"
+panic = "abort"
+
