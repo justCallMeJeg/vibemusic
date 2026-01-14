@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useUpdateStore } from "@/stores/update-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { Loader2, CheckCircle2, Download } from "lucide-react";
+import { Loader2, CheckCircle2, Download, Info } from "lucide-react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useState } from "react";
 import { UpdateDialog } from "@/components/dialogs/update-dialog";
@@ -74,14 +74,10 @@ export function SettingsAbout() {
     : 0;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          About
-        </h2>
-        <p className="text-muted-foreground">
-          Application information and update management.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Info className="w-5 h-5 text-purple-500" />
+        <h2 className="text-xl font-semibold">About</h2>
       </div>
 
       <div className="p-6 rounded-xl bg-secondary/50 border border-border space-y-6">

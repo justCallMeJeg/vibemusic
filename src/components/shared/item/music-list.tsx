@@ -32,10 +32,12 @@ const formatDuration = (ms: number) => {
 interface MusicListItemProps {
   track: Track;
   context?: Track[];
+  showArtwork?: boolean;
 }
 
 const MusicListItem = memo(function MusicListItem({
   track,
+  showArtwork = true,
 }: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
@@ -99,33 +101,36 @@ const MusicListItem = memo(function MusicListItem({
           }`}
         >
           <div className="flex h-min w-full gap-4">
-            <div className="relative">
-              <img
-                className="aspect-square h-10 rounded-lg object-cover bg-card"
-                src={artworkSrc}
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.src = placeholderArt;
-                }}
-                alt="Album Art"
-              />
-              {/* Overlay: Visible if playing, paused (current), or on hover */}
-              <div
-                className={`absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg transition-opacity ${
-                  isCurrentTrack
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                {isPlaying ? (
-                  <Pause size={16} className="fill-white text-white" />
-                ) : (
-                  <Play size={16} className="fill-white text-white" />
-                )}
+            {showArtwork && (
+              <div className="relative">
+                <img
+                  className="aspect-square h-10 rounded-lg object-cover bg-card"
+                  src={artworkSrc}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.src = placeholderArt;
+                  }}
+                  alt="Album Art"
+                />
+                {/* Overlay: Visible if playing, paused (current), or on hover */}
+                <div
+                  className={`absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg transition-opacity ${
+                    isCurrentTrack
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {isPlaying ? (
+                    <Pause size={16} className="fill-white text-white" />
+                  ) : (
+                    <Play size={16} className="fill-white text-white" />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex w-full items-center justify-between">
+              {/* ... rest of the component */}
               <div className="flex flex-col h-min w-full">
                 <p className="text-foreground text-base font-bold line-clamp-1">
                   {track.title}

@@ -223,7 +223,7 @@ export default function PlaylistDetailPage() {
           />
         )}
         header={
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="w-full min-w-0 flex flex-col">
             {/* Header with back button */}
             <div className="mt-8 flex items-center gap-2 mb-4">
               <Button
@@ -353,14 +353,16 @@ export default function PlaylistDetailPage() {
               </div>
             </div>
 
-            {/* Header Row */}
-            <div className="flex items-center gap-4 px-4 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2">
-              <div className="w-8 text-center">#</div>
-              <div className="flex-1">Title</div>
-              <div className="p-2">
-                <div className="w-4" />
+            {/* Header Row - Only show if has tracks */}
+            {tracks.length > 0 && (
+              <div className="flex items-center gap-4 px-4 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2">
+                <div className="w-8 text-center">#</div>
+                <div className="flex-1">Title</div>
+                <div className="p-2">
+                  <div className="w-4" />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         }
         emptyState={

@@ -3,7 +3,7 @@ import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
+import { ChevronLeft, Play, Shuffle, Music, Clock } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
@@ -95,7 +95,7 @@ export default function AlbumDetailPage() {
       <VirtualizedList
         items={tracks}
         header={
-          <div className="flex-1 min-w-0 flex flex-col">
+          <div className="w-full min-w-0 flex flex-col">
             {/* Header with back button */}
             <div className="mt-8 flex items-center gap-2 mb-4">
               <Button
@@ -155,18 +155,27 @@ export default function AlbumDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Header Row */}
+            <div className="flex items-center gap-2 px-2 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2 font-medium">
+              <div className="w-12 text-center">#</div>
+              <div className="flex-1 pl-4">Title</div>
+              <div className="w-16 text-right pr-4">
+                <Clock size={14} />
+              </div>
+            </div>
           </div>
         }
         renderItem={(track, index) => (
           <div
             key={track.id}
-            className="group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors px-2"
+            className="group flex items-center gap-2 hover:bg-accent/50 rounded-md pr-2 transition-colors px-2"
           >
             <span className="text-muted-foreground text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors">
               {index + 1}
             </span>
             <div className="flex-1 min-w-0">
-              <MusicListItem track={track} />
+              <MusicListItem track={track} showArtwork={false} />
             </div>
           </div>
         )}

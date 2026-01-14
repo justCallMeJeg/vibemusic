@@ -31,7 +31,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "h-full flex flex-col items-center justify-center",
+        "flex-1 w-full flex flex-col items-center justify-center",
         variant === "page" && "-mt-20",
         className
       )}

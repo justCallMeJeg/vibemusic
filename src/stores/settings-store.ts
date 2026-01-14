@@ -307,9 +307,16 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const scanOnStartup = await getVal<boolean>("scanOnStartup");
         const autoplay = await getVal<boolean>("autoplay");
 
-        const sidebarItems = await getVal<{ id: string; hidden: boolean }[]>(
+        let sidebarItems = await getVal<{ id: string; hidden: boolean }[]>(
           "sidebarItems"
         );
+
+        // Enforce settings visibility
+        if (sidebarItems) {
+          sidebarItems = sidebarItems.map((item) =>
+            item.id === "settings" ? { ...item, hidden: false } : item
+          );
+        }
         const defaultPage = await getVal<string>("defaultPage");
 
         const songsSortKey = await getVal<string>("songsSortKey");

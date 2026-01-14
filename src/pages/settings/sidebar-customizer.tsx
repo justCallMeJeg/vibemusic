@@ -59,14 +59,16 @@ function SortableItem({
       <span className="flex-1 font-medium capitalize">
         {labels[item.id] || item.id}
       </span>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggle}
-        className={item.hidden ? "text-muted-foreground" : "text-foreground"}
-      >
-        {item.hidden ? <EyeOff size={16} /> : <Eye size={16} />}
-      </Button>
+      {item.id !== "settings" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          className={item.hidden ? "text-muted-foreground" : "text-foreground"}
+        >
+          {item.hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+        </Button>
+      )}
     </div>
   );
 }
@@ -92,6 +94,7 @@ export function SidebarCustomizer() {
   };
 
   const handleToggle = (id: string) => {
+    if (id === "settings") return; // Prevent hiding settings
     const newItems = sidebarItems.map((item) =>
       item.id === id ? { ...item, hidden: !item.hidden } : item
     );
