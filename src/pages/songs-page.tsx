@@ -105,10 +105,10 @@ export default function SongsPage() {
         {/* Toolbar */}
         <div className="flex items-center gap-2">
           <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Filter songs..."
-              className="pl-9 bg-neutral-900 border-none"
+              className="pl-9 bg-card border-none"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoComplete="off"
@@ -163,7 +163,7 @@ export default function SongsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="text-xs text-gray-500 ml-2 whitespace-nowrap">
+          <div className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
             {displayedTracks.length} tracks
           </div>
         </div>
@@ -177,13 +177,13 @@ export default function SongsPage() {
           <div className="flex flex-col gap-1">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 p-2 rounded-md">
-                <Skeleton className="w-10 h-10 rounded-md bg-white/5 shrink-0" />
+                <Skeleton className="w-10 h-10 rounded-md bg-foreground/5 shrink-0" />
                 <div className="flex-1 space-y-1">
-                  <Skeleton className="h-4 w-48 bg-white/10" />
-                  <Skeleton className="h-3 w-24 bg-white/5" />
+                  <Skeleton className="h-4 w-48 bg-foreground/10" />
+                  <Skeleton className="h-3 w-24 bg-foreground/5" />
                 </div>
-                <Skeleton className="h-3 w-12 bg-white/5" />
-                <Skeleton className="h-3 w-12 bg-white/5" />
+                <Skeleton className="h-3 w-12 bg-foreground/5" />
+                <Skeleton className="h-3 w-12 bg-foreground/5" />
               </div>
             ))}
           </div>

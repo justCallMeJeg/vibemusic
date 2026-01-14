@@ -38,10 +38,10 @@ export function SettingsAudio() {
 
       <div className="grid gap-6">
         {/* Output Device */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="font-medium">Output Device</div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Select where audio should be played
             </div>
           </div>
@@ -89,13 +89,13 @@ export function SettingsAudio() {
         </div>
 
         {/* Crossfade Setting */}
-        <div className="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-start justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="font-medium">Crossfade</div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Overlap songs by specifying duration in milliseconds.
             </div>
-            <div className="text-xs text-gray-500 pt-1">
+            <div className="text-xs text-muted-foreground/70 pt-1">
               Tip: 1000ms = 1 second
             </div>
           </div>
@@ -110,10 +110,12 @@ export function SettingsAudio() {
                     setCrossfadeDuration(Number(val));
                   }
                 }}
-                className="bg-neutral-900 border-neutral-800 text-right font-mono"
+                className="bg-card border-border text-right font-mono"
                 placeholder="0"
               />
-              <span className="text-sm text-gray-500 font-medium">ms</span>
+              <span className="text-sm text-muted-foreground font-medium">
+                ms
+              </span>
             </div>
           </div>
         </div>

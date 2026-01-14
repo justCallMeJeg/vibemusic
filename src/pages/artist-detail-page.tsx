@@ -57,7 +57,7 @@ export default function ArtistDetailPage() {
 
   if (isLoading || !artist) {
     return (
-      <div className="h-full flex items-center justify-center text-neutral-500">
+      <div className="h-full flex items-center justify-center text-muted-foreground">
         Loading...
       </div>
     );
@@ -111,18 +111,18 @@ export default function ArtistDetailPage() {
           variant="ghost"
           size="icon"
           onClick={goBack}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft size={24} />
         </Button>
-        <span className="text-sm font-medium text-gray-400">
+        <span className="text-sm font-medium text-muted-foreground">
           Back to Artists
         </span>
       </div>
 
       {/* Artist Info Header */}
       <div className="flex gap-6 mb-8 px-8">
-        <div className="w-40 h-40 rounded-full overflow-hidden bg-neutral-800 shrink-0 shadow-lg">
+        <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
           {artworkSrc ? (
             <img
               src={artworkSrc}
@@ -133,22 +133,22 @@ export default function ArtistDetailPage() {
               }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-neutral-600">
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               <Users className="w-20 h-20" />
             </div>
           )}
         </div>
 
         <div className="flex flex-col justify-center min-w-0">
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
             {artist.name}
           </h1>
-          <div className="flex items-center gap-4 text-neutral-400 font-medium text-sm">
+          <div className="flex items-center gap-4 text-muted-foreground font-medium text-sm">
             <span>
               {artist.album_count}{" "}
               {artist.album_count === 1 ? "Album" : "Albums"}
             </span>
-            <span className="w-1 h-1 rounded-full bg-neutral-600" />
+            <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
             <span>
               {artist.track_count} {artist.track_count === 1 ? "Song" : "Songs"}
             </span>
@@ -173,7 +173,7 @@ export default function ArtistDetailPage() {
         {albums.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 Albums
               </h2>
               {/* Scroll Controls */}
@@ -222,7 +222,7 @@ export default function ArtistDetailPage() {
                     />
                     {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="bg-white rounded-full p-3 text-black transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
+                      <div className="bg-primary rounded-full p-3 text-primary-foreground transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
                         <Play size={24} fill="currentColor" className="ml-1" />
                       </div>
                     </div>
@@ -230,12 +230,12 @@ export default function ArtistDetailPage() {
 
                   <div className="min-w-0 flex flex-col gap-0.5">
                     <ScrollingText
-                      className="text-white text-sm font-bold hover:[&_span]:underline cursor-pointer w-full text-left"
+                      className="text-foreground text-sm font-bold hover:[&_span]:underline cursor-pointer w-full text-left"
                       onClick={() => handleAlbumClick(album.id)}
                     >
                       {album.title}
                     </ScrollingText>
-                    <p className="text-gray-400 text-xs line-clamp-1">
+                    <p className="text-muted-foreground text-xs line-clamp-1">
                       {album.year || "Unknown Year"}
                     </p>
                   </div>
@@ -248,16 +248,16 @@ export default function ArtistDetailPage() {
         {/* Songs Section (Top 5) */}
         {tracks.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
               Popular Songs
             </h2>
             <div className="flex flex-col gap-1">
               {tracks.slice(0, 5).map((track, i) => (
                 <div
                   key={track.id}
-                  className="group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors"
+                  className="group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors"
                 >
-                  <span className="text-gray-600 text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-white transition-colors">
+                  <span className="text-muted-foreground text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors">
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">

@@ -83,28 +83,28 @@ export default function AlbumDetailPage() {
     return (
       <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
         <div className="mt-8 flex items-center gap-2 mb-4">
-          <Skeleton className="h-10 w-10 rounded-md bg-white/5" />
-          <Skeleton className="h-4 w-32 bg-white/10" />
+          <Skeleton className="h-10 w-10 rounded-md bg-foreground/5" />
+          <Skeleton className="h-4 w-32 bg-foreground/10" />
         </div>
         <div className="flex gap-6 mb-6 px-2">
-          <Skeleton className="w-40 h-40 rounded-lg bg-white/5 shrink-0" />
+          <Skeleton className="w-40 h-40 rounded-lg bg-foreground/5 shrink-0" />
           <div className="flex flex-col justify-center min-w-0 flex-1 space-y-3">
-            <Skeleton className="h-8 w-1/2 bg-white/10" />
-            <Skeleton className="h-4 w-24 bg-white/5" />
-            <Skeleton className="h-4 w-32 bg-white/5" />
+            <Skeleton className="h-8 w-1/2 bg-foreground/10" />
+            <Skeleton className="h-4 w-24 bg-foreground/5" />
+            <Skeleton className="h-4 w-32 bg-foreground/5" />
             <div className="flex gap-2 pt-2">
-              <Skeleton className="h-8 w-24 rounded-md bg-white/10" />
-              <Skeleton className="h-8 w-24 rounded-md bg-white/5" />
+              <Skeleton className="h-8 w-24 rounded-md bg-foreground/10" />
+              <Skeleton className="h-8 w-24 rounded-md bg-foreground/5" />
             </div>
           </div>
         </div>
         <div className="flex-1 px-2 space-y-1">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-2">
-              <Skeleton className="w-8 h-8 rounded bg-white/5" />
+              <Skeleton className="w-8 h-8 rounded bg-foreground/5" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-1/2 bg-white/10" />
-                <Skeleton className="h-3 w-1/3 bg-white/5" />
+                <Skeleton className="h-4 w-1/2 bg-foreground/10" />
+                <Skeleton className="h-3 w-1/3 bg-foreground/5" />
               </div>
             </div>
           ))}
@@ -116,7 +116,7 @@ export default function AlbumDetailPage() {
   if (!album) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Album not found</div>
+        <div className="text-muted-foreground">Album not found</div>
       </div>
     );
   }
@@ -133,11 +133,11 @@ export default function AlbumDetailPage() {
           variant="ghost"
           size="icon"
           onClick={goBack}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft size={24} />
         </Button>
-        <span className="text-sm font-medium text-gray-400">
+        <span className="text-sm font-medium text-muted-foreground">
           Back to Albums
         </span>
       </div>
@@ -145,7 +145,7 @@ export default function AlbumDetailPage() {
       {/* Album info header */}
       <div className="flex gap-6 mb-6 px-2">
         <img
-          className="w-40 h-40 rounded-lg object-cover bg-neutral-800 shrink-0"
+          className="w-40 h-40 rounded-lg object-cover bg-card shrink-0"
           src={artworkSrc}
           onError={(e) => {
             e.currentTarget.src = placeholderArt;
@@ -153,13 +153,13 @@ export default function AlbumDetailPage() {
           alt={album.title}
         />
         <div className="flex flex-col justify-center min-w-0">
-          <h2 className="text-2xl font-bold text-white line-clamp-2">
+          <h2 className="text-2xl font-bold text-foreground line-clamp-2">
             {album.title}
           </h2>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             {formatDuration(album.total_duration_ms)}
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             {album.artist_name || "Unknown Artist"}
           </p>
 
@@ -169,7 +169,7 @@ export default function AlbumDetailPage() {
               variant="default"
               size="lg"
               onClick={handlePlay}
-              className="gap-2 rounded-full px-8 bg-white text-black hover:bg-white/90"
+              className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <Play size={20} fill="currentColor" />
               Play
@@ -200,9 +200,9 @@ export default function AlbumDetailPage() {
             {tracks.map((track, index) => (
               <div
                 key={track.id}
-                className="group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors"
+                className="group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors"
               >
-                <span className="text-gray-600 text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-white transition-colors">
+                <span className="text-muted-foreground text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors">
                   {index + 1}
                 </span>
                 <div className="flex-1 min-w-0">

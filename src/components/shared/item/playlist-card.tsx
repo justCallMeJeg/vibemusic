@@ -96,7 +96,7 @@ const PlaylistCard = memo(function PlaylistCard({
           className={`flex flex-col cursor-pointer transition-colors group ${
             isCompact
               ? "w-40 shrink-0 space-y-3"
-              : "rounded-lg p-3 hover:bg-white/5 gap-3"
+              : "rounded-lg p-3 hover:bg-accent gap-3"
           }`}
         >
           {/* Artwork with play overlay */}
@@ -116,7 +116,7 @@ const PlaylistCard = memo(function PlaylistCard({
                 alt={playlist.name}
               />
             ) : (
-              <span className="text-4xl font-bold text-white/50 select-none group-hover:scale-[1.02] transition-transform">
+              <span className="text-4xl font-bold text-muted-foreground select-none group-hover:scale-[1.02] transition-transform">
                 {playlist.name.slice(0, 2).toUpperCase()}
               </span>
             )}
@@ -124,7 +124,7 @@ const PlaylistCard = memo(function PlaylistCard({
             {/* Play overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
-                className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
                 onClick={handlePlayClick}
               >
                 <Play fill="currentColor" className="ml-1" size={24} />
@@ -135,12 +135,12 @@ const PlaylistCard = memo(function PlaylistCard({
           {/* Info */}
           <div className="min-w-0">
             <h3
-              className="font-semibold text-white truncate"
+              className="font-semibold text-foreground truncate"
               title={playlist.name}
             >
               {playlist.name}
             </h3>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {playlist.track_count} tracks
               {!isCompact && (
                 <>

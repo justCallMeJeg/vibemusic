@@ -81,8 +81,8 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
           ref={setNodeRef}
           style={style}
           onClick={handlePlayClick}
-          className={`flex items-center gap-3 p-2 rounded-md group hover:bg-white/5 cursor-pointer ${
-            isActive ? "bg-white/10" : ""
+          className={`flex items-center gap-3 p-2 rounded-md group hover:bg-accent cursor-pointer ${
+            isActive ? "bg-accent" : ""
           }`}
         >
           {/* Drag Handle - Always visible now */}
@@ -90,7 +90,7 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
             {...attributes}
             {...listeners}
             onClick={(e) => e.stopPropagation()}
-            className="cursor-grab active:cursor-grabbing text-neutral-500 hover:text-white transition-opacity"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-opacity"
           >
             <GripVertical size={16} />
           </div>
@@ -115,15 +115,15 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             <p
               className={`text-sm font-medium truncate ${
-                isActive ? "text-purple-400" : "text-white"
+                isActive ? "text-purple-400" : "text-foreground"
               }`}
             >
               {track.title}
             </p>
             <p
-              className={`text-xs text-neutral-400 truncate ${
+              className={`text-xs text-muted-foreground truncate ${
                 track.artist_id
-                  ? "hover:underline hover:text-white cursor-pointer"
+                  ? "hover:underline hover:text-foreground cursor-pointer"
                   : ""
               }`}
               onClick={handleArtistClick}
@@ -131,7 +131,7 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
               {track.artist || "Unknown Artist"}
             </p>
           </div>
-          <div className="text-xs text-neutral-500 font-mono">
+          <div className="text-xs text-muted-foreground font-mono">
             {formatDuration(track.duration_ms)}
           </div>
         </div>

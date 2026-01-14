@@ -153,12 +153,12 @@ export function PlaylistEditDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="bg-neutral-900 border-white/10 text-white sm:max-w-md"
+          className="bg-popover border-border text-popover-foreground sm:max-w-md"
           aria-describedby={undefined}
         >
           <DialogHeader>
             <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Make changes to your playlist here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
@@ -169,7 +169,7 @@ export function PlaylistEditDialog({
               {/* Image Preview / Selection */}
               <div className="relative group">
                 <div
-                  className="w-40 h-40 rounded-lg bg-neutral-800 flex flex-col items-center justify-center cursor-pointer overflow-hidden border border-dashed border-white/20 hover:border-white/50 transition-colors"
+                  className="w-40 h-40 rounded-lg bg-card flex flex-col items-center justify-center cursor-pointer overflow-hidden border border-dashed border-border hover:border-foreground/50 transition-colors"
                   onClick={handleSelectImage}
                 >
                   {previewUrl ? (
@@ -185,7 +185,7 @@ export function PlaylistEditDialog({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-gray-500">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Upload size={24} />
                       <span className="text-xs">Change Cover</span>
                     </div>
@@ -206,7 +206,7 @@ export function PlaylistEditDialog({
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-white/5 border-white/10"
+                  className="bg-secondary/50 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -214,7 +214,7 @@ export function PlaylistEditDialog({
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="bg-white/5 border-white/10 resize-none h-20"
+                  className="bg-secondary/50 border-border resize-none h-20"
                 />
               </div>
             </div>
@@ -224,14 +224,14 @@ export function PlaylistEditDialog({
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="text-gray-400 hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-white text-black hover:bg-gray-200"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes

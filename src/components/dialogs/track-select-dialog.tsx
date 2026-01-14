@@ -101,19 +101,19 @@ export function TrackSelectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-neutral-900 border-white/10 text-white max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden outline-none">
+      <DialogContent className="bg-popover border-border text-popover-foreground max-w-2xl h-[80vh] flex flex-col p-0 overflow-hidden outline-none">
         <DialogHeader className="p-4 pb-2 shrink-0">
           <DialogTitle>Add Songs to Playlist</DialogTitle>
           <div className="relative mt-2">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               size={16}
             />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search library..."
-              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus-visible:ring-indigo-500"
+              className="pl-9 bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-indigo-500"
               autoFocus
               autoComplete="off"
             />
@@ -122,11 +122,11 @@ export function TrackSelectDialog({
 
         <div className="flex-1 overflow-y-auto min-h-0 p-4 pt-0 custom-scrollbar">
           {isLoading ? (
-            <div className="text-gray-500 text-center py-8">
+            <div className="text-muted-foreground text-center py-8">
               Loading tracks...
             </div>
           ) : filteredTracks.length === 0 ? (
-            <div className="text-gray-500 text-center py-8">
+            <div className="text-muted-foreground text-center py-8">
               No tracks found
             </div>
           ) : (
@@ -137,7 +137,7 @@ export function TrackSelectDialog({
                   <div
                     key={track.id}
                     className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                      isSelected ? "bg-white/10" : "hover:bg-white/5"
+                      isSelected ? "bg-accent" : "hover:bg-accent/50"
                     }`}
                     onClick={() => toggleSelection(track.id)}
                   >
@@ -147,18 +147,18 @@ export function TrackSelectDialog({
                           ? convertFileSrc(track.artwork_path)
                           : placeholderArt
                       }
-                      className="w-10 h-10 rounded object-cover bg-neutral-800 shrink-0"
+                      className="w-10 h-10 rounded object-cover bg-card shrink-0"
                       alt=""
                     />
                     <div className="flex-1 min-w-0">
                       <div
                         className={`text-sm font-medium truncate ${
-                          isSelected ? "text-indigo-400" : "text-white"
+                          isSelected ? "text-indigo-400" : "text-foreground"
                         }`}
                       >
                         {track.title}
                       </div>
-                      <div className="text-xs text-gray-400 truncate">
+                      <div className="text-xs text-muted-foreground truncate">
                         {track.artist || "Unknown Artist"}
                       </div>
                     </div>
@@ -166,7 +166,7 @@ export function TrackSelectDialog({
                       className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                         isSelected
                           ? "bg-indigo-500 border-indigo-500 text-white"
-                          : "border-gray-600 text-transparent"
+                          : "border-muted-foreground text-transparent"
                       }`}
                     >
                       <Check size={12} strokeWidth={3} />
@@ -178,7 +178,7 @@ export function TrackSelectDialog({
           )}
         </div>
 
-        <div className="p-4 border-t border-white/5 flex justify-end gap-2 bg-neutral-900">
+        <div className="p-4 border-t border-border flex justify-end gap-2 bg-popover">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

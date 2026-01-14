@@ -47,12 +47,12 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 group"
+      className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg border border-border group"
     >
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab hover:text-white text-gray-500"
+        className="cursor-grab hover:text-foreground text-muted-foreground"
       >
         <GripVertical size={16} />
       </div>
@@ -63,7 +63,7 @@ function SortableItem({
         variant="ghost"
         size="icon"
         onClick={onToggle}
-        className={item.hidden ? "text-gray-600" : "text-white"}
+        className={item.hidden ? "text-muted-foreground" : "text-foreground"}
       >
         {item.hidden ? <EyeOff size={16} /> : <Eye size={16} />}
       </Button>

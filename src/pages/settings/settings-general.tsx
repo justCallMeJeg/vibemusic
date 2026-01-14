@@ -22,13 +22,13 @@ export function SettingsGeneral() {
 
       <div className="grid gap-6">
         {/* Close to Tray */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Power className="w-4 h-4 text-gray-400" />
+              <Power className="w-4 h-4 text-muted-foreground" />
               <div className="font-medium">Close to Tray</div>
             </div>
-            <div className="text-sm text-gray-400 pl-6">
+            <div className="text-sm text-muted-foreground pl-6">
               Minimize to system tray instead of quitting
             </div>
           </div>
@@ -36,13 +36,13 @@ export function SettingsGeneral() {
         </div>
 
         {/* Scan on Startup */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-gray-400" />
+              <HardDrive className="w-4 h-4 text-muted-foreground" />
               <div className="font-medium">Scan on Startup</div>
             </div>
-            <div className="text-sm text-gray-400 pl-6">
+            <div className="text-sm text-muted-foreground pl-6">
               Automatically scan library folders when app starts
             </div>
           </div>
@@ -50,12 +50,12 @@ export function SettingsGeneral() {
         </div>
 
         {/* Autoplay */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="font-medium">Autoplay</div>
             </div>
-            <div className="text-sm text-gray-400 pl-6">
+            <div className="text-sm text-muted-foreground pl-6">
               Resume playback automatically when app starts
             </div>
           </div>

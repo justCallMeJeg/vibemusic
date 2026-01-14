@@ -58,7 +58,7 @@ export default function NavigationMenu({
 
   return (
     <aside id="navigation-menu" className="w-full flex flex-col gap-4">
-      <div className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-gray-850 px-1 py-4">
+      <div className="items-center h-min w-full flex flex-col gap-2 rounded-lg outline outline-border px-1 py-4">
         <div className="flex flex-col gap-2 shrink-0">
           {sidebarItems
             .filter((item) => !item.hidden)
@@ -79,8 +79,8 @@ export default function NavigationMenu({
                       }}
                       className={
                         isActive || (isSearch && isSearchOpen)
-                          ? "text-white"
-                          : "text-gray-500 hover:text-white"
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       }
                     >
                       {iconMap[item.id] || <Disc />}
@@ -95,7 +95,7 @@ export default function NavigationMenu({
         </div>
       </div>
       <div
-        className={`items-center h-min w-full flex flex-col rounded-lg outline outline-gray-850 py-3 ${
+        className={`items-center h-min w-full flex flex-col rounded-lg outline outline-border py-3 ${
           isScanning ? "animate-pulse border border-blue-400" : ""
         }`}
       >
@@ -106,7 +106,7 @@ export default function NavigationMenu({
               variant="ghost"
               onClick={onImport}
               disabled={isScanning}
-              className="text-gray-500 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               <Import />
             </Button>

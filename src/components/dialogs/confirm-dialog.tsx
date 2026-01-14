@@ -47,15 +47,13 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-neutral-900 border-white/10 text-white">
+      <AlertDialogContent className="bg-popover border-border text-popover-foreground">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-neutral-400">
-            {description}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-3">
-          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+          <AlertDialogCancel className="bg-secondary border-border text-secondary-foreground hover:bg-accent hover:text-accent-foreground">
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
@@ -63,7 +61,7 @@ export function ConfirmDialog({
               "border-none",
               variant === "destructive"
                 ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-white text-black hover:bg-gray-200"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
             onClick={onConfirm}
             disabled={isLoading}

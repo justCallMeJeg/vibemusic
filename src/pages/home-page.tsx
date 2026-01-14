@@ -35,23 +35,23 @@ export default function HomePage() {
       <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
         {/* Header Loading */}
         <div className="mt-8 mb-4">
-          <Skeleton className="h-10 w-64 bg-white/10" />
-          <Skeleton className="h-4 w-48 mt-2 bg-white/5" />
+          <Skeleton className="h-10 w-64 bg-foreground/10" />
+          <Skeleton className="h-4 w-48 mt-2 bg-foreground/5" />
         </div>
 
         <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar">
           {/* Albums Skeleton */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-24 bg-white/10" />
+              <Skeleton className="h-6 w-24 bg-foreground/10" />
             </div>
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="w-40 shrink-0 space-y-3">
-                  <Skeleton className="aspect-square w-full rounded-xl bg-white/5" />
+                  <Skeleton className="aspect-square w-full rounded-xl bg-foreground/5" />
                   <div>
-                    <Skeleton className="h-4 w-32 bg-white/10 mb-1" />
-                    <Skeleton className="h-3 w-20 bg-white/5" />
+                    <Skeleton className="h-4 w-32 bg-foreground/10 mb-1" />
+                    <Skeleton className="h-3 w-20 bg-foreground/5" />
                   </div>
                 </div>
               ))}
@@ -61,15 +61,15 @@ export default function HomePage() {
           {/* Playlists Skeleton */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-24 bg-white/10" />
+              <Skeleton className="h-6 w-24 bg-foreground/10" />
             </div>
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="w-40 shrink-0 space-y-3">
-                  <Skeleton className="aspect-square w-full rounded-xl bg-white/5" />
+                  <Skeleton className="aspect-square w-full rounded-xl bg-foreground/5" />
                   <div>
-                    <Skeleton className="h-4 w-24 bg-white/10 mb-1" />
-                    <Skeleton className="h-3 w-16 bg-white/5" />
+                    <Skeleton className="h-4 w-24 bg-foreground/10 mb-1" />
+                    <Skeleton className="h-3 w-16 bg-foreground/5" />
                   </div>
                 </div>
               ))}
@@ -79,17 +79,17 @@ export default function HomePage() {
           {/* Songs Skeleton */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-32 bg-white/10" />
+              <Skeleton className="h-6 w-32 bg-foreground/10" />
             </div>
             <div className="flex flex-col gap-1">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 p-2 rounded-md">
-                  <Skeleton className="w-10 h-10 rounded-md bg-white/5 shrink-0" />
+                  <Skeleton className="w-10 h-10 rounded-md bg-foreground/5 shrink-0" />
                   <div className="flex-1 space-y-1">
-                    <Skeleton className="h-4 w-48 bg-white/10" />
-                    <Skeleton className="h-3 w-24 bg-white/5" />
+                    <Skeleton className="h-4 w-48 bg-foreground/10" />
+                    <Skeleton className="h-3 w-24 bg-foreground/5" />
                   </div>
-                  <Skeleton className="h-3 w-12 bg-white/5" />
+                  <Skeleton className="h-3 w-12 bg-foreground/5" />
                 </div>
               ))}
             </div>
@@ -106,7 +106,9 @@ export default function HomePage() {
         <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Welcome Back
         </h1>
-        <p className="text-gray-400 mt-1">Here's some music for you today.</p>
+        <p className="text-muted-foreground mt-1">
+          Here's some music for you today.
+        </p>
       </div>
       <div
         ref={scrollRef}
@@ -119,10 +121,10 @@ export default function HomePage() {
         {displayAlbums.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Albums</h2>
+              <h2 className="text-xl font-bold text-foreground">Albums</h2>
               <Button
                 variant="ghost"
-                className="text-sm text-gray-400 hover:text-white"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => setPage("albums")}
               >
                 See all <ChevronRight size={16} />
@@ -141,10 +143,10 @@ export default function HomePage() {
         {displayPlaylists.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Playlists</h2>
+              <h2 className="text-xl font-bold text-foreground">Playlists</h2>
               <Button
                 variant="ghost"
-                className="text-sm text-gray-400 hover:text-white"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => setPage("playlists")}
               >
                 See all <ChevronRight size={16} />
@@ -168,10 +170,12 @@ export default function HomePage() {
         {recentTracks.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Recently Added</h2>
+              <h2 className="text-xl font-bold text-foreground">
+                Recently Added
+              </h2>
               <Button
                 variant="ghost"
-                className="text-sm text-gray-400 hover:text-white"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => setPage("songs")}
               >
                 See all <ChevronRight size={16} />

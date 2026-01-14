@@ -30,10 +30,10 @@ export function SettingsAppearance() {
 
       <div className="grid gap-6">
         {/* Theme Setting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="font-medium">Theme</div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Choose your preferred visual theme
             </div>
           </div>
@@ -69,10 +69,10 @@ export function SettingsAppearance() {
         </div>
 
         {/* Dynamic Gradient Setting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="font-medium">Dynamic Background</div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Ambient gradient based on current album art
             </div>
           </div>
@@ -118,15 +118,15 @@ export function SettingsAppearance() {
         </div>
 
         {/* Sidebar Layout */}
-        <div className="flex flex-col gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex flex-col gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="flex items-center gap-2 mb-2">
-            <Layout className="w-5 h-5 text-gray-400" />
+            <Layout className="w-5 h-5 text-muted-foreground" />
             <h3 className="font-medium">Sidebar Layout</h3>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-400">Default Page</div>
+              <div className="text-sm text-muted-foreground">Default Page</div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-32 justify-between">
@@ -156,8 +156,8 @@ export function SettingsAppearance() {
               </DropdownMenu>
             </div>
 
-            <div className="border-t border-white/5 pt-4">
-              <div className="text-sm text-gray-400 mb-2">
+            <div className="border-t border-border pt-4">
+              <div className="text-sm text-muted-foreground mb-2">
                 Customize Sidebar Items
               </div>
               <SidebarCustomizer />

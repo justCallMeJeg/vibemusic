@@ -68,12 +68,12 @@ function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 hover:bg-white/5 rounded-md pr-2 transition-colors ${
-        isDragging ? "bg-white/10 shadow-xl" : ""
+      className={`group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors ${
+        isDragging ? "bg-accent shadow-xl" : ""
       }`}
     >
       <div
-        className="w-12 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing text-gray-600 group-hover:text-white"
+        className="w-12 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground group-hover:text-foreground"
         {...attributes}
         {...listeners}
       >
@@ -90,7 +90,7 @@ function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400"
+        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400"
         onClick={onRemove}
         title="Remove from playlist"
       >
@@ -216,31 +216,31 @@ export default function PlaylistDetailPage() {
     return (
       <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
         <div className="mt-8 flex items-center gap-2 mb-4">
-          <Skeleton className="h-10 w-10 rounded-md bg-white/5" />
-          <Skeleton className="h-4 w-32 bg-white/10" />
+          <Skeleton className="h-10 w-10 rounded-md bg-foreground/5" />
+          <Skeleton className="h-4 w-32 bg-foreground/10" />
         </div>
         <div className="flex gap-6 mb-6 px-2">
-          <Skeleton className="w-40 h-40 rounded-lg bg-white/5 shrink-0" />
+          <Skeleton className="w-40 h-40 rounded-lg bg-foreground/5 shrink-0" />
           <div className="flex flex-col justify-center min-w-0 flex-1 space-y-3">
-            <Skeleton className="h-10 w-3/4 bg-white/10" />
-            <Skeleton className="h-4 w-1/2 bg-white/5" />
+            <Skeleton className="h-10 w-3/4 bg-foreground/10" />
+            <Skeleton className="h-4 w-1/2 bg-foreground/5" />
             <div className="flex gap-2">
-              <Skeleton className="h-4 w-20 bg-white/5" />
-              <Skeleton className="h-4 w-20 bg-white/5" />
+              <Skeleton className="h-4 w-20 bg-foreground/5" />
+              <Skeleton className="h-4 w-20 bg-foreground/5" />
             </div>
             <div className="flex gap-2 pt-2">
-              <Skeleton className="h-12 w-32 rounded-full bg-white/10" />
-              <Skeleton className="h-12 w-32 rounded-full bg-white/5" />
+              <Skeleton className="h-12 w-32 rounded-full bg-foreground/10" />
+              <Skeleton className="h-12 w-32 rounded-full bg-foreground/5" />
             </div>
           </div>
         </div>
         <div className="flex-1 px-2 space-y-1">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-2">
-              <Skeleton className="w-8 h-8 rounded bg-white/5" />
+              <Skeleton className="w-8 h-8 rounded bg-foreground/5" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-1/2 bg-white/10" />
-                <Skeleton className="h-3 w-1/3 bg-white/5" />
+                <Skeleton className="h-4 w-1/2 bg-foreground/10" />
+                <Skeleton className="h-3 w-1/3 bg-foreground/5" />
               </div>
             </div>
           ))}
@@ -252,7 +252,7 @@ export default function PlaylistDetailPage() {
   if (!playlist) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Playlist not found</div>
+        <div className="text-muted-foreground">Playlist not found</div>
       </div>
     );
   }
@@ -281,18 +281,18 @@ export default function PlaylistDetailPage() {
           variant="ghost"
           size="icon"
           onClick={goBack}
-          className="text-gray-400 hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft size={24} />
         </Button>
-        <span className="text-sm font-medium text-gray-400">
+        <span className="text-sm font-medium text-muted-foreground">
           Back to Playlists
         </span>
       </div>
 
       {/* Album info header */}
       <div className="flex gap-6 mb-6 px-2">
-        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-white/50 text-6xl font-bold select-none shrink-0 overflow-hidden">
+        <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden">
           {playlist.artwork_path && !imageError ? (
             <img
               src={convertFileSrc(playlist.artwork_path)}
@@ -308,13 +308,13 @@ export default function PlaylistDetailPage() {
         </div>
 
         <div className="flex flex-col justify-center min-w-0">
-          <h2 className="text-4xl font-bold text-white line-clamp-2 mb-2">
+          <h2 className="text-4xl font-bold text-foreground line-clamp-2 mb-2">
             {playlist.name}
           </h2>
-          <p className="text-gray-400 text-sm">
+          <p className="text-muted-foreground text-sm">
             {playlist.description || "No description"}
           </p>
-          <div className="text-gray-500 text-sm flex gap-2 items-center mt-2">
+          <div className="text-muted-foreground text-sm flex gap-2 items-center mt-2">
             <span>{tracks.length} songs</span>
             <span>•</span>
             <span>{formatDuration(totalDurationMs)}</span>
@@ -333,7 +333,7 @@ export default function PlaylistDetailPage() {
               variant="default"
               size="lg"
               onClick={handlePlay}
-              className="gap-2 rounded-full px-8 bg-white text-black hover:bg-white/90"
+              className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <Play size={20} fill="currentColor" />
               Play
@@ -420,7 +420,7 @@ export default function PlaylistDetailPage() {
         ) : (
           <div className="flex flex-col gap-1 pb-42">
             {/* Header Row */}
-            <div className="flex items-center gap-4 px-4 py-2 text-gray-500 text-xs uppercase tracking-wider border-b border-white/5 mb-2">
+            <div className="flex items-center gap-4 px-4 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2">
               <div className="w-8 text-center">#</div>
               <div className="flex-1">Title</div>
               <div className="p-2">

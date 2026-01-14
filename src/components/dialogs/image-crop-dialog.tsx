@@ -112,18 +112,18 @@ export function ImageCropDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="bg-neutral-900 border-white/10 text-white sm:max-w-md"
+        className="bg-popover border-border text-popover-foreground sm:max-w-md"
         aria-describedby={undefined}
       >
         <DialogHeader>
           <DialogTitle>Crop Image</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-muted-foreground">
             Adjust the image to fit the square cover format.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6 py-4">
-          <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden">
+          <div className="relative w-full h-64 bg-background rounded-lg overflow-hidden">
             {imageSrc && (
               <Cropper
                 image={imageSrc}
@@ -138,7 +138,7 @@ export function ImageCropDialog({
           </div>
 
           <div className="w-full space-y-2 px-4">
-            <div className="flex justify-between text-xs text-gray-400">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>Zoom</span>
               <span>{zoom.toFixed(1)}x</span>
             </div>
@@ -156,14 +156,14 @@ export function ImageCropDialog({
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="text-gray-400 hover:text-white hover:bg-white/10"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isProcessing}
-            className="bg-white text-black hover:bg-gray-200"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Crop

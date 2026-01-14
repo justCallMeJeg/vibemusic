@@ -44,12 +44,13 @@ export default function App() {
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
 
   const {
-    theme,
+    resolvedTheme,
     dynamicGradient,
     loadSettings,
     isLoading: isSettingsLoading,
     addLibraryPath,
     libraryPaths,
+    initSystemThemeListener,
   } = useSettingsStore();
 
   // Library Store Initialization
@@ -177,6 +178,12 @@ export default function App() {
     return cleanup;
   }, [initListeners]);
 
+  // Initialize system theme listener
+  useEffect(() => {
+    const cleanup = initSystemThemeListener();
+    return cleanup;
+  }, [initSystemThemeListener]);
+
   // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
@@ -256,12 +263,12 @@ export default function App() {
 
   if (isProfilesLoading) {
     return (
-      <div className="h-screen w-screen bg-black text-white relative flex flex-col">
+      <div className="h-screen w-screen bg-background text-foreground relative flex flex-col">
         <TitleBar />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 animate-pulse">
-            <div className="w-12 h-12 rounded-full bg-white/10" />
-            <div className="w-32 h-4 rounded-full bg-white/10" />
+            <div className="w-12 h-12 rounded-full bg-foreground/10" />
+            <div className="w-32 h-4 rounded-full bg-foreground/10" />
           </div>
         </div>
       </div>
@@ -270,7 +277,7 @@ export default function App() {
 
   if (!activeProfileId) {
     return (
-      <div className="h-screen w-screen bg-black text-white relative flex flex-col">
+      <div className="h-screen w-screen bg-background text-foreground relative flex flex-col">
         <TitleBar />
         <div className="flex-1 overflow-hidden">
           <ProfileSelectionPage />
@@ -285,7 +292,7 @@ export default function App() {
       id="app"
       className={`selection:bg-white/10 h-dvh w-dvw overflow-hidden flex flex-col relative ${
         !isMiniPlayer ? "px-6 gap-4" : "p-0"
-      } ${theme === "dark" || theme === "system" ? "dark" : ""}`}
+      } ${resolvedTheme === "dark" ? "dark" : ""}`}
     >
       {/* Custom Title Bar */}
       {!isMiniPlayer && <TitleBar />}
@@ -306,7 +313,7 @@ export default function App() {
 
           <div className="flex flex-1 gap-6 min-h-0 relative z-10 pt-10">
             {/* Sidebar */}
-            <div className="mt-2 pt-6 flex flex-col gap-10 w-16 shrink-0 h-full pb-32">
+            <div className="mt-2 pt-6 flex flex-col gap-6 w-16 shrink-0 h-full pb-32">
               <div
                 id="user_profile"
                 onClick={() => selectProfile(null)} // Click to switch profile
@@ -353,7 +360,7 @@ export default function App() {
 
           {/* Music Controller */}
           <div
-            className={`fixed bottom-0 left-0 right-0 p-7 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
+            className={`fixed bottom-0 left-0 right-0 p-6 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
               isPlayerVisible
                 ? "translate-y-0 opacity-100"
                 : "translate-y-full opacity-0"

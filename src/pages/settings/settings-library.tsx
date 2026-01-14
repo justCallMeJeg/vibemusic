@@ -110,11 +110,11 @@ export function SettingsLibrary() {
       </div>
 
       <div className="grid gap-6">
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
+        <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium">Music Folders</div>
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Manage locations where Vibe looks for music
               </div>
             </div>
@@ -128,7 +128,7 @@ export function SettingsLibrary() {
               {libraryPaths.map((path) => (
                 <div
                   key={path}
-                  className="flex items-center justify-between p-3 bg-white/5 rounded-lg group"
+                  className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg group"
                 >
                   <span className="text-sm font-mono truncate mr-4">
                     {path}
@@ -150,12 +150,12 @@ export function SettingsLibrary() {
               title="No library folders"
               description="No folders added yet."
               variant="default"
-              emptyClassName="py-8 bg-white/5 border-dashed"
+              emptyClassName="py-8 bg-secondary/50 border-dashed"
               className="h-auto"
             />
           )}
 
-          <div className="pt-4 border-t border-white/10 flex gap-4">
+          <div className="pt-4 border-t border-border flex gap-4">
             <Button
               variant="outline"
               onClick={handleRescan}

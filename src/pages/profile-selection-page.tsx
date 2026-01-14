@@ -173,7 +173,7 @@ export default function ProfileSelectionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center animate-in fade-in duration-500">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center animate-in fade-in duration-500">
       <div className="text-center mb-12">
         <h1 className="text-5xl font-medium mb-4">Who's listening?</h1>
       </div>
@@ -225,7 +225,7 @@ export default function ProfileSelectionPage() {
                 </div>
               )}
             </div>
-            <span className="text-gray-400 group-hover:text-white text-lg truncate max-w-full font-medium">
+            <span className="text-muted-foreground group-hover:text-foreground text-lg truncate max-w-full font-medium">
               {profile.name}
             </span>
           </div>
@@ -237,10 +237,10 @@ export default function ProfileSelectionPage() {
             onClick={openCreateDialog}
             className="group flex flex-col items-center gap-4 w-32 cursor-pointer hover:scale-105 transition-transform"
           >
-            <div className="w-32 h-32 rounded-md bg-transparent border-2 border-white/20 group-hover:bg-white group-hover:border-white flex items-center justify-center transition-all">
-              <Plus className="w-16 h-16 text-gray-400 group-hover:text-black" />
+            <div className="w-32 h-32 rounded-md bg-transparent border-2 border-border group-hover:bg-primary group-hover:border-primary flex items-center justify-center transition-all">
+              <Plus className="w-16 h-16 text-muted-foreground group-hover:text-primary-foreground" />
             </div>
-            <span className="text-gray-400 group-hover:text-white text-lg font-medium">
+            <span className="text-muted-foreground group-hover:text-foreground text-lg font-medium">
               Add Profile
             </span>
           </div>
@@ -251,9 +251,9 @@ export default function ProfileSelectionPage() {
         <Button
           variant="outline"
           size="lg"
-          className={` tracking-widest uppercase font-medium px-8 py-6 text-gray-400 hover:text-white border-gray-600 hover:border-white rounded-none ${
+          className={` tracking-widest uppercase font-medium px-8 py-6 text-muted-foreground hover:text-foreground border-border hover:border-foreground rounded-none ${
             isManageMode
-              ? "bg-white text-black hover:bg-white hover:text-black"
+              ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
               : "bg-transparent"
           }`}
           onClick={() => setIsManageMode(!isManageMode)}
@@ -263,7 +263,7 @@ export default function ProfileSelectionPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-neutral-900 border-white/10 text-white sm:max-w-md">
+        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingProfileId ? "Edit Profile" : "Add Profile"}
@@ -297,17 +297,17 @@ export default function ProfileSelectionPage() {
                   placeholder="Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-neutral-800 border-none text-lg h-12"
+                  className="bg-card border-none text-lg h-12"
                   autoFocus
                 />
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted-foreground">
                   Click the avatar to upload an image.
                 </span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs uppercase text-gray-500 font-bold tracking-wider">
+              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider">
                 Color
               </label>
               <div className="flex gap-2">
@@ -316,7 +316,7 @@ export default function ProfileSelectionPage() {
                     key={c}
                     className={`w-8 h-8 rounded-full ${c} ${
                       color === c
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-neutral-900"
+                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-popover"
                         : "opacity-70 hover:opacity-100"
                     }`}
                     onClick={() => setColor(c)}
@@ -329,14 +329,14 @@ export default function ProfileSelectionPage() {
             <Button
               variant="ghost"
               onClick={() => setDialogOpen(false)}
-              className="text-gray-400 hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               Cancel
             </Button>
             <Button
               variant="default"
               onClick={handleSave}
-              className="bg-white text-black hover:bg-gray-200 min-w-24"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-24"
               disabled={!name.trim()}
             >
               Save

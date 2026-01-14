@@ -94,14 +94,14 @@ const MusicListItem = memo(function MusicListItem({
       <ContextMenuTrigger>
         <div
           onClick={handlePlayClick}
-          className={`flex w-full h-min rounded-lg px-4 py-2 hover:outline hover:outline-gray-850 hover:bg-white/3 cursor-pointer group transition-colors ${
-            isCurrentTrack ? "bg-white/10 outline outline-gray-800" : ""
+          className={`flex w-full h-min rounded-lg px-4 py-2 hover:outline hover:outline-border hover:bg-accent/30 cursor-pointer group transition-colors ${
+            isCurrentTrack ? "bg-accent outline outline-border" : ""
           }`}
         >
           <div className="flex h-min w-full gap-4">
             <div className="relative">
               <img
-                className="aspect-square h-10 rounded-lg object-cover bg-neutral-800"
+                className="aspect-square h-10 rounded-lg object-cover bg-card"
                 src={artworkSrc}
                 loading="lazy"
                 onError={(e) => {
@@ -127,13 +127,13 @@ const MusicListItem = memo(function MusicListItem({
 
             <div className="flex w-full items-center justify-between">
               <div className="flex flex-col h-min w-full">
-                <p className="text-white text-base font-bold line-clamp-1">
+                <p className="text-foreground text-base font-bold line-clamp-1">
                   {track.title}
                 </p>
                 <p
-                  className={`text-gray-400 text-xs font-normal line-clamp-1 ${
+                  className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
                     track.artist_id
-                      ? "hover:underline hover:text-white cursor-pointer"
+                      ? "hover:underline hover:text-foreground cursor-pointer"
                       : ""
                   }`}
                   onClick={handleArtistClick}
@@ -142,7 +142,7 @@ const MusicListItem = memo(function MusicListItem({
                 </p>
               </div>
               <div className="flex gap-1 h-min items-center shrink-0 w-16 justify-end">
-                <p className="text-gray-400 text-xs font-normal tabular-nums text-right w-full">
+                <p className="text-muted-foreground text-xs font-normal tabular-nums text-right w-full">
                   {formatDuration(track.duration_ms)}
                 </p>
               </div>
@@ -173,7 +173,7 @@ const MusicListItem = memo(function MusicListItem({
               </ContextMenuItem>
             ))}
             {playlists.length === 0 && (
-              <div className="px-2 py-1 text-xs text-gray-500">
+              <div className="px-2 py-1 text-xs text-muted-foreground">
                 No playlists
               </div>
             )}

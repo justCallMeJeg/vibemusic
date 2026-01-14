@@ -88,7 +88,7 @@ export default function PlaylistsPage() {
               Create Playlist
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-neutral-900 border-white/10 text-white">
+          <DialogContent className="sm:max-w-[425px] bg-popover border-border text-popover-foreground">
             <form onSubmit={handleCreate}>
               <DialogHeader>
                 <DialogTitle>Create Playlist</DialogTitle>
@@ -101,7 +101,7 @@ export default function PlaylistsPage() {
                   <div className="grid gap-2">
                     <Label
                       htmlFor="name"
-                      className="text-left text-neutral-400"
+                      className="text-left text-muted-foreground"
                     >
                       Name
                     </Label>
@@ -109,7 +109,7 @@ export default function PlaylistsPage() {
                       id="name"
                       value={newPlaylistName}
                       onChange={(e) => setNewPlaylistName(e.target.value)}
-                      className="bg-neutral-950 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-neutral-700"
+                      className="bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                       placeholder="My awesome playlist"
                       autoFocus
                     />
@@ -120,7 +120,7 @@ export default function PlaylistsPage() {
                 <Button
                   type="submit"
                   disabled={isCreating || !newPlaylistName.trim()}
-                  className="bg-white text-black hover:bg-gray-200"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {isCreating ? "Creating..." : "Create Playlist"}
                 </Button>
@@ -151,10 +151,10 @@ export default function PlaylistsPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-8">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
-                <Skeleton className="aspect-square w-full rounded-md bg-white/5" />
+                <Skeleton className="aspect-square w-full rounded-md bg-foreground/5" />
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-3/4 bg-white/10" />
-                  <Skeleton className="h-3 w-1/2 bg-white/5" />
+                  <Skeleton className="h-4 w-3/4 bg-foreground/10" />
+                  <Skeleton className="h-3 w-1/2 bg-foreground/5" />
                 </div>
               </div>
             ))}

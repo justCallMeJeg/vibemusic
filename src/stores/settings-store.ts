@@ -19,8 +19,27 @@ export interface SidebarItem {
   hidden: boolean;
 }
 
+// Helper to get system theme preference
+const getSystemTheme = (): "dark" | "light" => {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return "dark"; // Fallback to dark
+};
+
+// Apply theme class to document
+const applyThemeClass = (theme: "dark" | "light" | "system") => {
+  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+  document.documentElement.classList.remove("dark", "light");
+  document.documentElement.classList.add(resolvedTheme);
+  return resolvedTheme;
+};
+
 interface SettingsState {
   theme: "dark" | "light" | "system";
+  resolvedTheme: "dark" | "light"; // The actual applied theme
   dynamicGradient: boolean;
   libraryPaths: string[]; // persisted list of folders
   selectedDevice: string | null;
@@ -47,6 +66,7 @@ interface SettingsState {
 
 interface SettingsActions {
   setTheme: (theme: "dark" | "light" | "system") => void;
+  initSystemThemeListener: () => () => void; // Returns cleanup function
   setDynamicGradient: (enabled: boolean) => void;
 
   // Library Actions
@@ -81,7 +101,8 @@ interface SettingsActions {
 
 export const useSettingsStore = create<SettingsState & SettingsActions>(
   (set, get) => ({
-    theme: "dark", // Default to dark since globals.css is dark-first
+    theme: "system", // Default to system preference
+    resolvedTheme: getSystemTheme(), // Initialize with current system theme
     dynamicGradient: true, // Default to on
     libraryPaths: [],
     selectedDevice: null,
@@ -107,16 +128,24 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     defaultPage: "home",
 
     setTheme: async (theme) => {
-      set({ theme });
-      if (theme === "system") {
-        document.documentElement.classList.remove("dark", "light");
-      } else {
-        document.documentElement.classList.remove("dark", "light");
-        document.documentElement.classList.add(theme);
-      }
+      const resolvedTheme = applyThemeClass(theme);
+      set({ theme, resolvedTheme });
       const store = await getStore();
       await store.set("theme", theme);
       await store.save();
+    },
+
+    initSystemThemeListener: () => {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = () => {
+        const { theme } = get();
+        if (theme === "system") {
+          const resolvedTheme = applyThemeClass("system");
+          set({ resolvedTheme });
+        }
+      };
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
     },
 
     setDynamicGradient: async (enabled) => {
@@ -290,9 +319,12 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         );
 
         // Update Store State
+        const themeValue = theme ?? "system";
+        const resolvedTheme = applyThemeClass(themeValue);
         set({
           currentProfileId: profileId, // <--- FIX: valid profile ID set here
-          theme: theme ?? "dark",
+          theme: themeValue,
+          resolvedTheme,
           dynamicGradient: dynamicGradient ?? true,
           libraryPaths: libraryPaths ?? [],
           selectedDevice: selectedDevice ?? null,
@@ -316,17 +348,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           isLoading: false,
         });
 
-        // Apply Side Effects
-        if (theme) {
-          if (theme !== "system") {
-            document.documentElement.classList.remove("dark", "light");
-            document.documentElement.classList.add(theme);
-          } else {
-            document.documentElement.classList.remove("dark", "light");
-            // System theme logic usually handled by CSS media query or separate listener,
-            // but here we just clean up manual classes
-          }
-        }
+        // Note: Theme is already applied above via applyThemeClass
 
         if (selectedDevice) {
           await invoke("audio_set_device", { deviceName: selectedDevice });

@@ -76,15 +76,15 @@ export function SettingsAbout() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold tracking-tight text-white/90">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
           About
         </h2>
-        <p className="text-white/50">
+        <p className="text-muted-foreground">
           Application information and update management.
         </p>
       </div>
 
-      <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
+      <div className="p-6 rounded-xl bg-secondary/50 border border-border space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h3 className="font-medium">Update Channel</h3>
@@ -92,7 +92,7 @@ export function SettingsAbout() {
               Choose between Stable releases or Nightly builds.
             </p>
           </div>
-          <div className="flex bg-neutral-900 p-1 rounded-lg border border-neutral-800">
+          <div className="flex bg-card p-1 rounded-lg border border-border">
             {(["stable", "dev"] as const).map((ch) => (
               <Tooltip key={ch}>
                 <TooltipTrigger asChild>
@@ -107,8 +107,8 @@ export function SettingsAbout() {
                     className={cn(
                       "px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize",
                       channel === ch
-                        ? "bg-neutral-800 text-white shadow-sm"
-                        : "text-neutral-400 hover:text-white"
+                        ? "bg-accent text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {ch}
@@ -136,16 +136,18 @@ export function SettingsAbout() {
           }}
         />
 
-        <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
+        <div className="flex items-center justify-between pt-4 border-t border-border">
           <div>
-            <h3 className="text-lg font-medium text-white">vibemusic</h3>
-            <p className="text-sm text-white/50">Version {appVersion}</p>
+            <h3 className="text-lg font-medium text-foreground">vibemusic</h3>
+            <p className="text-sm text-muted-foreground">
+              Version {appVersion}
+            </p>
           </div>
           <div className="text-right">
             {/* Download Progress */}
             {isDownloading && downloadProgress && (
               <div className="mb-3 w-48">
-                <div className="flex justify-between text-xs text-white/50 mb-1">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Downloading...</span>
                   <span>
                     {formatBytes(downloadProgress.downloaded)}
@@ -154,7 +156,7 @@ export function SettingsAbout() {
                   </span>
                 </div>
                 <Progress value={downloadPercentage} max={100} />
-                <p className="text-xs text-white/40 mt-1 text-right">
+                <p className="text-xs text-muted-foreground/70 mt-1 text-right">
                   {Math.round(downloadPercentage)}%
                 </p>
               </div>
@@ -179,7 +181,7 @@ export function SettingsAbout() {
                     variant="outline"
                     onClick={handleCheck}
                     disabled={isChecking}
-                    className="bg-white/5 border-white/10 hover:bg-white/10 text-white min-w-[140px]"
+                    className="bg-secondary/50 border-border hover:bg-accent text-foreground min-w-[140px]"
                   >
                     {isChecking ? (
                       <>
@@ -205,7 +207,7 @@ export function SettingsAbout() {
               !isUpdateAvailable &&
               !isDownloading &&
               !isReadyToInstall && (
-                <p className="text-xs text-white/30 mt-2 flex items-center justify-end gap-1">
+                <p className="text-xs text-muted-foreground/60 mt-2 flex items-center justify-end gap-1">
                   <CheckCircle2 className="h-3 w-3" />
                   Up to date
                 </p>
@@ -219,10 +221,10 @@ export function SettingsAbout() {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-white/10">
-          <p className="text-sm text-white/40">
+        <div className="pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground">
             Current Channel:{" "}
-            <span className="text-white/70 capitalize">
+            <span className="text-foreground/70 capitalize">
               {channel === "dev" ? "Nightly (Dev)" : "Stable Release"}
             </span>
           </p>
@@ -230,17 +232,17 @@ export function SettingsAbout() {
       </div>
 
       {/* Logs Section */}
-      <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
+      <div className="p-6 rounded-xl bg-secondary/50 border border-border space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <h3 className="text-white font-medium">Trobleshooting</h3>
-            <p className="text-sm text-neutral-400">
+            <h3 className="text-foreground font-medium">Trobleshooting</h3>
+            <p className="text-sm text-muted-foreground">
               View application logs for debugging
             </p>
           </div>
           <Button
             variant="outline"
-            className="bg-white/5 border-white/10 hover:bg-white/10 text-white gap-2"
+            className="bg-secondary/50 border-border hover:bg-accent text-foreground gap-2"
             onClick={async () => {
               try {
                 const logDir = await appLogDir();

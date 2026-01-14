@@ -19,7 +19,7 @@ export function SettingsSidebar({
   ];
 
   return (
-    <nav className="w-64 border-r border-white/5 p-4 flex flex-col gap-2">
+    <nav className="w-64 border-r border-border p-4 flex flex-col gap-2">
       <h2 className="pt-6 text-xl font-bold px-4 mb-4">Settings</h2>
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -32,7 +32,7 @@ export function SettingsSidebar({
               "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left",
               isActive
                 ? "bg-purple-500/10 text-purple-400"
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
           >
             <Icon className="w-5 h-5" />

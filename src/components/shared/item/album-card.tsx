@@ -103,12 +103,12 @@ const AlbumCard = memo(function AlbumCard({
           className={`flex flex-col cursor-pointer transition-colors group ${
             isCompact
               ? "w-40 shrink-0 space-y-3"
-              : "rounded-lg p-3 hover:bg-white/5"
+              : "rounded-lg p-3 hover:bg-accent"
           }`}
         >
           {/* Artwork with play overlay */}
           <div
-            className={`aspect-square w-full bg-neutral-800 overflow-hidden relative ${
+            className={`aspect-square w-full bg-card overflow-hidden relative ${
               isCompact ? "rounded-xl" : "rounded-lg mb-3"
             }`}
           >
@@ -124,7 +124,7 @@ const AlbumCard = memo(function AlbumCard({
             {/* Play overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
-                className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
                 onClick={handlePlayClick}
               >
                 <Play fill="currentColor" className="ml-1" size={24} />
@@ -135,16 +135,16 @@ const AlbumCard = memo(function AlbumCard({
           {/* Info */}
           <div className="min-w-0">
             <p
-              className="text-white text-sm font-bold line-clamp-1"
+              className="text-foreground text-sm font-bold line-clamp-1"
               title={album.title}
             >
               {album.title}
             </p>
-            <p className="text-gray-400 text-xs line-clamp-1">
+            <p className="text-muted-foreground text-xs line-clamp-1">
               {album.artist_name || "Unknown Artist"}
             </p>
             {!isCompact && (
-              <p className="text-gray-500 text-xs mt-1">
+              <p className="text-muted-foreground text-xs mt-1">
                 {album.track_count} tracks •{" "}
                 {formatDuration(album.total_duration_ms)}
               </p>

@@ -85,10 +85,10 @@ const ArtistCard = memo(function ArtistCard({ artist }: ArtistCardProps) {
       <ContextMenuTrigger>
         <div
           onClick={() => openArtistDetail(artist.id)}
-          className="flex flex-col rounded-lg p-3 hover:bg-white/5 cursor-pointer transition-colors group gap-3"
+          className="flex flex-col rounded-lg p-3 hover:bg-accent cursor-pointer transition-colors group gap-3"
         >
           {/* Artwork with play overlay */}
-          <div className="aspect-square w-full rounded-full bg-neutral-800 overflow-hidden relative">
+          <div className="aspect-square w-full rounded-full bg-card overflow-hidden relative">
             <img
               className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
               src={artworkSrc}
@@ -101,7 +101,7 @@ const ArtistCard = memo(function ArtistCard({ artist }: ArtistCardProps) {
             {/* Play overlay */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
-                className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
                 onClick={handlePlayClick}
               >
                 <Play fill="currentColor" className="ml-1" size={24} />
@@ -111,10 +111,10 @@ const ArtistCard = memo(function ArtistCard({ artist }: ArtistCardProps) {
 
           {/* Info */}
           <div className="min-w-0">
-            <ScrollingText className="font-semibold text-white hover:[&_span]:underline cursor-pointer w-full text-left">
+            <ScrollingText className="font-semibold text-foreground hover:[&_span]:underline cursor-pointer w-full text-left">
               {artist.name}
             </ScrollingText>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {artist.album_count}{" "}
               {artist.album_count === 1 ? "Album" : "Albums"} •{" "}
               {artist.track_count} {artist.track_count === 1 ? "Song" : "Songs"}

@@ -68,7 +68,7 @@ export default function QueueMenu() {
   return (
     <div
       id="queue-menu"
-      className="h-full flex flex-col rounded-lg outline outline-gray-850 w-full p-4 bg-neutral-900/50 backdrop-blur-xl overflow-hidden"
+      className="h-full flex flex-col rounded-lg outline outline-border w-full p-4 bg-popover/50 backdrop-blur-xl overflow-hidden"
     >
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Queue</h1>
@@ -79,10 +79,10 @@ export default function QueueMenu() {
 
       {currentTrack && (
         <div className="mb-6 shrink-0">
-          <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
             Now Playing
           </h2>
-          <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg border border-white/10">
+          <div className="flex items-center gap-4 bg-secondary/50 p-3 rounded-lg border border-border">
             <img
               src={
                 currentTrack.artwork_path
@@ -93,14 +93,14 @@ export default function QueueMenu() {
               className="w-12 h-12 rounded object-cover shadow-lg"
             />
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-white truncate text-lg">
+              <p className="font-bold text-foreground truncate text-lg">
                 {currentTrack.title}
               </p>
               <p className="text-sm text-purple-400 truncate">
                 {currentTrack.artist || "Unknown Artist"}
               </p>
             </div>
-            <div className="text-xs font-mono font-bold text-neutral-500 bg-neutral-900 px-2 py-1 rounded">
+            <div className="text-xs font-mono font-bold text-muted-foreground bg-card px-2 py-1 rounded">
               {status === "playing"
                 ? "PLAYING"
                 : status === "paused"
@@ -122,7 +122,7 @@ export default function QueueMenu() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs h-6 px-2 text-neutral-500 hover:text-red-400"
+                className="text-xs h-6 px-2 text-muted-foreground hover:text-red-400"
                 onClick={useAudioStore.getState().clearQueue}
               >
                 Clear
@@ -140,7 +140,7 @@ export default function QueueMenu() {
             >
               <div className="flex flex-col gap-1">
                 {queue.length === 0 ? (
-                  <p className="text-neutral-500 text-sm italic p-2">
+                  <p className="text-muted-foreground text-sm italic p-2">
                     Queue is empty
                   </p>
                 ) : (

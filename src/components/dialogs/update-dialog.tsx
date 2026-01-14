@@ -28,32 +28,34 @@ export function UpdateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-neutral-900 border-white/10 text-white">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-popover border-border text-popover-foreground">
         <DialogHeader>
           <DialogTitle className="text-xl">New Version Available</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-muted-foreground">
             Version {updateManifest?.version} is ready to download.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto my-4 p-4 rounded-md bg-neutral-950 border border-neutral-800">
+        <div className="flex-1 overflow-y-auto my-4 p-4 rounded-md bg-card border border-border">
           <div
             className="prose prose-invert prose-sm max-w-none
-            prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-white/10 prose-headings:pb-2 prose-headings:mb-3
+            prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
             prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
-            prose-p:text-gray-300 prose-p:leading-relaxed
+            prose-p:text-muted-foreground prose-p:leading-relaxed
             prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-white prose-strong:font-semibold
-            prose-code:text-indigo-300 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
-            prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10
-            prose-ul:text-gray-300 prose-ol:text-gray-300
+            prose-strong:text-foreground prose-strong:font-semibold
+            prose-code:text-indigo-300 prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+            prose-pre:bg-background/50 prose-pre:border prose-pre:border-border
+            prose-ul:text-muted-foreground prose-ol:text-muted-foreground
             prose-li:marker:text-indigo-400
-            prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-gray-300 prose-blockquote:not-italic prose-blockquote:py-1"
+            prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
           >
             {updateManifest?.body ? (
               <ReactMarkdown>{updateManifest.body}</ReactMarkdown>
             ) : (
-              <p className="text-gray-500 italic">No changelog provided.</p>
+              <p className="text-muted-foreground italic">
+                No changelog provided.
+              </p>
             )}
           </div>
         </div>
@@ -68,7 +70,7 @@ export function UpdateDialog({
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isDownloading}
-              className="text-gray-400 hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent"
             >
               Later
             </Button>
