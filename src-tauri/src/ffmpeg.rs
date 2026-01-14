@@ -9,9 +9,9 @@ use std::os::windows::process::CommandExt;
 
 
 #[derive(serde::Serialize, Clone, Debug)]
-#[serde(tag = "status", content = "path")]
+#[serde(tag = "status")]
 pub enum FFmpegStatus {
-    Ready(String),
+    Ready { path: String, version: String },
     Missing,
     #[allow(dead_code)]
     ManualRequired
@@ -192,53 +192,35 @@ pub fn probe_file(path: &str) -> Result<MediaMetadata, String> {
 
 // --- Helper ---
 
+fn get_local_ffmpeg_path() -> Option<PathBuf> {
+    let suffix = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
+    
+    // Try to resolve generic cache dir
+    if let Some(cache_dir) = dirs::data_local_dir() {
+        // Priority 1: com.music.vibe (Identifier)
+        let path_id = cache_dir.join("com.music.vibe").join("binaries").join(suffix);
+        if path_id.exists() {
+            return Some(path_id);
+        }
+
+        // Priority 2: vibemusic (ProductName)
+        let path_prod = cache_dir.join("vibemusic").join("binaries").join(suffix);
+        if path_prod.exists() {
+            return Some(path_prod);
+        }
+    }
+    None
+}
+
 fn resolve_ffmpeg_path_internal() -> Option<PathBuf> {
-   // 1. Check System PATH
-   if let Ok(path) = which::which("ffmpeg") {
+   // 1. Check App Data (Manual/Local) first
+   if let Some(path) = get_local_ffmpeg_path() {
        return Some(path);
    }
 
-   // 2. Check App Local Data (Hard to get AppHandle here properly without passing it down? 
-   // Actually, we can't easily access AppHandle in static context easily without passing it.
-   // But `probe_file` and `FFmpegProcess::spawn` are called from AudioThread which doesn't strictly have AppHandle refs everywhere easily.
-   // However, `AudioEngine` DOES have AppHandle.
-   // BUT, `probe_file` is a function.
-   // Workaround: We will use a standard location: `AppLocalData/vibemusic/binaries/ffmpeg`.
-   // Rust `dirs` crate or `tauri::api::path`?
-   // Since version 2, tauri path API requires instance.
-   
-   // FIX: We can assume standard paths or ask caller to provide it.
-   // But `resolve_ffmpeg_path_internal` is called by `spawn`.
-   // Let's rely on standard OS paths for AppData for now if AppHandle isn't passed.
-   // Or better: `which("ffmpeg")` failing implies we MUST check the local folder.
-   // Let's construct the path manually based on OS conventions if possible, or use a global initialized path?
-   
-   // SIMPLIFICATION:
-   // We will rely on `directories` crate or just `std::env`.
-   // Or better, let's look relative to the executable? No, dev mode.
-   // Let's use `dirs` crate if possible (need to add it?). `directories` is standard.
-   
-   // Actually, I can add `directories` to Cargo.toml or use `std::env::var`.
-   // "APPDATA" on windows. "HOME/.local/share" on linux.
-   let suffix = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
-   
-   if let Some(cache_dir) = dirs::data_local_dir() {
-       // Typically C:\Users\User\AppData\Local
-       // Tauri uses `Bundle Identifier` usually. "com.music.vibe" or "vibemusic"?
-       // tauri.conf.json says "identifier": "com.music.vibe" but "productName": "vibemusic".
-       // Default dir is usually `AppName`.
-       // Let's try `vibemusic/binaries/ffmpeg` first.
-       
-       let path = cache_dir.join("vibemusic").join("binaries").join(suffix);
-       if path.exists() {
-           return Some(path);
-       }
-       
-       // Fallback to identifier?
-       let path_id = cache_dir.join("com.music.vibe").join("binaries").join(suffix);
-       if path_id.exists() {
-           return Some(path_id);
-       }
+   // 2. Check System PATH
+   if let Ok(path) = which::which("ffmpeg") {
+       return Some(path);
    }
    
    None
@@ -249,26 +231,87 @@ fn resolve_ffmpeg_path_internal() -> Option<PathBuf> {
 /// Checks if FFmpeg is available on the system or in the app data directory.
 #[tauri::command]
 pub fn check_ffmpeg_status<R: Runtime>(app: AppHandle<R>) -> FFmpegStatus {
-    // 1. Check System
-    if which::which("ffmpeg").is_ok() {
-         return FFmpegStatus::Ready("System PATH".to_string());
-    }
-
-    // 2. Check App Data (using Tauri API which is robust)
+    // 1. Check App Data (Prioritize Local/Manual)
     if let Ok(app_data_dir) = app.path().app_data_dir() {
         let suffix = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
         let local_path = app_data_dir.join("binaries").join(suffix);
         if local_path.exists() {
-            return FFmpegStatus::Ready(local_path.to_string_lossy().to_string());
+            info!("check_ffmpeg_status found local binary: {:?}", local_path);
+            let version = get_ffmpeg_version(&local_path);
+            return FFmpegStatus::Ready { 
+                path: local_path.to_string_lossy().to_string(),
+                version
+            };
         }
+    }
+
+    // Fallback: Check manual resolution helper
+    if let Some(path) = get_local_ffmpeg_path() {
+        info!("check_ffmpeg_status found local binary via helper: {:?}", path);
+        let version = get_ffmpeg_version(&path);
+        return FFmpegStatus::Ready { 
+            path: path.to_string_lossy().to_string(),
+            version
+        };
+    }
+
+    // 2. Check System
+    if let Ok(path) = which::which("ffmpeg") {
+         info!("check_ffmpeg_status found system binary: {:?}", path);
+         let version = get_ffmpeg_version(&path);
+         return FFmpegStatus::Ready { 
+            path: path.to_string_lossy().to_string(),
+            version
+         };
     }
 
     FFmpegStatus::Missing
 }
 
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct FFmpegVersion {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+}
+
+#[tauri::command]
+pub fn get_supported_ffmpeg_versions() -> Vec<FFmpegVersion> {
+    let mut versions = vec![
+        FFmpegVersion {
+            id: "latest".to_string(),
+            name: "Latest Stable".to_string(),
+            description: "Recommended. Best support for newer formats (M4A/AAC).".to_string(),
+        }
+    ];
+
+    // Windows has access to Gyan.dev archives
+    if cfg!(target_os = "windows") {
+        versions.push(FFmpegVersion {
+            id: "6.1.1".to_string(),
+            name: "v6.1.1".to_string(),
+            description: "Stable release from 2023.".to_string(),
+        });
+        versions.push(FFmpegVersion {
+            id: "5.1.4".to_string(),
+            name: "v5.1.4".to_string(),
+            description: "LTS release from 2022.".to_string(),
+        });
+    }
+
+    // FFbinaries (Legacy) is available everywhere
+    versions.push(FFmpegVersion {
+        id: "4.4.1".to_string(),
+        name: "v4.4.1 (Legacy)".to_string(),
+        description: "Older release. Use if you experience compatibility issues.".to_string(),
+    });
+
+    versions
+}
+
 /// Downloads and extracts FFmpeg to the app data directory.
 #[tauri::command]
-pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, String> {
+pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>, version_id: Option<String>) -> Result<String, String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let binaries_dir = app_data_dir.join("binaries");
 
@@ -276,18 +319,12 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
         std::fs::create_dir_all(&binaries_dir).map_err(|e| e.to_string())?;
     }
 
-    // Platform detection
-    let (url, zip_name) = if cfg!(target_os = "windows") {
-        ("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip", "ffmpeg.zip")
-    } else if cfg!(target_os = "macos") {
-        // Just ffmpeg binary zipped
-        ("https://evermeet.cx/ffmpeg/ffmpeg.zip", "ffmpeg.zip")
-    } else {
-        // Fallback or keep old logic for Linux for now
-        ("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-64.zip", "ffmpeg.zip")
-    };
+    let version = version_id.as_deref().unwrap_or("latest");
+    
+    // URL Resolution
+    let (url, zip_name) = resolve_ffmpeg_url(version)?;
 
-    info!("Downloading FFmpeg from: {}", url);
+    info!("Downloading FFmpeg ({}) from: {}", version, url);
 
     let client = reqwest::Client::new();
     let res = client.get(url).send().await.map_err(|e| e.to_string())?;
@@ -311,26 +348,21 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
 
     info!("Download complete. Extracting...");
     
-    // Extraction (Synchronous is fine for unzip)
+    // Extraction
     let file = std::fs::File::open(&zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
 
-    // Target binary name
     let binary_name = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
     let mut found = false;
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
-        
-        // Simple search: Does the filename match?
-        // Note: zip::read::ZipFile::name() returns the full path in the zip
-        // We want to verify it ends with /ffmpeg.exe or is exactly ffmpeg.exe
         let path_in_zip = file.name();
         
         let matches = if cfg!(target_os = "windows") {
              path_in_zip.ends_with("ffmpeg.exe") && !path_in_zip.contains("__MACOSX")
         } else {
-             path_in_zip.ends_with("ffmpeg") && !path_in_zip.contains("__MACOSX") && !path_in_zip.ends_with(".c") // avoid potential source files if any
+             path_in_zip.ends_with("ffmpeg") && !path_in_zip.contains("__MACOSX") && !path_in_zip.ends_with(".c")
         };
 
         if matches {
@@ -353,7 +385,6 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
         }
     }
 
-    // Cleanup
     let _ = std::fs::remove_file(&zip_path);
 
     let final_path = binaries_dir.join(binary_name);
@@ -363,6 +394,55 @@ pub async fn download_ffmpeg<R: Runtime>(app: AppHandle<R>) -> Result<String, St
     } else {
         Err("Extraction failed or ffmpeg binary not found in zip".to_string())
     }
+}
+
+fn resolve_ffmpeg_url(version: &str) -> Result<(&'static str, &'static str), String> {
+    if cfg!(target_os = "windows") {
+        match version {
+            "latest" => Ok(("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip", "ffmpeg.zip")),
+            "6.1.1" => Ok(("https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-6.1.1-essentials_build.zip", "ffmpeg.zip")),
+            "5.1.4" => Ok(("https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-5.1.4-essentials_build.zip", "ffmpeg.zip")),
+            "4.4.1" => Ok(("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-win-64.zip", "ffmpeg.zip")),
+            _ => Err(format!("Unknown version for Windows: {}", version))
+        }
+    } else if cfg!(target_os = "macos") {
+        match version {
+            "latest" => Ok(("https://evermeet.cx/ffmpeg/ffmpeg.zip", "ffmpeg.zip")),
+            "4.4.1" => Ok(("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-osx-64.zip", "ffmpeg.zip")),
+            _ => Err(format!("Unknown version for macOS: {}", version))
+        }
+    } else {
+        // Linux
+         match version {
+            "4.4.1" | "latest" => Ok(("https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-64.zip", "ffmpeg.zip")),
+            _ => Err(format!("Unknown version for Linux: {}", version))
+        }
+    }
+}
+
+fn get_ffmpeg_version(path: &std::path::Path) -> String {
+    let mut cmd = Command::new(path);
+    cmd.arg("-version");
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    if let Ok(output) = cmd.output() {
+        if output.status.success() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            // Example: "ffmpeg version 6.1.1-essentials_build-www.gyan.dev Copyright (c) 2000-2023 the FFmpeg developers"
+            if let Some(line) = output_str.lines().next() {
+                // Split at "Copyright" to remove the legal text
+                let part = line.split("Copyright").next().unwrap_or(line);
+                // remove "ffmpeg version" prefix if present for cleaner UI? 
+                // User probably wants "6.1.1" or "version 6.1.1".
+                // Let's keep "ffmpeg version ..." but trimmed. 
+                // Actually, let's try to remove "ffmpeg version " prefix to make it short: "6.1.1-..."
+                let cleaner = part.trim().trim_start_matches("ffmpeg version ").trim();
+                return cleaner.to_string();
+            }
+        }
+    }
+    "Unknown Version".to_string()
 }
 
 /// Allows user to manually set FFmpeg path (validates version)
@@ -387,6 +467,7 @@ pub fn manual_set_ffmpeg_path<R: Runtime>(app: AppHandle<R>, path: String) -> Re
         let binary_name = if cfg!(target_os = "windows") { "ffmpeg.exe" } else { "ffmpeg" };
         let target_path = binaries_dir.join(binary_name);
 
+        info!("Copying manual FFmpeg from {:?} to {:?}", path, target_path);
         std::fs::copy(&path, &target_path).map_err(|e| e.to_string())?;
         
         return Ok(target_path.to_string_lossy().to_string());

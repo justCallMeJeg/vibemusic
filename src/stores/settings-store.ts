@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { load } from "@tauri-apps/plugin-store";
+import { toast } from "sonner"; // Added import
 
 // Lazy store initialization
 // const storePromise: Promise<Store> | null = null;
@@ -17,6 +18,22 @@ const getStore = async () => {
 export interface SidebarItem {
   id: string;
   hidden: boolean;
+}
+
+export type FFmpegStatus =
+  | { status: "Ready"; path: string; version: string }
+  | { status: "Missing" }
+  | { status: "ManualRequired" };
+
+export interface FFmpegVersion {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface DownloadProgress {
+  progress: number;
+  total: number;
 }
 
 // Helper to get system theme preference
@@ -44,10 +61,18 @@ interface SettingsState {
   libraryPaths: string[]; // persisted list of folders
   selectedDevice: string | null;
   audioDevices: { name: string }[];
+  currentFFmpegStatus: FFmpegStatus | null;
+  availableFFmpegVersions: FFmpegVersion[];
   isLoading: boolean;
   currentProfileId: string | null;
-  crossfadeDuration: number; // Audio
 
+  // FFmpeg Download State
+  isFFmpegDownloading: boolean;
+  ffmpegDownloadProgress: DownloadProgress | null;
+  ffmpegDownloadError: string | null;
+
+  crossfadeDuration: number; // Audio
+  // ... (rest)
   // Behavior
   closeToTray: boolean;
   scanOnStartup: boolean;
@@ -82,6 +107,13 @@ interface SettingsActions {
   refreshAudioDevices: () => Promise<void>;
   setCrossfadeDuration: (duration: number) => void;
 
+  // FFmpeg Actions
+  checkFFmpegStatus: () => Promise<void>;
+  setFFmpegPath: (path: string) => Promise<void>;
+  fetchFFmpegVersions: () => Promise<void>;
+  downloadFFmpeg: (versionId?: string) => Promise<void>;
+  updateFFmpegDownloadProgress: (progress: DownloadProgress) => void;
+
   // Behavior Actions
   setCloseToTray: (enabled: boolean) => void;
   setScanOnStartup: (enabled: boolean) => void;
@@ -107,10 +139,17 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     libraryPaths: [],
     selectedDevice: null,
     audioDevices: [],
+    currentFFmpegStatus: null,
+    availableFFmpegVersions: [],
     isLoading: true,
     currentProfileId: null,
     crossfadeDuration: 0,
     closeToTray: false,
+
+    // Initial Download State
+    isFFmpegDownloading: false,
+    ffmpegDownloadProgress: null,
+    ffmpegDownloadError: null,
     scanOnStartup: false,
     autoplay: false,
     miniPlayerStyle: "square",
@@ -232,6 +271,65 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       const store = await getStore();
       await store.set("crossfadeDuration", durationMs);
       await store.save();
+    },
+
+    checkFFmpegStatus: async () => {
+      try {
+        const status = await invoke<FFmpegStatus>("check_ffmpeg_status");
+        set({ currentFFmpegStatus: status });
+      } catch (e) {
+        console.error("Failed to check ffmpeg status:", e);
+      }
+    },
+
+    downloadFFmpeg: async (versionId) => {
+      set({
+        isFFmpegDownloading: true,
+        ffmpegDownloadError: null,
+        ffmpegDownloadProgress: null,
+      });
+
+      try {
+        await invoke("download_ffmpeg", { versionId });
+        await get().checkFFmpegStatus();
+        toast.success("FFmpeg downloaded successfully!");
+      } catch (e: unknown) {
+        console.error("FFmpeg download failed", e);
+        let msg = "Unknown error";
+        if (typeof e === "string") msg = e;
+        else if (e instanceof Error) msg = e.message;
+
+        set({ ffmpegDownloadError: msg });
+        toast.error(`Download failed: ${msg}`);
+        throw e;
+      } finally {
+        set({ isFFmpegDownloading: false, ffmpegDownloadProgress: null });
+      }
+    },
+
+    updateFFmpegDownloadProgress: (progress) => {
+      set({ ffmpegDownloadProgress: progress });
+    },
+
+    fetchFFmpegVersions: async () => {
+      try {
+        const versions = await invoke<FFmpegVersion[]>(
+          "get_supported_ffmpeg_versions"
+        );
+        set({ availableFFmpegVersions: versions });
+      } catch (e) {
+        console.error("Failed to fetch ffmpeg versions:", e);
+      }
+    },
+
+    setFFmpegPath: async (path) => {
+      try {
+        await invoke("manual_set_ffmpeg_path", { path });
+        get().checkFFmpegStatus();
+      } catch (e) {
+        console.error("Failed to set manual ffmpeg path:", e);
+        throw e;
+      }
     },
 
     setCloseToTray: async (enabled) => {

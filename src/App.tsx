@@ -29,6 +29,7 @@ import { logger } from "@/lib/logger";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { useUpdateStore } from "./stores/update-store";
+import { DownloadProgress } from "@/stores/settings-store";
 
 import { FFmpegSetupDialog } from "./components/dialogs/ffmpeg-setup-dialog";
 import MiniPlayer from "./components/mini-player";
@@ -54,7 +55,21 @@ export default function App() {
     addLibraryPath,
     libraryPaths,
     initSystemThemeListener,
+    updateFFmpegDownloadProgress,
   } = useSettingsStore();
+
+  // Global FFmpeg download listener
+  useEffect(() => {
+    const unlistenPromise = listen<DownloadProgress>(
+      "download-progress",
+      (event) => {
+        updateFFmpegDownloadProgress(event.payload);
+      }
+    );
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [updateFFmpegDownloadProgress]);
 
   // Library Store Initialization
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
