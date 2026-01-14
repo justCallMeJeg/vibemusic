@@ -51,7 +51,18 @@ impl DbHelper {
                 // We ignore error here just in case, but usually it should work
                 let _ = conn.execute("ALTER TABLE playlists ADD COLUMN artwork_path TEXT", []);
             }
-        }
+            }
+
+            // Ensure performance indexes exist (idempotent)
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_tracks_created_at ON tracks(created_at)",
+                [],
+            )?;
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_albums_artist_year ON albums(artist_id, year DESC)",
+                [],
+            )?;
+
 
         Ok(Self { conn })
     }
@@ -585,13 +596,10 @@ impl DbHelper {
             "SELECT 
                 a.id, 
                 a.name, 
-                COUNT(DISTINCT al.id) as album_count,
-                COUNT(DISTINCT t.id) as track_count,
+                (SELECT COUNT(*) FROM albums WHERE artist_id = a.id) as album_count,
+                (SELECT COUNT(*) FROM tracks WHERE artist_id = a.id) as track_count,
                 (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
             FROM artists a
-            LEFT JOIN albums al ON al.artist_id = a.id
-            LEFT JOIN tracks t ON t.artist_id = a.id
-            GROUP BY a.id
             ORDER BY a.name ASC",
         )?;
 

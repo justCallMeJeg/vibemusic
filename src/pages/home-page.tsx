@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { Playlist } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
@@ -57,75 +57,6 @@ export default function HomePage() {
   const recentTracks = tracks.slice(0, 20);
   const displayAlbums = albums.slice(0, 10);
   const displayPlaylists = playlists;
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-        {/* Header Loading */}
-        <div className="mt-8 mb-4">
-          <Skeleton className="h-10 w-64 bg-foreground/10" />
-          <Skeleton className="h-4 w-48 mt-2 bg-foreground/5" />
-        </div>
-
-        <div className="pt-4 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-42 space-y-8 custom-scrollbar">
-          {/* Albums Skeleton */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-24 bg-foreground/10" />
-            </div>
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="w-40 shrink-0 space-y-3">
-                  <Skeleton className="aspect-square w-full rounded-xl bg-foreground/5" />
-                  <div>
-                    <Skeleton className="h-4 w-32 bg-foreground/10 mb-1" />
-                    <Skeleton className="h-3 w-20 bg-foreground/5" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Playlists Skeleton */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-24 bg-foreground/10" />
-            </div>
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4 scrollbar-none">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="w-40 shrink-0 space-y-3">
-                  <Skeleton className="aspect-square w-full rounded-xl bg-foreground/5" />
-                  <div>
-                    <Skeleton className="h-4 w-24 bg-foreground/10 mb-1" />
-                    <Skeleton className="h-3 w-16 bg-foreground/5" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Songs Skeleton */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-32 bg-foreground/10" />
-            </div>
-            <div className="flex flex-col gap-1">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-md">
-                  <Skeleton className="w-10 h-10 rounded-md bg-foreground/5 shrink-0" />
-                  <div className="flex-1 space-y-1">
-                    <Skeleton className="h-4 w-48 bg-foreground/10" />
-                    <Skeleton className="h-3 w-24 bg-foreground/5" />
-                  </div>
-                  <Skeleton className="h-3 w-12 bg-foreground/5" />
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
@@ -223,7 +154,8 @@ export default function HomePage() {
           </section>
         )}
 
-        {displayAlbums.length === 0 &&
+        {!isLoading &&
+          displayAlbums.length === 0 &&
           displayPlaylists.length === 0 &&
           recentTracks.length === 0 && (
             <EmptyState

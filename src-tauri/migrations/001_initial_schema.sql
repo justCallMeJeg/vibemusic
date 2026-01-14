@@ -98,3 +98,5 @@ CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playl
 CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track ON playlist_tracks(track_id);
 CREATE INDEX IF NOT EXISTS idx_play_history_track ON play_history(track_id);
 CREATE INDEX IF NOT EXISTS idx_play_history_played_at ON play_history(played_at);
+CREATE INDEX IF NOT EXISTS idx_tracks_created_at ON tracks(created_at);
+CREATE INDEX IF NOT EXISTS idx_albums_artist_year ON albums(artist_id, year DESC);

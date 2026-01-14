@@ -1,47 +1,44 @@
+import { Suspense, lazy } from "react";
 import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
-import SongsPage from "@/pages/songs-page";
-import AlbumsPage from "@/pages/albums-page";
-import AlbumDetailPage from "@/pages/album-detail-page";
-import PlaylistsPage from "@/pages/playlists-page";
-import PlaylistDetailPage from "@/pages/playlist-detail-page";
-import ArtistsPage from "@/pages/artists-page";
-import ArtistDetailPage from "@/pages/artist-detail-page";
-import HomePage from "@/pages/home-page";
-import SettingsPage from "@/pages/settings-page";
+import { PageSkeleton } from "./page-skeleton";
+
+// Lazy load pages
+const SongsPage = lazy(() => import("@/pages/songs-page"));
+const AlbumsPage = lazy(() => import("@/pages/albums-page"));
+const AlbumDetailPage = lazy(() => import("@/pages/album-detail-page"));
+const PlaylistsPage = lazy(() => import("@/pages/playlists-page"));
+const PlaylistDetailPage = lazy(() => import("@/pages/playlist-detail-page"));
+const ArtistsPage = lazy(() => import("@/pages/artists-page"));
+const ArtistDetailPage = lazy(() => import("@/pages/artist-detail-page"));
+const HomePage = lazy(() => import("@/pages/home-page"));
+const SettingsPage = lazy(() => import("@/pages/settings-page"));
 
 export default function MainContent() {
   const currentPage = useCurrentPage();
   const detailView = useDetailView();
 
-  // Handle detail views first
-  if (detailView) {
-    if (detailView.type === "album") {
-      return <AlbumDetailPage />;
-    }
-    if (detailView.type === "playlist") {
-      return <PlaylistDetailPage />;
-    }
-    if (detailView.type === "artist") {
-      return <ArtistDetailPage />;
-    }
-  }
-
-  // Handle main pages
-  switch (currentPage) {
-    case "home":
-      return <HomePage />;
-    case "songs":
-      return <SongsPage />;
-    case "albums":
-      return <AlbumsPage />;
-    case "playlists":
-      return <PlaylistsPage />;
-    case "artists":
-      return <ArtistsPage />;
-    case "settings":
-    case "about":
-      return <SettingsPage />;
-    default:
-      return <SongsPage />;
-  }
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      {/* Handle detail views first */}
+      {detailView ? (
+        <>
+          {detailView.type === "album" && <AlbumDetailPage />}
+          {detailView.type === "playlist" && <PlaylistDetailPage />}
+          {detailView.type === "artist" && <ArtistDetailPage />}
+        </>
+      ) : (
+        /* Handle main pages */
+        <>
+          {currentPage === "home" && <HomePage />}
+          {currentPage === "songs" && <SongsPage />}
+          {currentPage === "albums" && <AlbumsPage />}
+          {currentPage === "playlists" && <PlaylistsPage />}
+          {currentPage === "artists" && <ArtistsPage />}
+          {(currentPage === "settings" || currentPage === "about") && (
+            <SettingsPage />
+          )}
+        </>
+      )}
+    </Suspense>
+  );
 }

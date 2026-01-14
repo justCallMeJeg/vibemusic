@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
 import placeholderArt from "@/assets/placeholder-art.png";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import { VirtualizedList } from "@/components/shared/virtualized-list";
 
 export default function AlbumDetailPage() {
@@ -77,41 +77,8 @@ export default function AlbumDetailPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-        <div className="mt-8 flex items-center gap-2 mb-4">
-          <Skeleton className="h-10 w-10 rounded-md bg-foreground/5" />
-          <Skeleton className="h-4 w-32 bg-foreground/10" />
-        </div>
-        <div className="flex gap-6 mb-6 px-2">
-          <Skeleton className="w-40 h-40 rounded-lg bg-foreground/5 shrink-0" />
-          <div className="flex flex-col justify-center min-w-0 flex-1 space-y-3">
-            <Skeleton className="h-8 w-1/2 bg-foreground/10" />
-            <Skeleton className="h-4 w-24 bg-foreground/5" />
-            <Skeleton className="h-4 w-32 bg-foreground/5" />
-            <div className="flex gap-2 pt-2">
-              <Skeleton className="h-8 w-24 rounded-md bg-foreground/10" />
-              <Skeleton className="h-8 w-24 rounded-md bg-foreground/5" />
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 px-2 space-y-1">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-2">
-              <Skeleton className="w-8 h-8 rounded bg-foreground/5" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-1/2 bg-foreground/10" />
-                <Skeleton className="h-3 w-1/3 bg-foreground/5" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   if (!album) {
+    if (isLoading) return null; // Wait for loading
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-muted-foreground">Album not found</div>
@@ -204,11 +171,13 @@ export default function AlbumDetailPage() {
           </div>
         )}
         emptyState={
-          <EmptyState
-            icon={Music}
-            title="No tracks found"
-            description="This album appears to be empty."
-          />
+          !isLoading ? (
+            <EmptyState
+              icon={Music}
+              title="No tracks found"
+              description="This album appears to be empty."
+            />
+          ) : null
         }
       />
     </div>

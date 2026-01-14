@@ -48,3 +48,9 @@ url = "2.5"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
 
+[profile.release]
+codegen-units = 1 # Maximum optimization
+lto = true        # Link Time Optimization
+strip = true      # Remove symbols to reduce size
+panic = "abort"   # Abort on panic (smaller binary)
+

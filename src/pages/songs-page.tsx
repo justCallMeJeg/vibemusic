@@ -4,7 +4,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import MusicListItem from "@/components/shared/item/music-list";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import {
   DropdownMenu,
@@ -39,6 +38,8 @@ export default function SongsPage() {
 
   // Apply visual scroll mask using the same ref
   useScrollMask(24, parentRef);
+
+  // ... (existing code)
 
   // Filter and Sort Logic
   const displayedTracks = useMemo(() => {
@@ -173,22 +174,9 @@ export default function SongsPage() {
         ref={parentRef}
         className="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar scroll-mask-y"
       >
-        {isLoading ? (
-          <div className="flex flex-col gap-1">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-md">
-                <Skeleton className="w-10 h-10 rounded-md bg-foreground/5 shrink-0" />
-                <div className="flex-1 space-y-1">
-                  <Skeleton className="h-4 w-48 bg-foreground/10" />
-                  <Skeleton className="h-3 w-24 bg-foreground/5" />
-                </div>
-                <Skeleton className="h-3 w-12 bg-foreground/5" />
-                <Skeleton className="h-3 w-12 bg-foreground/5" />
-              </div>
-            ))}
-          </div>
-        ) : displayedTracks.length === 0 ? (
-          searchQuery ? (
+        {displayedTracks.length === 0 ? (
+          !isLoading &&
+          (searchQuery ? (
             <EmptyState
               icon={Search}
               title="No matches found"
@@ -200,7 +188,7 @@ export default function SongsPage() {
               title="No songs found"
               description="Import music using the sidebar button to get started."
             />
-          )
+          ))
         ) : (
           <div
             style={{
