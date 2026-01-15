@@ -7,6 +7,7 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+/// Metadata for an available update.
 pub struct UpdateMetadata {
     pub version: String,
     pub current_version: String,

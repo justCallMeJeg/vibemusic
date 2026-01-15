@@ -17,11 +17,10 @@ use profile::ProfileState;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
+
+/// Entry point for the Tauri application.
+/// Initializes plugins, state, and runs the application loop.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -125,7 +124,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
+            // Library
             library::get_all_tracks,
             library::get_all_albums,
             library::get_album_by_id,
@@ -135,7 +134,6 @@ pub fn run() {
             scanner::get_file_metadata,
             scanner::scan_folder,
             scanner::scan_music_library,
-            scanner::check_files_exist,
             scanner::check_files_exist,
             scanner::prune_library,
             // Artist commands
@@ -172,7 +170,6 @@ pub fn run() {
             updater::check_update,
             updater::download_update,
             updater::install_update,
-            updater::install_update,
             updater::download_and_install_update,
             // Watcher
             watcher::watch_paths,
@@ -180,7 +177,8 @@ pub fn run() {
             ffmpeg::check_ffmpeg_status,
             ffmpeg::download_ffmpeg,
             ffmpeg::manual_set_ffmpeg_path,
-            ffmpeg::get_supported_ffmpeg_versions
+            ffmpeg::get_supported_ffmpeg_versions,
+
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,8 +2,10 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
+/// Shared state for the active profile.
 pub struct ProfileState(pub Mutex<Option<String>>);
 
+/// Sets the active profile ID in the application state.
 #[tauri::command]
 pub fn set_active_profile(app: AppHandle, profile_id: Option<String>) {
     log::info!("Setting active profile to: {:?}", profile_id);
@@ -35,6 +37,7 @@ pub fn get_library_db_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join(db_name))
 }
 
+/// Deletes all data associated with a profile (DB, settings, avatar).
 #[tauri::command]
 pub fn delete_profile_data(app: AppHandle, profile_id: String) -> Result<(), String> {
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
@@ -73,6 +76,7 @@ pub fn delete_profile_data(app: AppHandle, profile_id: String) -> Result<(), Str
     Ok(())
 }
 
+/// Uploads a profile avatar from a file path.
 #[tauri::command]
 pub fn upload_profile_avatar(
     app: AppHandle,
@@ -105,6 +109,7 @@ pub fn upload_profile_avatar(
     Ok(target_path.to_string_lossy().to_string())
 }
 
+/// Saves raw image bytes as the profile avatar.
 #[tauri::command]
 pub fn save_profile_avatar_bytes(
     app: AppHandle,

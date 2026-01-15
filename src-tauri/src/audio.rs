@@ -69,6 +69,7 @@ enum AudioCommand {
     SetCrossfade(u64), // Duration in milliseconds
 }
 
+/// Main audio engine for managing playback.
 pub struct AudioEngine {
     command_tx: Sender<AudioCommand>,
     state: Arc<Mutex<PlaybackState>>,

@@ -88,24 +88,9 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
     let mut guard = state.watcher.lock().map_err(|e| e.to_string())?;
     *guard = Some(watcher);
 
-    // Start or restart debouncer thread
-    // We strive to have only one debouncer thread running.
-    // The channel `rx` is new, so the old thread's rx (if any) is disconnected? No, we need to signal it?
-    // Actually, `crossbeam` channel is multi-producer, multi-consumer.
-    // Ideally we keep the same thread and channel, just update the watcher.
-    // Let's refactor:
-    // 1. Create channel ONCE in `init`.
-    // 2. Pass `tx` to `watch_paths`.
-    // 3. `debouncer` loop runs forever.
-    
-    // REFACTOR:
-    // We need to change `WatcherState` to hold `tx`.
-    // But `init` returns `WatcherState`, and `watch_paths` needs to access it.
-    // Simple approach: Spawn a NEW thread for each `watch_paths` call is bad.
-    
-    // Let's stick to: "Recreate watcher" but handle debouncing cleanly.
-    // If I start a loop that consumes `rx`, it works.
-    // `app` clone needed for scan.
+    // Start debounce loop in a new thread.
+    // Ideally this logic should be more robust (e.g. using a global channel),
+    // but for now this per-watch instantiation works because the old channel disconnects when the watcher is dropped.
     
     let app_handle = app.clone();
     let folders_clone = folders.clone();

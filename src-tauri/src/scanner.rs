@@ -20,7 +20,7 @@ const AUDIO_EXTENSIONS: &[&str] = &[
     "mp3", "flac", "wav", "ogg", "m4a", "aac", "aiff", "wv", "opus",
 ];
 
-/// Metadata extracted from an audio file
+/// Metadata extracted from an audio file.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TrackMetadata {
     pub file_path: String,

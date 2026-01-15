@@ -10,6 +10,7 @@ use std::os::windows::process::CommandExt;
 
 #[derive(serde::Serialize, Clone, Debug)]
 #[serde(tag = "status")]
+/// Status of the FFmpeg binary.
 pub enum FFmpegStatus {
     Ready { path: String, version: String },
     Missing,
@@ -30,6 +31,7 @@ pub struct MediaMetadata {
     pub channels: u16,
 }
 
+/// Wrapper around a running FFmpeg process.
 pub struct FFmpegProcess {
     child: Child,
 }

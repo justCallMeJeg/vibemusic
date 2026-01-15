@@ -1,6 +1,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
+/// Application-wide error type.
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Database error: {0}")]

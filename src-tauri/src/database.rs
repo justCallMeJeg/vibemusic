@@ -4,6 +4,7 @@ use std::path::Path;
 use log::warn;
 
 
+/// Helper for interacting with the SQLite database.
 pub struct DbHelper {
     conn: Connection,
 }
@@ -139,6 +140,8 @@ impl DbHelper {
         Ok(tx.last_insert_rowid())
     }
 
+    /// Inserts or updates a track in the database.
+    /// Handles artist and album creation/updates automatically.
     pub fn upsert_track(tx: &Transaction, metadata: &TrackMetadata) -> Result<()> {
         // Track artist (used for the track itself)
         let artist_id = if let Some(artist) = &metadata.artist {

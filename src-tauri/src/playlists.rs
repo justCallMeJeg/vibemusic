@@ -14,10 +14,9 @@ pub struct Playlist {
     pub created_at: String,
 }
 
-// ... (Commented out code preserved)
-
-// Commands will be implemented after updating DbHelper
+// Commands follow below
 #[command]
+/// Creates a new playlist with the given name and optional description.
 pub fn create_playlist(
     app: AppHandle,
     name: String,

@@ -39,6 +39,7 @@ pub struct LibraryAlbum {
     pub total_duration_ms: u64,
 }
 
+/// Retrieves all tracks from the database.
 #[command]
 pub fn get_all_tracks(app: AppHandle) -> Result<Vec<LibraryTrack>, String> {
     let db_path = get_library_db_path(&app)?;
