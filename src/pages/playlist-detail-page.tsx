@@ -17,10 +17,10 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 
+import { ArtworkImage } from "@/components/shared/artwork-image";
 import { useLibraryStore } from "@/stores/library-store";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Pencil, GripVertical } from "lucide-react";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
@@ -241,15 +241,13 @@ export default function PlaylistDetailPage() {
 
             {/* Playlist info header */}
             <div className="flex gap-6 mb-6 px-2">
-              <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden">
+              <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden shadow-xl">
                 {playlist.artwork_path && !imageError ? (
-                  <img
-                    src={convertFileSrc(playlist.artwork_path)}
+                  <ArtworkImage
+                    src={playlist.artwork_path}
                     alt={playlist.name}
                     className="w-full h-full object-cover"
-                    onError={(_e) => {
-                      setImageError(true);
-                    }}
+                    onError={() => setImageError(true)}
                   />
                 ) : (
                   playlist.name.slice(0, 2).toUpperCase()

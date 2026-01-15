@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { Playlist, updatePlaylist } from "@/lib/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { StandardDialog } from "@/components/shared/standard-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,96 +141,85 @@ export function PlaylistEditDialog({
     }
   };
 
+  const footer = (
+    <>
+      <Button
+        variant="ghost"
+        onClick={() => onOpenChange(false)}
+        className="text-muted-foreground hover:text-foreground hover:bg-accent"
+      >
+        Cancel
+      </Button>
+      <Button
+        onClick={handleSave}
+        disabled={isSaving}
+        className="bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Save Changes
+      </Button>
+    </>
+  );
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          className="bg-popover border-border text-popover-foreground sm:max-w-md"
-          aria-describedby={undefined}
-        >
-          <DialogHeader>
-            <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Make changes to your playlist here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-6 py-4">
-            {/* Image Section */}
-            <div className="flex flex-col items-center gap-4">
-              {/* Image Preview / Selection */}
-              <div className="relative group">
-                <div
-                  className="w-40 h-40 rounded-lg bg-card flex flex-col items-center justify-center cursor-pointer overflow-hidden border border-dashed border-border hover:border-foreground/50 transition-colors"
-                  onClick={handleSelectImage}
-                >
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : playlist.artwork_path ? (
-                    <img
-                      src={convertFileSrc(playlist.artwork_path)}
-                      alt="Cover"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Upload size={24} />
-                      <span className="text-xs">Change Cover</span>
-                    </div>
-                  )}
-
-                  {/* Overlay hint */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Pencil size={24} className="text-white" />
+      <StandardDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Edit Playlist"
+        description="Make changes to your playlist here. Click save when you're done."
+        footer={footer}
+        contentClassName="sm:max-w-md"
+      >
+        <div className="grid gap-6 py-4">
+          {/* Image Section */}
+          <div className="flex flex-col items-center gap-4">
+            {/* Image Preview / Selection */}
+            <div className="relative group">
+              <div
+                className="w-40 h-40 rounded-lg bg-card flex flex-col items-center justify-center cursor-pointer overflow-hidden border border-dashed border-border hover:border-foreground/50 transition-colors"
+                onClick={handleSelectImage}
+              >
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : playlist.artwork_path ? (
+                  <img
+                    src={convertFileSrc(playlist.artwork_path)}
+                    alt="Cover"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Upload size={24} />
+                    <span className="text-xs">Change Cover</span>
                   </div>
-                </div>
-              </div>
-            </div>
+                )}
 
-            {/* Inputs */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-secondary/50 border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="bg-secondary/50 border-border resize-none h-20"
-                />
+                {/* Overlay hint */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Pencil size={24} className="text-white" />
+                </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              className="text-muted-foreground hover:text-foreground hover:bg-accent"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* Inputs */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="resize-none h-20"
+              />
+            </div>
+          </div>
+        </div>
+      </StandardDialog>
 
       <ImageCropDialog
         imageSrc={cropImageSrc}

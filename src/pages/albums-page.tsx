@@ -4,6 +4,7 @@ import { useLibraryStore } from "@/stores/library-store";
 
 import AlbumCard from "@/components/shared/item/album-card";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
+import { PageHeader } from "@/components/shared/page-header";
 
 export default function AlbumsPage() {
   const albums = useLibraryStore((s) => s.albums);
@@ -11,9 +12,7 @@ export default function AlbumsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <div className="mt-8 flex items-center justify-between mb-6 px-2">
-        <h1 className="text-3xl font-bold">Albums</h1>
-      </div>
+      <PageHeader title="Albums" />
 
       <VirtualizedGrid
         items={albums}

@@ -114,7 +114,7 @@ export function TrackSelectDialog({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search library..."
-              className="pl-9 bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-indigo-500"
+              className="pl-9"
               autoFocus
               autoComplete="off"
             />

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { logger } from "@/lib/logger";
+import { StandardDialog } from "@/components/shared/standard-dialog";
 
 type FFmpegStatus =
   | { status: "Ready"; path: string }
@@ -98,80 +99,83 @@ export function FFmpegSetupDialog({ onReady }: { onReady: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-100 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-xl shadow-2xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
-        <div className="flex flex-col items-center text-center space-y-4">
-          {/* Icons */}
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            {status === "checking" ? (
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            ) : status === "downloading" ? (
-              <Download className="w-8 h-8 animate-bounce text-primary" />
-            ) : status === "missing" ? (
-              <AlertCircle className="w-8 h-8 text-yellow-500" />
-            ) : (
-              <FolderOpen className="w-8 h-8 text-green-500" />
-            )}
-          </div>
-
-          {/* Text Content */}
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold tracking-tight">
-              {status === "checking" && "Checking Dependencies..."}
-              {status === "missing" && "Audio Engine Required"}
-              {status === "downloading" && "Setting up Audio Engine..."}
-              {status === "ready" && "Ready!"}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {status === "checking" && "Verifying FFmpeg installation..."}
-              {status === "missing" &&
-                "Vibe Music requires FFmpeg to analyze your library. We can download it automatically (~20MB)."}
-              {status === "downloading" &&
-                `Downloading components... ${Math.round(downloadProgress)}%`}
-            </p>
-          </div>
-
-          {/* Actions */}
-          {status === "missing" && (
-            <div className="flex flex-col w-full gap-3 pt-4">
-              <Button onClick={handleDownload} className="w-full" size="lg">
-                <Download className="w-4 h-4 mr-2" />
-                Download automatically
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={handleManualLocate}
-                className="w-full"
-              >
-                <FolderOpen className="w-4 h-4 mr-2" />
-                Locate manually
-              </Button>
-            </div>
-          )}
-
-          {/* Progress Bar */}
-          {status === "downloading" && (
-            <Progress value={downloadProgress} className="w-full h-2" />
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md w-full">
-              {error}
-            </div>
+    <StandardDialog
+      open={true}
+      onOpenChange={() => {}} // Block closing
+      title={
+        status === "checking"
+          ? "Checking Dependencies..."
+          : status === "missing"
+          ? "Audio Engine Required"
+          : status === "downloading"
+          ? "Setting up Audio Engine..."
+          : "Ready!"
+      }
+      description={
+        status === "checking"
+          ? "Verifying FFmpeg installation..."
+          : status === "missing"
+          ? "Vibe Music requires FFmpeg to analyze your library. We can download it automatically (~20MB)."
+          : status === "downloading"
+          ? `Downloading components... ${Math.round(downloadProgress)}%`
+          : undefined
+      }
+      contentClassName="max-w-md"
+    >
+      <div className="flex flex-col items-center text-center space-y-4 py-4">
+        {/* Icons */}
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+          {status === "checking" ? (
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          ) : status === "downloading" ? (
+            <Download className="w-8 h-8 animate-bounce text-primary" />
+          ) : status === "missing" ? (
+            <AlertCircle className="w-8 h-8 text-yellow-500" />
+          ) : (
+            <FolderOpen className="w-8 h-8 text-green-500" />
           )}
         </div>
+
+        {/* Actions */}
+        {status === "missing" && (
+          <div className="flex flex-col w-full gap-3 pt-4">
+            <Button onClick={handleDownload} className="w-full" size="lg">
+              <Download className="w-4 h-4 mr-2" />
+              Download automatically
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={handleManualLocate}
+              className="w-full"
+            >
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Locate manually
+            </Button>
+          </div>
+        )}
+
+        {/* Progress Bar */}
+        {status === "downloading" && (
+          <Progress value={downloadProgress} className="w-full h-2" />
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md w-full">
+            {error}
+          </div>
+        )}
       </div>
-    </div>
+    </StandardDialog>
   );
 }

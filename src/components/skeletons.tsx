@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { GridSkeleton } from "@/components/shared/grid-skeleton";
 
 export function SongsSkeleton() {
   return (
@@ -33,8 +34,8 @@ export function AlbumsSkeleton() {
       <div className="mt-8 flex items-center justify-between mb-6 px-2">
         <Skeleton className="h-9 w-32 bg-foreground/10" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-2">
-        {Array.from({ length: 15 }).map((_, i) => (
+      <GridSkeleton
+        renderItem={(i) => (
           <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
             <Skeleton className="aspect-square w-full rounded-lg bg-foreground/5" />
             <div className="space-y-2">
@@ -42,8 +43,8 @@ export function AlbumsSkeleton() {
               <Skeleton className="h-3 w-1/2 bg-foreground/5" />
             </div>
           </div>
-        ))}
-      </div>
+        )}
+      />
     </div>
   );
 }
@@ -54,8 +55,8 @@ export function ArtistsSkeleton() {
       <div className="mt-8 flex items-center justify-between mb-6 px-2">
         <Skeleton className="h-9 w-32 bg-foreground/10" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-2">
-        {Array.from({ length: 15 }).map((_, i) => (
+      <GridSkeleton
+        renderItem={(i) => (
           <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
             <Skeleton className="aspect-square w-full rounded-full bg-foreground/5" />
             <div className="space-y-2 flex flex-col items-center">
@@ -63,8 +64,8 @@ export function ArtistsSkeleton() {
               <Skeleton className="h-3 w-1/2 bg-foreground/5" />
             </div>
           </div>
-        ))}
-      </div>
+        )}
+      />
     </div>
   );
 }

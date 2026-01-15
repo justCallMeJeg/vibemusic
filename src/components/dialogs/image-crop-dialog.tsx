@@ -1,17 +1,10 @@
 import { useState, useCallback } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import Cropper from "react-easy-crop";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { StandardDialog } from "@/components/shared/standard-dialog";
 
 interface Area {
   x: number;
@@ -110,67 +103,64 @@ export function ImageCropDialog({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="bg-popover border-border text-popover-foreground sm:max-w-md"
-        aria-describedby={undefined}
+  const footer = (
+    <>
+      <Button
+        variant="ghost"
+        onClick={() => onOpenChange(false)}
+        className="text-muted-foreground hover:text-foreground hover:bg-accent"
       >
-        <DialogHeader>
-          <DialogTitle>Crop Image</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Adjust the image to fit the square cover format.
-          </DialogDescription>
-        </DialogHeader>
+        Cancel
+      </Button>
+      <Button
+        onClick={handleSave}
+        disabled={isProcessing}
+        className="bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Save Crop
+      </Button>
+    </>
+  );
 
-        <div className="flex flex-col items-center gap-6 py-4">
-          <div className="relative w-full h-64 bg-background rounded-lg overflow-hidden">
-            {imageSrc && (
-              <Cropper
-                image={imageSrc}
-                crop={crop}
-                zoom={zoom}
-                aspect={1}
-                onCropChange={setCrop}
-                onCropComplete={onCropChangeComplete}
-                onZoomChange={setZoom}
-              />
-            )}
-          </div>
-
-          <div className="w-full space-y-2 px-4">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Zoom</span>
-              <span>{zoom.toFixed(1)}x</span>
-            </div>
-            <Slider
-              value={[zoom]}
-              min={1}
-              max={3}
-              step={0.1}
-              onValueChange={(v) => setZoom(v[0])}
+  return (
+    <StandardDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Crop Image"
+      description="Adjust the image to fit the square cover format."
+      footer={footer}
+      contentClassName="sm:max-w-md"
+    >
+      <div className="flex flex-col items-center gap-6 py-4">
+        <div className="relative w-full h-64 bg-background rounded-lg overflow-hidden">
+          {imageSrc && (
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              onCropChange={setCrop}
+              onCropComplete={onCropChangeComplete}
+              onZoomChange={setZoom}
             />
-          </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isProcessing}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Crop
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="w-full space-y-2 px-4">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Zoom</span>
+            <span>{zoom.toFixed(1)}x</span>
+          </div>
+          <Slider
+            value={[zoom]}
+            min={1}
+            max={3}
+            step={0.1}
+            onValueChange={(v) => setZoom(v[0])}
+          />
+        </div>
+      </div>
+    </StandardDialog>
   );
 }

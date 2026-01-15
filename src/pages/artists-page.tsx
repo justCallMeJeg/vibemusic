@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Music2 } from "lucide-react";
 import ArtistCard from "@/components/shared/item/artist-card";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
+import { PageHeader } from "@/components/shared/page-header";
 
 export default function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
@@ -18,9 +19,7 @@ export default function ArtistsPage() {
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
-      <div className="mt-8 flex items-center justify-between mb-6 px-2">
-        <h1 className="text-3xl font-bold">Artists</h1>
-      </div>
+      <PageHeader title="Artists" />
 
       <VirtualizedGrid
         items={sortedArtists}
