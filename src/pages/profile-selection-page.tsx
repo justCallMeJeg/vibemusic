@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useSettingsStore } from "@/stores/settings-store";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export default function ProfileSelectionPage() {
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -60,6 +62,9 @@ export default function ProfileSelectionPage() {
   // Crop State
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+
+  // Use scroll mask for the profile list
+  useScrollMask(32, scrollRef);
 
   useEffect(() => {
     loadProfiles();
@@ -174,94 +179,105 @@ export default function ProfileSelectionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center animate-in fade-in duration-500">
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-medium mb-4">Who's listening?</h1>
+    <div className="h-screen w-full bg-background gap-6 text-foreground flex flex-col items-center justify-center pt-16 pb-6 animate-in fade-in duration-700 overflow-hidden">
+      <div className="text-center">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+          Who's listening?
+        </h1>
+        <p className="text-muted-foreground text-base">
+          Select your profile to continue
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-8 max-w-4xl px-8">
-        {profiles.map((profile) => (
-          <div
-            key={profile.id}
-            onClick={() => handleSelectProfile(profile.id)}
-            className={`group flex flex-col items-center gap-4 w-32 cursor-pointer transition-transform ${
-              isManageMode ? "" : "hover:scale-105"
-            }`}
-          >
-            <div className="relative">
-              {profile.avatarPath ? (
-                <img
-                  src={convertFileSrc(profile.avatarPath)}
-                  alt={profile.name}
-                  className="w-32 h-32 rounded-md object-cover shadow-lg group-hover:ring-4 ring-white/20 transition-all"
-                />
-              ) : (
-                <div
-                  className={`w-32 h-32 rounded-md ${profile.color} flex items-center justify-center text-4xl font-bold shadow-lg group-hover:ring-4 ring-white/20 transition-all`}
-                >
-                  {profile.name[0]?.toUpperCase()}
-                </div>
-              )}
-
-              {isManageMode && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-4 rounded-md opacity-100 transition-all">
+      <div
+        ref={scrollRef}
+        className="h-min w-full max-w-5xl overflow-y-auto px-6 scroll-mask-y custom-scrollbar"
+      >
+        <div className="min-h-full flex flex-wrap content-center justify-center gap-y-6 gap-x-4 pb-4 pt-2">
+          {profiles.map((profile) => (
+            <div
+              key={profile.id}
+              onClick={() => handleSelectProfile(profile.id)}
+              className={`group relative flex flex-col items-center gap-2 w-28 cursor-pointer transition-all duration-300 ${
+                isManageMode ? "" : "hover:scale-105"
+              }`}
+            >
+              <div className="relative w-28 h-28">
+                {profile.avatarPath ? (
+                  <img
+                    src={convertFileSrc(profile.avatarPath)}
+                    alt={profile.name}
+                    className="w-full h-full rounded-full object-cover shadow-[0_4px_12px_rgba(0,0,0,0.5)] group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] ring-2 ring-transparent group-hover:ring-primary/50 transition-all duration-300"
+                  />
+                ) : (
                   <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditDialog(profile);
-                    }}
-                    className="p-2 rounded-full hover:bg-white/20 text-white transition-colors"
+                    className={`w-full h-full rounded-full ${profile.color} flex items-center justify-center text-4xl font-bold shadow-[0_4px_12px_rgba(0,0,0,0.5)] group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] ring-2 ring-transparent group-hover:ring-primary/50 text-white transition-all duration-300`}
                   >
-                    <Pencil className="w-6 h-6" />
+                    {profile.name[0]?.toUpperCase()}
                   </div>
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteId(profile.id);
-                    }}
-                    className="p-2 rounded-full hover:bg-red-500/20 text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-6 h-6" />
-                  </div>
-                </div>
-              )}
-            </div>
-            <span className="text-muted-foreground group-hover:text-foreground text-lg truncate max-w-full font-medium">
-              {profile.name}
-            </span>
-          </div>
-        ))}
+                )}
 
-        {/* Add Profile Button */}
-        {!isManageMode && (
-          <div
-            onClick={openCreateDialog}
-            className="group flex flex-col items-center gap-4 w-32 cursor-pointer hover:scale-105 transition-transform"
-          >
-            <div className="w-32 h-32 rounded-md bg-transparent border-2 border-border group-hover:bg-primary group-hover:border-primary flex items-center justify-center transition-all">
-              <Plus className="w-16 h-16 text-muted-foreground group-hover:text-primary-foreground" />
+                {isManageMode && (
+                  <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center gap-2 animate-in fade-in duration-200 backdrop-blur-[1px]">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(profile);
+                      }}
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </div>
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(profile.id);
+                      }}
+                      className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <span className="text-foreground/80 group-hover:text-foreground text-sm font-medium truncate max-w-full tracking-tight transition-colors">
+                {profile.name}
+              </span>
             </div>
-            <span className="text-muted-foreground group-hover:text-foreground text-lg font-medium">
-              Add Profile
-            </span>
-          </div>
-        )}
+          ))}
+
+          {/* Add Profile Button */}
+          {!isManageMode && profiles.length < 5 && (
+            <div
+              onClick={openCreateDialog}
+              className="group flex flex-col items-center gap-2 w-28 cursor-pointer hover:scale-105 transition-all duration-300"
+            >
+              <div className="w-28 h-28 rounded-full bg-secondary/30 border-2 border-dashed border-muted-foreground/30 group-hover:border-primary/50 group-hover:bg-secondary/50 flex items-center justify-center transition-all duration-300">
+                <Plus className="w-10 h-10 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <span className="text-muted-foreground group-hover:text-foreground text-sm font-medium tracking-tight transition-colors">
+                Add Profile
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-16">
-        <Button
-          variant="outline"
-          size="lg"
-          className={` tracking-widest uppercase font-medium px-8 py-6 text-muted-foreground hover:text-foreground border-border hover:border-foreground rounded-none ${
-            isManageMode
-              ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-              : "bg-transparent"
-          }`}
-          onClick={() => setIsManageMode(!isManageMode)}
-        >
-          {isManageMode ? "Done" : "Manage Profiles"}
-        </Button>
-      </div>
+      <Button
+        variant={isManageMode ? "default" : "outline"}
+        size="lg"
+        className={`
+            px-8 py-6 text-base font-semibold tracking-wide transition-all duration-300
+            ${
+              isManageMode
+                ? "bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                : "border-white/10 hover:bg-white/5 hover:text-white"
+            }
+          `}
+        onClick={() => setIsManageMode(!isManageMode)}
+      >
+        {isManageMode ? "Done" : "Manage Profiles"}
+      </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-md">
@@ -345,12 +361,6 @@ export default function ProfileSelectionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* QUIT DIALOG etc (reused from App.tsx via return logic? No, App.tsx renders it. This is child.) 
-          Wait, App.tsx rendered quit dialog when !activeProfileId.
-          ProfileSelectionPage is rendered INSIDE App.tsx.
-          So ProfileSelectionPage doesn't need to render QuitDialog.
-      */}
 
       <ConfirmDialog
         open={!!deleteId}
