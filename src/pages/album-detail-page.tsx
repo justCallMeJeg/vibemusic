@@ -7,9 +7,9 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
-import MusicListItem from "@/components/shared/item/music-list";
 import placeholderArt from "@/assets/placeholder-art.png";
 import { TrackListHeader } from "@/components/shared/track-list-header";
+import { TrackListRow } from "@/components/shared/item/track-list-row";
 
 import { VirtualizedList } from "@/components/shared/virtualized-list";
 
@@ -163,17 +163,12 @@ export default function AlbumDetailPage() {
           </div>
         }
         renderItem={(track, index) => (
-          <div
+          <TrackListRow
             key={track.id}
-            className="group flex items-center gap-2 hover:bg-accent/50 rounded-md pr-2 transition-colors px-2"
-          >
-            <span className="text-muted-foreground text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors">
-              {index + 1}
-            </span>
-            <div className="flex-1 min-w-0">
-              <MusicListItem track={track} showArtwork={false} />
-            </div>
-          </div>
+            track={track}
+            index={index + 1}
+            showArtwork={false}
+          />
         )}
         emptyState={
           !isLoading ? (

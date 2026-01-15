@@ -96,3 +96,16 @@ pub fn remove_track_from_playlist(
     db.remove_track_from_playlist(playlist_id, track_id)
         .map_err(|e| e.to_string())
 }
+
+#[command]
+pub fn reorder_playlist(
+    app: AppHandle,
+    id: i64,
+    new_order: Vec<i64>,
+) -> Result<(), String> {
+    let db_path = get_library_db_path(&app)?;
+    let mut db = DbHelper::new(&db_path).map_err(|e| e.to_string())?;
+
+    db.reorder_playlist(id, new_order)
+        .map_err(|e| e.to_string())
+}

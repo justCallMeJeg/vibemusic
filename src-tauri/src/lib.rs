@@ -161,6 +161,7 @@ pub fn run() {
             playlists::get_playlist_tracks,
             playlists::add_track_to_playlist,
             playlists::remove_track_from_playlist,
+            playlists::reorder_playlist,
             // Profile
             profile::set_active_profile,
             profile::delete_profile_data,

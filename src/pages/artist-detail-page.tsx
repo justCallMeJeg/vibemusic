@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import { useAudioStore } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
-import MusicListItem from "@/components/shared/item/music-list";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 import placeholderArt from "@/assets/placeholder-art.png";
+import { TrackListRow } from "@/components/shared/item/track-list-row";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
@@ -254,17 +254,7 @@ export default function ArtistDetailPage() {
             </h2>
             <div className="flex flex-col gap-1">
               {tracks.slice(0, 5).map((track, i) => (
-                <div
-                  key={track.id}
-                  className="group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors"
-                >
-                  <span className="text-muted-foreground text-sm w-12 text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <MusicListItem track={track} />
-                  </div>
-                </div>
+                <TrackListRow key={track.id} track={track} index={i + 1} />
               ))}
             </div>
           </section>

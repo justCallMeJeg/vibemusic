@@ -34,11 +34,14 @@ interface MusicListItemProps {
   track: Track;
   context?: Track[];
   showArtwork?: boolean;
+  /** Disable hover styles when used inside a parent with its own hover */
+  disableHover?: boolean;
 }
 
 const MusicListItem = memo(function MusicListItem({
   track,
   showArtwork = true,
+  disableHover = false,
 }: MusicListItemProps) {
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
@@ -97,8 +100,14 @@ const MusicListItem = memo(function MusicListItem({
       <ContextMenuTrigger>
         <div
           onClick={handlePlayClick}
-          className={`flex w-full h-min rounded-lg px-4 py-2 hover:outline hover:outline-border hover:bg-accent/30 cursor-pointer group transition-colors ${
-            isCurrentTrack ? "bg-accent outline outline-border" : ""
+          className={`flex w-full h-min rounded-lg px-4 py-2 cursor-pointer group transition-colors ${
+            !disableHover
+              ? "hover:outline hover:outline-border hover:bg-accent/30"
+              : ""
+          } ${
+            isCurrentTrack && !disableHover
+              ? "bg-accent outline outline-border"
+              : ""
           }`}
         >
           <div className="flex h-min w-full gap-4">

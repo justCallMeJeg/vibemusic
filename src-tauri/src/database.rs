@@ -664,7 +664,24 @@ impl DbHelper {
             "DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_id = ?",
             params![playlist_id, track_id],
         )?;
-        // Optional: Reorder positions? Not strictly necessary for basic functionality.
+        Ok(())
+    }
+
+    pub fn reorder_playlist(&mut self, playlist_id: i64, new_order: Vec<i64>) -> Result<()> {
+        let tx = self.conn.transaction()?;
+
+        // Prepare the update statement once
+        {
+            let mut stmt = tx.prepare(
+                "UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND track_id = ?",
+            )?;
+
+            for (index, track_id) in new_order.iter().enumerate() {
+                stmt.execute(params![index as i64, playlist_id, track_id])?;
+            }
+        }
+
+        tx.commit()?;
         Ok(())
     }
     pub fn get_all_artists(&self) -> Result<Vec<crate::library::Artist>> {

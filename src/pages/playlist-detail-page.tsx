@@ -8,7 +8,7 @@ import {
   Playlist,
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
-import { useAudioStore } from "@/stores/audio-store";
+import { useAudioStore, useCurrentTrack } from "@/stores/audio-store";
 import { ChevronLeft, Play, Trash2, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
@@ -36,6 +36,7 @@ interface SortableTrackItemProps {
 }
 
 function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
+  const currentTrack = useCurrentTrack();
   const {
     attributes,
     listeners,
@@ -44,6 +45,8 @@ function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
     transition,
     isDragging,
   } = useSortable({ id: track.id });
+
+  const isCurrentTrack = currentTrack?.id === track.id;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -56,8 +59,12 @@ function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 hover:bg-accent rounded-md pr-2 transition-colors ${
+      className={`group flex items-center gap-2 hover:bg-accent/50 rounded-md pr-2 transition-colors ${
         isDragging ? "bg-accent shadow-xl" : ""
+      } ${
+        isCurrentTrack && !isDragging
+          ? "bg-accent/50 outline outline-border"
+          : ""
       }`}
     >
       <div
@@ -72,7 +79,7 @@ function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <MusicListItem track={track} />
+        <MusicListItem track={track} disableHover />
       </div>
 
       <Button
