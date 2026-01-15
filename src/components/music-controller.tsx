@@ -33,6 +33,7 @@ import {
 import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 import placeholderArt from "@/assets/placeholder-art.png";
 
@@ -296,7 +297,7 @@ export default function MusicControler() {
             <Button
               variant="ghost"
               onClick={() => {
-                console.log("Toggle Mini Player Clicked");
+                logger.debug("Toggle Mini Player Clicked");
                 toggleMiniPlayer();
               }}
               className="text-muted-foreground hover:text-foreground"

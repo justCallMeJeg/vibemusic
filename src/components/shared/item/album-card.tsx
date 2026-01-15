@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 
 import placeholderArt from "@/assets/placeholder-art.png";
@@ -58,8 +59,7 @@ const AlbumCard = memo(function AlbumCard({
 
       play(queue[0], queue);
     } catch (e) {
-      console.error("Failed to play album:", e);
-      toast.error("Failed to play album");
+      logger.error("Failed to play album", e);
     }
   };
 
@@ -71,7 +71,7 @@ const AlbumCard = memo(function AlbumCard({
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing album next");
     } catch (e) {
-      console.error("Failed to play album next:", e);
+      logger.error("Failed to play album next", e);
       toast.error("Failed to play next");
     }
   };
@@ -84,8 +84,7 @@ const AlbumCard = memo(function AlbumCard({
       tracks.forEach((track) => addToQueue(track));
       toast.success("Added album to queue");
     } catch (e) {
-      console.error("Failed to add album to queue:", e);
-      toast.error("Failed to add to queue");
+      logger.error("Failed to add album to queue", e);
     }
   };
 

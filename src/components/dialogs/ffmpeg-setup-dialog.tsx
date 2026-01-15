@@ -6,6 +6,7 @@ import { Loader2, FolderOpen, Download, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { logger } from "@/lib/logger";
 
 type FFmpegStatus =
   | { status: "Ready"; path: string }
@@ -33,7 +34,7 @@ export function FFmpegSetupDialog({ onReady }: { onReady: () => void }) {
         setStatus("missing");
       }
     } catch (e) {
-      console.error("Failed to check ffmpeg status:", e);
+      logger.error("Failed to check ffmpeg status", e);
       setError("Failed to check system dependencies.");
     }
   }, [onReady]);
@@ -62,7 +63,7 @@ export function FFmpegSetupDialog({ onReady }: { onReady: () => void }) {
       setStatus("ready");
       setTimeout(onReady, 1000); // Brief delay to show completion
     } catch (e) {
-      console.error("Download failed:", e);
+      logger.error("Download failed", e);
       setStatus("missing");
       setError("Download failed. Please check your internet connection.");
     } finally {
@@ -89,7 +90,7 @@ export function FFmpegSetupDialog({ onReady }: { onReady: () => void }) {
         setTimeout(onReady, 1000);
       }
     } catch (e) {
-      console.error("Manual locate failed:", e);
+      logger.error("Manual locate failed", e);
       toast.error("Invalid FFmpeg binary", {
         description: "The selected file could not be verified.",
       });

@@ -3,6 +3,7 @@ import { load, Store } from "@tauri-apps/plugin-store";
 import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibraryStore } from "./library-store";
+import { logger } from "@/lib/logger";
 
 export interface Profile {
   id: string;
@@ -81,7 +82,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         set({ profiles, activeProfileId, isLoading: false });
       }
     } catch (e) {
-      console.error("Failed to load profiles:", e);
+      logger.error("Failed to load profiles", e);
       set({ isLoading: false });
     }
   },
@@ -99,7 +100,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           imageData: Array.from(avatarBytes),
         });
       } catch (e) {
-        console.error("Failed to save avatar bytes", e);
+        logger.error("Failed to save avatar bytes", e);
       }
     } else if (avatarPath) {
       try {
@@ -108,7 +109,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           filePath: avatarPath,
         });
       } catch (e) {
-        console.error("Failed to upload avatar", e);
+        logger.error("Failed to upload avatar", e);
       }
     }
 
@@ -143,7 +144,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         });
         finalUpdates.avatarPath = savedPath;
       } catch (e) {
-        console.error("Failed to save avatar bytes", e);
+        logger.error("Failed to save avatar bytes", e);
       }
     } else if (updates.avatarPath) {
       try {
@@ -153,7 +154,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         });
         finalUpdates.avatarPath = savedPath;
       } catch (e) {
-        console.error("Failed to upload avatar", e);
+        logger.error("Failed to upload avatar", e);
         // Keep original path if failure? Or fail?
         // For now catch and log, maybe keep temp path which might work if local?
         // No, if upload fails, better to not save invalid path.

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 import { Plus, ListMusic } from "lucide-react";
 import { useLibraryStore } from "@/stores/library-store";
 import { Playlist } from "@/lib/api";
@@ -63,7 +64,7 @@ export default function PlaylistsPage() {
     try {
       await deletePlaylist(playlistToDelete.id);
     } catch (error) {
-      console.error("Failed to delete playlist:", error);
+      logger.error("Failed to delete playlist", error);
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);

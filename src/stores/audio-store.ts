@@ -5,6 +5,7 @@ import { useSettingsStore } from "./settings-store";
 import { useLibraryStore } from "./library-store";
 import { toast } from "sonner";
 import { Track } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 // --- Types ---
 type PlaybackStatus = "playing" | "paused" | "stopped" | "loading";
@@ -95,7 +96,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         cover: track.artwork_path,
       });
     } catch (e) {
-      console.error("Failed to play:", e);
+      logger.error("Failed to play", e);
       set({ status: "stopped" });
     }
   };
@@ -104,7 +105,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
   // Internal next handler
   const handleNext = async () => {
     const state = get();
-    console.log("[handleNext] Start", {
+    logger.debug("[handleNext] Start", {
       queue: state.queue.length,
       currentIndex: state.currentIndex,
       repeat: state.repeat,
@@ -112,7 +113,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     });
 
     if (state.queue.length === 0) {
-      console.log("[handleNext] Queue empty -> Stop");
+      logger.debug("[handleNext] Queue empty -> Stop");
       // Don't clear currentTrack so UI can still show last played song
       set({ status: "stopped", position: 0 });
       await invoke("audio_stop");
@@ -120,7 +121,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     }
 
     if (state.repeat === "one") {
-      console.log("[handleNext] Repeat One -> Replay");
+      logger.debug("[handleNext] Repeat One -> Replay");
       if (state.currentTrack) {
         set({ position: 0 });
         await playInternal(state.currentTrack);
@@ -134,10 +135,10 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     // Handle end of queue
     if (nextIndex >= state.queue.length) {
       if (state.repeat === "all") {
-        console.log("[handleNext] Repeat All -> Loop to start");
+        logger.debug("[handleNext] Repeat All -> Loop to start");
         nextIndex = 0;
       } else {
-        console.log("[handleNext] End of queue -> Stop");
+        logger.debug("[handleNext] End of queue -> Stop");
         set({ status: "stopped", position: 0 });
         await invoke("audio_stop");
         return;
@@ -145,7 +146,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     }
 
     const nextTrack = state.queue[nextIndex];
-    console.log("[handleNext] Playing next:", nextIndex, nextTrack.title);
+    logger.debug(`[handleNext] Playing next: ${nextIndex} ${nextTrack.title}`);
 
     set({
       currentTrack: nextTrack,
@@ -428,7 +429,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
                 (state.repeat !== "off" ||
                   state.currentIndex < state.queue.length - 1);
               if (hasNext) {
-                console.log(
+                logger.debug(
                   "Triggering automatic crossfade",
                   s.position_ms,
                   threshold
@@ -480,7 +481,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       const unlistenError = listen<string>(
         "audio-playback-error",
         async (event) => {
-          console.error("Playback Error:", event.payload);
+          logger.error("Playback Error", event.payload);
           const state = get();
           const track = state.currentTrack;
 
@@ -494,7 +495,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
                 description: `Removed "${track.title}" from library.`,
               });
             } catch (e) {
-              console.error("Failed to self-heal library:", e);
+              logger.error("Failed to self-heal library", e);
               toast.error(`File missing: ${track.title}`, {
                 description: "Run 'Prune Library' in settings to clean up.",
               });

@@ -11,6 +11,7 @@ import { Search, Check } from "lucide-react";
 import { Track, getTracks } from "@/lib/api";
 import { useLibraryStore } from "@/stores/library-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { logger } from "@/lib/logger";
 import placeholderArt from "@/assets/placeholder-art.png";
 
 interface TrackSelectDialogProps {
@@ -93,7 +94,7 @@ export function TrackSelectDialog({
       );
       onOpenChange(false);
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to add tracks", e);
     } finally {
       setIsAdding(false);
     }

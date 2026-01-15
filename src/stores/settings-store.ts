@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { load } from "@tauri-apps/plugin-store";
 import { toast } from "sonner"; // Added import
+import { logger } from "@/lib/logger";
 
 // Lazy store initialization
 // const storePromise: Promise<Store> | null = null;
@@ -203,7 +204,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await store.set("libraryPaths", newPaths);
         await store.set("libraryPaths", newPaths);
         await store.save();
-        invoke("watch_paths", { folders: newPaths }).catch(console.error);
+        invoke("watch_paths", { folders: newPaths }).catch((e) =>
+          logger.error("Failed to watch paths", e)
+        );
 
         // Auto-scan the new path
         try {
@@ -217,7 +220,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           await useLibraryStore.getState().fetchLibrary();
           return stats;
         } catch (e) {
-          console.error("Failed to scan new library path:", e);
+          logger.error("Failed to scan new library path", e);
           throw e; // Re-throw to allow caller to handle error toast
         }
       }
@@ -229,7 +232,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       try {
         await invoke("remove_location", { path });
       } catch (e) {
-        console.error("Failed to remove location from DB:", e);
+        logger.error("Failed to remove location from DB", e);
       }
 
       const { libraryPaths } = get();
@@ -241,7 +244,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
 
       // Update watcher
-      invoke("watch_paths", { folders: newPaths }).catch(console.error);
+      invoke("watch_paths", { folders: newPaths }).catch((e) =>
+        logger.error("Failed to watch paths", e)
+      );
 
       // Refresh UI to reflect removal
       useLibraryStore.getState().fetchLibrary();
@@ -260,7 +265,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const devices = await invoke<{ name: string }[]>("audio_get_devices");
         set({ audioDevices: devices });
       } catch (e) {
-        console.error("Failed to refresh devices:", e);
+        logger.error("Failed to refresh devices", e);
       }
     },
 
@@ -278,7 +283,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const status = await invoke<FFmpegStatus>("check_ffmpeg_status");
         set({ currentFFmpegStatus: status });
       } catch (e) {
-        console.error("Failed to check ffmpeg status:", e);
+        logger.error("Failed to check ffmpeg status", e);
       }
     },
 
@@ -294,13 +299,12 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await get().checkFFmpegStatus();
         toast.success("FFmpeg downloaded successfully!");
       } catch (e: unknown) {
-        console.error("FFmpeg download failed", e);
         let msg = "Unknown error";
         if (typeof e === "string") msg = e;
         else if (e instanceof Error) msg = e.message;
 
         set({ ffmpegDownloadError: msg });
-        toast.error(`Download failed: ${msg}`);
+        logger.error(`Download failed: ${msg}`, e);
         throw e;
       } finally {
         set({ isFFmpegDownloading: false, ffmpegDownloadProgress: null });
@@ -318,7 +322,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         );
         set({ availableFFmpegVersions: versions });
       } catch (e) {
-        console.error("Failed to fetch ffmpeg versions:", e);
+        logger.error("Failed to fetch ffmpeg versions", e);
       }
     },
 
@@ -327,7 +331,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await invoke("manual_set_ffmpeg_path", { path });
         get().checkFFmpegStatus();
       } catch (e) {
-        console.error("Failed to set manual ffmpeg path:", e);
+        logger.error("Failed to set manual ffmpeg path", e);
         throw e;
       }
     },
@@ -491,7 +495,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         // We should attach the current store instance to the state or a closure variable.
         // Let's update the global `getStore` function implementation below.
       } catch (e) {
-        console.error("Failed to load settings:", e);
+        logger.error("Failed to load settings", e);
         set({ isLoading: false });
       }
     },

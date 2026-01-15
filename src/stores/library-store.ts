@@ -15,6 +15,7 @@ import {
   deletePlaylist,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface LibraryState {
   tracks: Track[];
@@ -86,9 +87,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         isInitialized: true,
       });
     } catch (error) {
-      console.error("Failed to fetch library:", error);
+      logger.error("Failed to fetch library", error);
       set({ isLoading: false });
-      toast.error("Failed to load library");
     }
   },
 
@@ -97,7 +97,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const tracks = await getTracks();
       set({ tracks });
     } catch (error) {
-      console.error("Failed to refresh tracks:", error);
+      logger.error("Failed to refresh tracks", error);
     }
   },
 
@@ -106,7 +106,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const albums = await getAlbums();
       set({ albums });
     } catch (error) {
-      console.error("Failed to refresh albums:", error);
+      logger.error("Failed to refresh albums", error);
     }
   },
 
@@ -115,7 +115,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const playlists = await getPlaylists();
       set({ playlists });
     } catch (error) {
-      console.error("Failed to refresh playlists:", error);
+      logger.error("Failed to refresh playlists", error);
     }
   },
 
@@ -124,7 +124,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const artists = await getArtists();
       set({ artists });
     } catch (error) {
-      console.error("Failed to refresh artists:", error);
+      logger.error("Failed to refresh artists", error);
     }
   },
 
@@ -135,8 +135,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       toast.success("Playlist created");
       return true;
     } catch (error) {
-      console.error("Failed to create playlist:", error);
-      toast.error("Failed to create playlist");
+      logger.error("Failed to create playlist", error);
       return false;
     }
   },
@@ -148,8 +147,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       toast.success("Playlist updated");
       return true;
     } catch (error) {
-      console.error("Failed to update playlist:", error);
-      toast.error("Failed to update playlist");
+      logger.error("Failed to update playlist", error);
       return false;
     }
   },
@@ -161,8 +159,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       toast.success("Playlist deleted");
       return true;
     } catch (error) {
-      console.error("Failed to delete playlist:", error);
-      toast.error("Failed to delete playlist");
+      logger.error("Failed to delete playlist", error);
       return false;
     }
   },
@@ -176,8 +173,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       // Let's do it to be safe and consistent.
       await get().refreshPlaylists();
     } catch (error) {
-      console.error("Failed to add to playlist:", error);
-      toast.error("Failed to add to playlist");
+      logger.error("Failed to add to playlist", error);
     }
   },
 
@@ -186,8 +182,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       await reorderPlaylist(id, newOrder);
       // No need to refresh global list for reordering tracks inside a playlist
     } catch (error) {
-      console.error("Failed to reorder playlist:", error);
-      toast.error("Failed to reorder playlist");
+      logger.error("Failed to reorder playlist", error);
       throw error;
     }
   },

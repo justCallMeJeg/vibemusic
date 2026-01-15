@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import Cropper from "react-easy-crop";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface Area {
   x: number;
@@ -103,7 +104,7 @@ export function ImageCropDialog({
         onOpenChange(false);
       }
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to crop image", e);
     } finally {
       setIsProcessing(false);
     }

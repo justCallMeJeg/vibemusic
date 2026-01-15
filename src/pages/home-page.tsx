@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
+import { logger } from "@/lib/logger";
 import MusicListItem from "@/components/shared/item/music-list";
 import AlbumCard from "@/components/shared/item/album-card";
 import PlaylistCard from "@/components/shared/item/playlist-card";
@@ -38,7 +39,7 @@ export default function HomePage() {
     try {
       await deletePlaylist(playlistToDelete.id);
     } catch (error) {
-      console.error("Failed to delete playlist:", error);
+      logger.error("Failed to delete playlist", error);
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);

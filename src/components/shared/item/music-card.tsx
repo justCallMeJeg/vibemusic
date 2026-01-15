@@ -12,6 +12,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "../../ui/context-menu";
+import { logger } from "@/lib/logger";
 
 import placeholderArt from "@/assets/placeholder-art.png";
 
@@ -57,7 +58,7 @@ function MusicCard({ track, context }: MusicCardProps) {
                 className="aspect-square h-40 rounded-lg object-cover bg-card"
                 src={artworkSrc}
                 onError={(e) => {
-                  console.error("Failed to load image:", artworkSrc);
+                  logger.error("Failed to load image", artworkSrc);
                   e.currentTarget.src = placeholderArt;
                 }}
                 alt="Album Art"

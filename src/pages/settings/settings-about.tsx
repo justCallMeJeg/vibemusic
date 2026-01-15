@@ -16,7 +16,7 @@ import {
 import { appLogDir } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { FileText } from "lucide-react";
-import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 // Helper to format bytes
 function formatBytes(bytes: number): string {
@@ -61,7 +61,7 @@ export function SettingsAbout() {
         await audioStore.stop();
       }
     } catch (e) {
-      console.error("Failed to stop audio:", e);
+      logger.error("Failed to stop audio", e);
     }
 
     // Install the update
@@ -244,10 +244,7 @@ export function SettingsAbout() {
                 const logDir = await appLogDir();
                 await openPath(logDir);
               } catch (error) {
-                console.error("Failed to open logs folder:", error);
-                toast.error("Failed to open logs folder", {
-                  description: "Please check if the logs directory exists.",
-                });
+                logger.error("Failed to open logs folder", error);
               }
             }}
           >

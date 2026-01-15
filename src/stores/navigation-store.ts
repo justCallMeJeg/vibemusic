@@ -6,7 +6,7 @@ import {
   PhysicalPosition,
 } from "@tauri-apps/api/window";
 import { useSettingsStore } from "./settings-store";
-import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 // --- Types ---
 // --- Types ---
@@ -88,7 +88,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
 
       if (state.isMiniPlayer) {
         // EXITING MINI PLAYER
-        console.log("Exiting Mini Player...");
+        logger.debug("Exiting Mini Player...");
         await appWindow.setAlwaysOnTop(false);
 
         // Restore min size constraints for main app
@@ -127,7 +127,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
         });
       } else {
         // ENTERING MINI PLAYER
-        console.log("Entering Mini Player...");
+        logger.debug("Entering Mini Player...");
         const factor = await appWindow.scaleFactor();
         const size = await appWindow.innerSize();
         const logicalSize = size.toLogical(factor);
@@ -192,10 +192,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
         set({ isMiniPlayer: true });
       }
     } catch (e) {
-      console.error("Failed to toggle mini player:", e);
-      toast.error("Failed to toggle Mini Player", {
-        description: e instanceof Error ? e.message : String(e),
-      });
+      logger.error("Failed to toggle Mini Player", e);
     }
   },
 }));

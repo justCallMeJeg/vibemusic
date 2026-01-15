@@ -22,6 +22,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 // import { listen } from "@tauri-apps/api/event"; // Removed unused import
 // import { DownloadProgress } from "@/stores/settings-store"; // Removed unused import
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,7 +118,7 @@ export function SettingsAudio() {
         }
       }
 
-      console.log("FFmpeg Check:", {
+      logger.debug("FFmpeg Check", {
         selected: selectedVersion,
         current: currentVerStr,
         comparison: cmp,
@@ -170,7 +171,7 @@ export function SettingsAudio() {
         });
       }
     } catch (err) {
-      console.error("Failed to open file dialog:", err);
+      logger.error("Failed to open file dialog", err);
       // toast.error("Failed to open file dialog"); // Optional: prevent toast spam if user just cancelled
     }
   };

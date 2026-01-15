@@ -22,6 +22,7 @@ import { join, appDataDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Loader2, Upload, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { useLibraryStore } from "@/stores/library-store";
 import { Textarea } from "../ui/textarea";
 import { ImageCropDialog } from "./image-crop-dialog";
@@ -74,8 +75,7 @@ export function PlaylistEditDialog({
         setIsCropDialogOpen(true);
       }
     } catch (e) {
-      console.error(e);
-      toast.error("Failed to select image");
+      logger.error("Failed to select image", e);
     }
   };
 
@@ -119,7 +119,7 @@ export function PlaylistEditDialog({
         finalArtworkPath = await join(appData, "covers", fileName);
       }
 
-      console.log("Saving playlist update:", {
+      logger.debug("Saving playlist update", {
         id: playlist.id,
         name,
         description,
@@ -142,8 +142,7 @@ export function PlaylistEditDialog({
       // Clean up object URLs
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     } catch (e) {
-      console.error(e);
-      toast.error("Failed to update playlist");
+      logger.error("Failed to update playlist", e);
     } finally {
       setIsSaving(false);
     }

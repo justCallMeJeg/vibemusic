@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 
 import { useLibraryStore } from "@/stores/library-store";
@@ -118,8 +119,7 @@ export default function PlaylistDetailPage() {
       setImageError(false);
       setTracks(tracksData);
     } catch (error) {
-      console.error("Failed to load playlist:", error);
-      toast.error("Failed to load playlist");
+      logger.error("Failed to load playlist", error);
     } finally {
       setIsLoading(false);
     }

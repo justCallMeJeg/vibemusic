@@ -16,6 +16,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Camera, Pencil } from "lucide-react";
 import { ImageCropDialog } from "@/components/dialogs/image-crop-dialog";
 import { useProfileStore, Profile } from "@/stores/profile-store";
+import { logger } from "@/lib/logger";
 
 const AVATAR_COLORS = [
   "bg-red-500",
@@ -125,7 +126,7 @@ export default function ProfileSelectionPage() {
         setCropDialogOpen(true);
       }
     } catch (e) {
-      console.error(e);
+      logger.error("Failed to select avatar", e);
     }
   };
 

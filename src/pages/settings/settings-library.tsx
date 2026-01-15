@@ -5,6 +5,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
 
@@ -42,8 +43,7 @@ export function SettingsLibrary() {
         });
       }
     } catch (error) {
-      console.error("Failed to add folder:", error);
-      toast.error("Failed to add folder");
+      logger.error("Failed to add folder", error);
     }
   };
 

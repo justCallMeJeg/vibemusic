@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
+import { logger } from "@/lib/logger";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { ChevronLeft, Play, Shuffle, Music, Clock } from "lucide-react";
@@ -39,7 +40,7 @@ export default function AlbumDetailPage() {
         );
         setTracks(sortedTracks);
       } catch (error) {
-        console.error("Failed to load album:", error);
+        logger.error("Failed to load album", error);
       } finally {
         setIsLoading(false);
       }

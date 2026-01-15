@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
 import { ScrollingText } from "@/components/shared/scrolling-text";
+import { logger } from "@/lib/logger";
 
 export function GlobalSearch() {
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
@@ -87,7 +88,7 @@ export function GlobalSearch() {
         .then((res) => {
           if (!cancelled) setResults(res);
         })
-        .catch((e) => console.error("Search failed:", e))
+        .catch((e) => logger.error("Search failed", e))
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
@@ -120,7 +121,7 @@ export function GlobalSearch() {
         play(queue[0], queue);
         setSearchOpen(false);
       } catch (e) {
-        console.error("Failed to play album", e);
+        logger.error("Failed to play album", e);
       }
     },
     [play, setSearchOpen]
@@ -137,7 +138,7 @@ export function GlobalSearch() {
         play(queue[0], queue);
         setSearchOpen(false);
       } catch (e) {
-        console.error("Failed to play playlist", e);
+        logger.error("Failed to play playlist", e);
       }
     },
     [play, setSearchOpen]

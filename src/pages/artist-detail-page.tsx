@@ -9,6 +9,7 @@ import {
   Album,
   Track,
 } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   ArrowLeft,
@@ -81,7 +82,7 @@ export default function ArtistDetailPage() {
         play(sorted[0], sorted);
       }
     } catch (err) {
-      console.error("Failed to play album", err);
+      logger.error("Failed to play album", err);
     }
   };
 

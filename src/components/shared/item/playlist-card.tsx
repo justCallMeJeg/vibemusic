@@ -12,6 +12,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { formatDistanceToNow } from "date-fns";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 
@@ -51,8 +52,7 @@ const PlaylistCard = memo(function PlaylistCard({
 
       play(queue[0], queue);
     } catch (e) {
-      console.error("Failed to play playlist:", e);
-      toast.error("Failed to play playlist");
+      logger.error("Failed to play playlist", e);
     }
   };
 
@@ -64,7 +64,7 @@ const PlaylistCard = memo(function PlaylistCard({
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing playlist next");
     } catch (e) {
-      console.error("Failed to play playlist next:", e);
+      logger.error("Failed to play playlist next", e);
       toast.error("Failed to play next");
     }
   };
@@ -77,8 +77,7 @@ const PlaylistCard = memo(function PlaylistCard({
       tracks.forEach((track) => addToQueue(track));
       toast.success("Added playlist to queue");
     } catch (e) {
-      console.error("Failed to add playlist to queue:", e);
-      toast.error("Failed to add to queue");
+      logger.error("Failed to add playlist to queue", e);
     }
   };
 
