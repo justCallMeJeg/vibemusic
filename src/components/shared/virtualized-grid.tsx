@@ -11,15 +11,13 @@ interface VirtualizedGridProps<T> {
   className?: string;
 }
 
-// Helper hook to calculate grid columns based on container width
-function useGridColumns(containerRef: React.RefObject<HTMLElement | null>) {
+// Helper hook to calculate grid columns based on window width (matching Tailwind breakpoints)
+function useGridColumns() {
   const [columns, setColumns] = useState(2);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
     const updateColumns = () => {
-      const width = containerRef.current?.offsetWidth || window.innerWidth;
+      const width = window.innerWidth;
       if (width >= 1280) setColumns(5); // xl
       else if (width >= 1024) setColumns(4); // lg
       else if (width >= 768) setColumns(3); // md
@@ -27,12 +25,10 @@ function useGridColumns(containerRef: React.RefObject<HTMLElement | null>) {
     };
 
     updateColumns();
+    window.addEventListener("resize", updateColumns);
 
-    const resizeObserver = new ResizeObserver(updateColumns);
-    resizeObserver.observe(containerRef.current);
-
-    return () => resizeObserver.disconnect();
-  }, [containerRef]);
+    return () => window.removeEventListener("resize", updateColumns);
+  }, []);
 
   return columns;
 }
@@ -51,7 +47,7 @@ export function VirtualizedGrid<T>({
   useScrollMask(24, parentRef);
 
   // Determine number of columns
-  const columns = useGridColumns(parentRef);
+  const columns = useGridColumns();
 
   // Calculate rows
   const rowCount = Math.ceil(items.length / columns);
