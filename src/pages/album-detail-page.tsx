@@ -4,11 +4,12 @@ import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ChevronLeft, Play, Shuffle, Music, Clock } from "lucide-react";
+import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import MusicListItem from "@/components/shared/item/music-list";
 import placeholderArt from "@/assets/placeholder-art.png";
+import { TrackListHeader } from "@/components/shared/track-list-header";
 
 import { VirtualizedList } from "@/components/shared/virtualized-list";
 
@@ -158,13 +159,7 @@ export default function AlbumDetailPage() {
             </div>
 
             {/* Header Row */}
-            <div className="flex items-center gap-2 px-2 py-2 text-muted-foreground text-xs uppercase tracking-wider border-b border-border mb-2 font-medium">
-              <div className="w-12 text-center">#</div>
-              <div className="flex-1 pl-4">Title</div>
-              <div className="w-16 text-right pr-4">
-                <Clock size={14} />
-              </div>
-            </div>
+            <TrackListHeader />
           </div>
         }
         renderItem={(track, index) => (
