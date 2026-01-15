@@ -490,22 +490,36 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           const track = state.currentTrack;
 
           if (track) {
-            // Try to auto-delete first
-            try {
-              await invoke("delete_track", { trackId: track.id });
-              useLibraryStore.getState().fetchLibrary();
+            const errorMsg = event.payload.toLowerCase();
+            const isFileMissing =
+              errorMsg.includes("no such file") ||
+              errorMsg.includes("file not found") ||
+              errorMsg.includes("cannot open") ||
+              errorMsg.includes("failed to probe");
 
-              toast("File not found", {
-                description: `Removed "${track.title}" from library.`,
-              });
-            } catch (e) {
-              logger.error("Failed to self-heal library", e);
-              toast.error(`File missing: ${track.title}`, {
-                description: "Run 'Prune Library' in settings to clean up.",
+            if (isFileMissing) {
+              // File is genuinely missing - safe to auto-delete
+              try {
+                await invoke("delete_track", { trackId: track.id });
+                useLibraryStore.getState().fetchLibrary();
+
+                toast("File not found", {
+                  description: `Removed "${track.title}" from library.`,
+                });
+              } catch (e) {
+                logger.error("Failed to self-heal library", e);
+                toast.error(`File missing: ${track.title}`, {
+                  description: "Run 'Prune Library' in settings to clean up.",
+                });
+              }
+            } else {
+              // Other error (decoding issue, etc.) - don't delete, just notify
+              toast.error(`Playback error: ${track.title}`, {
+                description: "Skipping to next track.",
               });
             }
 
-            // Stop or Next?
+            // Skip to next track
             get().next();
           }
         }

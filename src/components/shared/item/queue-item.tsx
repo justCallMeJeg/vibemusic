@@ -46,17 +46,14 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
     if (isActive) {
       if (status === "playing") {
         pause();
-      } else {
+      } else if (status === "paused") {
         resume();
+      } else {
+        // Status is "stopped" or "loading" - need to re-play the track
+        play(track, queue);
       }
     } else {
       // Play this track from the current queue
-      // We need to find the queue index, or allow play to take an index?
-      // Actually play(track) will reset queue if we don't pass one.
-      // But we just want to jump to it.
-      // audioStore.play implementation:
-      // if newQueue passed, use it. else queue=[track].
-      // We should pass the *current* queue to preserve it!
       play(track, queue);
     }
   };
