@@ -43,8 +43,11 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
   const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
+  const [showProfileSwitchWarning, setShowProfileSwitchWarning] =
+    useState(false);
   const [isFFmpegReady, setIsFFmpegReady] = useState(false);
   const hasCheckedForUpdate = useRef(false);
+  const stop = useAudioStore((s) => s.stop);
 
   // Individual selectors for better re-render performance
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
@@ -91,6 +94,21 @@ export default function App() {
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
+
+  const handleProfileClick = () => {
+    // Check if playback is active
+    if (currentTrack && (status === "playing" || status === "paused")) {
+      setShowProfileSwitchWarning(true);
+    } else {
+      selectProfile(null);
+    }
+  };
+
+  const confirmProfileSwitch = async () => {
+    await stop();
+    setShowProfileSwitchWarning(false);
+    selectProfile(null);
+  };
 
   // Load profiles on mount
   useEffect(() => {
@@ -352,7 +370,7 @@ export default function App() {
             <div className="mt-2 pt-6 flex flex-col gap-6 w-16 shrink-0 h-full pb-32">
               <div
                 id="user_profile"
-                onClick={() => selectProfile(null)} // Click to switch profile
+                onClick={handleProfileClick}
                 className={`aspect-square w-full shrink-0 rounded-lg overflow-hidden ${
                   !activeProfile?.avatarPath &&
                   (activeProfile?.color || "bg-gray-600")
@@ -413,6 +431,14 @@ export default function App() {
       )}
 
       {quitDialog}
+      <ConfirmDialog
+        open={showProfileSwitchWarning}
+        onOpenChange={setShowProfileSwitchWarning}
+        title="Stop Playback?"
+        description="Switching profiles will stop the current playback. Do you want to continue?"
+        confirmText="Switch Profile"
+        onConfirm={confirmProfileSwitch}
+      />
       <Toaster />
     </main>
   );

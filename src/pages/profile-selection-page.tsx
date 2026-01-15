@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useAudioStore } from "@/stores/audio-store";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileManageDialog } from "@/components/dialogs/profile-manage-dialog";
@@ -25,7 +26,13 @@ export default function ProfileSelectionPage() {
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null); // For playback warning
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Get audio state to check if playback is active
+  const currentTrack = useAudioStore((s) => s.currentTrack);
+  const status = useAudioStore((s) => s.status);
+  const stop = useAudioStore((s) => s.stop);
 
   // Use scroll mask for the profile list
   useScrollMask(32, scrollRef);
@@ -36,8 +43,26 @@ export default function ProfileSelectionPage() {
 
   const handleSelectProfile = async (id: string) => {
     if (isManageMode) return;
+
+    // Check if playback is active
+    const isPlaying =
+      currentTrack && (status === "playing" || status === "paused");
+    if (isPlaying) {
+      setPendingProfileId(id);
+      return;
+    }
+
     await selectProfile(id);
     await loadSettings(id);
+  };
+
+  const confirmProfileSwitch = async () => {
+    if (pendingProfileId) {
+      await stop();
+      await selectProfile(pendingProfileId);
+      await loadSettings(pendingProfileId);
+      setPendingProfileId(null);
+    }
   };
 
   const openCreateDialog = () => {
@@ -187,6 +212,15 @@ export default function ProfileSelectionPage() {
         confirmText="Delete Profile"
         variant="destructive"
         onConfirm={confirmDelete}
+      />
+
+      <ConfirmDialog
+        open={!!pendingProfileId}
+        onOpenChange={(open) => !open && setPendingProfileId(null)}
+        title="Stop Playback?"
+        description="Switching profiles will stop the current playback. Do you want to continue?"
+        confirmText="Switch Profile"
+        onConfirm={confirmProfileSwitch}
       />
     </div>
   );
