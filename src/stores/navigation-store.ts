@@ -187,20 +187,34 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
         await appWindow.setMaxSize(new LogicalSize(width, height));
         await appWindow.setSize(new LogicalSize(width, height));
 
-        // Position at bottom right
+        // Position based on user preference
         const monitor = await currentMonitor();
         if (monitor) {
-          const padding = 20 * factor; // 20px padding from right
-          const taskbarPadding = 60 * factor; // ~60px estimated taskbar/bottom spacing
+          const padding = 20 * factor; // 20px padding from edges
+          const taskbarPadding = 60 * factor; // ~60px estimated taskbar spacing
           const windowWidthPhysical = width * factor;
           const windowHeightPhysical = height * factor;
 
-          const x = Math.round(
-            monitor.size.width - windowWidthPhysical - padding
-          );
-          const y = Math.round(
-            monitor.size.height - windowHeightPhysical - taskbarPadding
-          );
+          let x: number;
+          let y: number;
+
+          const position = settings.miniPlayerPosition || "bottom-right";
+
+          // Calculate X position
+          if (position.includes("right")) {
+            x = Math.round(monitor.size.width - windowWidthPhysical - padding);
+          } else {
+            x = Math.round(padding);
+          }
+
+          // Calculate Y position
+          if (position.includes("bottom")) {
+            y = Math.round(
+              monitor.size.height - windowHeightPhysical - taskbarPadding
+            );
+          } else {
+            y = Math.round(padding);
+          }
 
           await appWindow.setPosition(new PhysicalPosition(x, y));
         }

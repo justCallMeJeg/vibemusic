@@ -87,6 +87,7 @@ interface SettingsState {
 
   // Mini Player
   miniPlayerStyle: "square" | "wide" | "bar";
+  miniPlayerPosition: "bottom-right" | "bottom-left" | "top-right" | "top-left";
 }
 
 interface SettingsActions {
@@ -127,6 +128,9 @@ interface SettingsActions {
   setSongsSort: (key: string, direction: string) => void;
 
   setMiniPlayerStyle: (style: "square" | "wide" | "bar") => void;
+  setMiniPlayerPosition: (
+    position: "bottom-right" | "bottom-left" | "top-right" | "top-left"
+  ) => void;
 
   loadSettings: (profileId?: string) => Promise<void>;
 }
@@ -157,6 +161,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     scanOnStartup: false,
     autoplay: false,
     miniPlayerStyle: "square",
+    miniPlayerPosition: "bottom-right",
 
     // Sidebar Defaults
     sidebarItems: [
@@ -393,6 +398,13 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setMiniPlayerPosition: async (position) => {
+      set({ miniPlayerPosition: position });
+      const store = await getStore();
+      await store.set("miniPlayerPosition", position);
+      await store.save();
+    },
+
     loadSettings: async (profileId?: string) => {
       // If no profileId provided, verify if we already have one loaded or just stop?
       // Actually, we should REQUIRE profileId now, or use a default.
@@ -445,6 +457,9 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const miniPlayerStyle = await getVal<"square" | "wide" | "bar">(
           "miniPlayerStyle"
         );
+        const miniPlayerPosition = await getVal<
+          "bottom-right" | "bottom-left" | "top-right" | "top-left"
+        >("miniPlayerPosition");
 
         // Update Store State
         const themeValue = theme ?? "system";
@@ -473,6 +488,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           songsSortKey: songsSortKey ?? "date_added",
           songsSortDirection: songsSortDirection ?? "desc",
           miniPlayerStyle: miniPlayerStyle ?? "square",
+          miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
           isLoading: false,
         });
 

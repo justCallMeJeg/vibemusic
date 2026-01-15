@@ -81,40 +81,93 @@ export function SettingsAppearance() {
             onCheckedChange={setDynamicGradient}
           />
         </div>
-        {/* Mini Player Layout */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="space-y-1">
-            <div className="font-medium">Mini Player Layout</div>
-            <div className="text-sm text-gray-400">
-              Choose the layout for the mini player window
+        {/* Mini Player Settings */}
+        <div className="flex flex-col gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <Layout className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-medium">Mini Player</h3>
+          </div>
+
+          <div className="space-y-4">
+            {/* Layout */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Layout</div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-32 justify-between">
+                    <span className="capitalize">
+                      {useSettingsStore().miniPlayerStyle}
+                    </span>
+                    <ChevronDown className="w-4 h-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuRadioGroup
+                    value={useSettingsStore().miniPlayerStyle}
+                    onValueChange={(v) =>
+                      useSettingsStore
+                        .getState()
+                        .setMiniPlayerStyle(v as "square" | "wide" | "bar")
+                    }
+                  >
+                    <DropdownMenuRadioItem value="square">
+                      Square
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="wide">
+                      Wide
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="bar">
+                      Bar
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Position */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Position</div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-32 justify-between">
+                    <span className="capitalize">
+                      {useSettingsStore().miniPlayerPosition.replace("-", " ")}
+                    </span>
+                    <ChevronDown className="w-4 h-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuRadioGroup
+                    value={useSettingsStore().miniPlayerPosition}
+                    onValueChange={(v) =>
+                      useSettingsStore
+                        .getState()
+                        .setMiniPlayerPosition(
+                          v as
+                            | "bottom-right"
+                            | "bottom-left"
+                            | "top-right"
+                            | "top-left"
+                        )
+                    }
+                  >
+                    <DropdownMenuRadioItem value="bottom-right">
+                      Bottom Right
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="bottom-left">
+                      Bottom Left
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="top-right">
+                      Top Right
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="top-left">
+                      Top Left
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-32 justify-between">
-                <span className="capitalize">
-                  {useSettingsStore().miniPlayerStyle}
-                </span>
-                <ChevronDown className="w-4 h-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup
-                value={useSettingsStore().miniPlayerStyle}
-                onValueChange={(v) =>
-                  useSettingsStore
-                    .getState()
-                    .setMiniPlayerStyle(v as "square" | "wide" | "bar")
-                }
-              >
-                <DropdownMenuRadioItem value="square">
-                  Square
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="wide">Wide</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="bar">Bar</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Sidebar Layout */}
