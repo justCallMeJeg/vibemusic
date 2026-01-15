@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ArrowUpDown, Search, Filter } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useLibraryStore } from "@/stores/library-store";
+import { useIsPlayerVisible } from "@/stores/audio-store";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
@@ -97,6 +98,10 @@ export default function SongsPage() {
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5, // Render 5 extra items above/below viewport
   });
+
+  // Dynamic padding based on player visibility
+  const isPlayerVisible = useIsPlayerVisible();
+  const bottomPadding = isPlayerVisible ? 156 : 24;
 
   return (
     <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
@@ -194,9 +199,10 @@ export default function SongsPage() {
         ) : (
           <div
             style={{
-              height: `${virtualizer.getTotalSize() + 168}px`, // +168px padding for controller
+              height: `${virtualizer.getTotalSize() + bottomPadding}px`, // Dynamic padding for controller
               width: "100%",
               position: "relative",
+              transition: "height 300ms ease-in-out",
             }}
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {

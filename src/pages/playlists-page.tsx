@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
+import { useIsPlayerVisible } from "@/stores/audio-store";
 
 export default function PlaylistsPage() {
   // Use global store
@@ -32,6 +33,9 @@ export default function PlaylistsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const scrollRef = useScrollMask();
+
+  // Dynamic padding based on player visibility
+  const isPlayerVisible = useIsPlayerVisible();
 
   const confirmDelete = async () => {
     if (!playlistToDelete) return;
@@ -103,7 +107,11 @@ export default function PlaylistsPage() {
             description="Create your first playlist to organize your music."
           />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-42">
+          <div
+            className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 ${
+              isPlayerVisible ? "pb-39" : "pb-8"
+            }`}
+          >
             {playlists.map((playlist) => (
               <PlaylistCard
                 key={playlist.id}

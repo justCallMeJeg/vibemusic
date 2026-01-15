@@ -1,6 +1,7 @@
 import { useRef, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { useIsPlayerVisible } from "@/stores/audio-store";
 import {
   DndContext,
   closestCenter,
@@ -23,7 +24,7 @@ interface VirtualizedSortableListProps<T> {
   getItemId: (item: T) => string | number;
   itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string;
+  paddingBottom?: string; // Override dynamic padding if provided
   className?: string;
   header?: React.ReactNode;
 }
@@ -35,11 +36,19 @@ export function VirtualizedSortableList<T>({
   getItemId,
   itemHeight = 56,
   emptyState,
-  paddingBottom = "168px",
+  paddingBottom,
   className = "",
   header,
 }: VirtualizedSortableListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic padding based on player visibility
+  const isPlayerVisible = useIsPlayerVisible();
+  const bottomPadding = paddingBottom
+    ? parseInt(paddingBottom, 10)
+    : isPlayerVisible
+    ? 156
+    : 24;
 
   // Apply visual scroll mask
   useScrollMask(24, parentRef);
@@ -107,10 +116,10 @@ export function VirtualizedSortableList<T>({
             >
               <div
                 style={{
-                  height: `${virtualizer.getTotalSize()}px`,
+                  height: `${virtualizer.getTotalSize() + bottomPadding}px`,
                   width: "100%",
                   position: "relative",
-                  paddingBottom,
+                  transition: "height 300ms ease-in-out",
                 }}
               >
                 {virtualItems.map((virtualRow) => {

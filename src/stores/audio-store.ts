@@ -541,6 +541,10 @@ export const useShuffle = () => useAudioStore((s) => s.shuffle);
 export const usePosition = () => useAudioStore((s) => s.position);
 export const useDuration = () => useAudioStore((s) => s.duration);
 
+// Derived selector for player visibility (used for dynamic bottom padding)
+export const useIsPlayerVisible = () =>
+  useAudioStore((s) => !!s.currentTrack && s.status !== "stopped");
+
 // Actions (static getters - never cause re-renders)
 export const getPlayerActions = () => {
   const s = useAudioStore.getState();

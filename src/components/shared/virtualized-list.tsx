@@ -1,13 +1,14 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { useIsPlayerVisible } from "@/stores/audio-store";
 
 interface VirtualizedListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
   itemHeight?: number; // Approximate height of an item
   emptyState?: React.ReactNode;
-  paddingBottom?: string;
+  paddingBottom?: string; // Override dynamic padding if provided
   className?: string;
   header?: React.ReactNode;
 }
@@ -17,11 +18,19 @@ export function VirtualizedList<T>({
   renderItem,
   itemHeight = 56,
   emptyState,
-  paddingBottom = "168px",
+  paddingBottom,
   className = "",
   header,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic padding based on player visibility
+  const isPlayerVisible = useIsPlayerVisible();
+  const bottomPadding = paddingBottom
+    ? parseInt(paddingBottom, 10)
+    : isPlayerVisible
+    ? 156
+    : 24;
 
   // Apply visual scroll mask
   useScrollMask(24, parentRef);
@@ -58,10 +67,10 @@ export function VirtualizedList<T>({
         ) : (
           <div
             style={{
-              height: `${virtualizer.getTotalSize()}px`,
+              height: `${virtualizer.getTotalSize() + bottomPadding}px`,
               width: "100%",
               position: "relative",
-              paddingBottom,
+              transition: "height 300ms ease-in-out",
             }}
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {

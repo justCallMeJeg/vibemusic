@@ -14,6 +14,7 @@ import { Playlist } from "@/lib/api";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { useIsPlayerVisible } from "@/stores/audio-store";
 
 export default function HomePage() {
   const albums = useLibraryStore((s) => s.albums);
@@ -54,6 +55,9 @@ export default function HomePage() {
 
   const scrollRef = useScrollMask();
 
+  // Dynamic padding based on player visibility
+  const isPlayerVisible = useIsPlayerVisible();
+
   // Derived state for display
   const recentTracks = tracks.slice(0, 20);
   const displayAlbums = albums.slice(0, 10);
@@ -80,7 +84,8 @@ export default function HomePage() {
         ref={scrollRef}
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
-          (displayAlbums.length > 0 || displayPlaylists.length > 0) && "pb-42",
+          (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
+            (isPlayerVisible ? "pb-39" : "pb-8"),
           isEmpty && "flex flex-col"
         )}
       >
