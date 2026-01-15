@@ -110,15 +110,12 @@ export default function ArtistDetailPage() {
       <div className="mt-8 flex items-center gap-2 mb-4 px-8">
         <Button
           variant="ghost"
-          size="icon"
           onClick={goBack}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground gap-2 pl-2"
         >
           <ArrowLeft size={24} />
+          <span className="text-sm font-medium">Back to Artists</span>
         </Button>
-        <span className="text-sm font-medium text-muted-foreground">
-          Back to Artists
-        </span>
       </div>
 
       {/* Artist Info Header */}

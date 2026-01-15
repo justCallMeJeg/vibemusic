@@ -102,15 +102,12 @@ export default function AlbumDetailPage() {
             <div className="mt-8 flex items-center gap-2 mb-4">
               <Button
                 variant="ghost"
-                size="icon"
                 onClick={goBack}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground gap-2 pl-2"
               >
                 <ChevronLeft size={24} />
+                <span className="text-sm font-medium">Back to Albums</span>
               </Button>
-              <span className="text-sm font-medium text-muted-foreground">
-                Back to Albums
-              </span>
             </div>
 
             {/* Album info header */}
