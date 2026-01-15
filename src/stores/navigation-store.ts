@@ -9,7 +9,7 @@ import { useSettingsStore } from "./settings-store";
 import { logger } from "@/lib/logger";
 
 // --- Types ---
-// --- Types ---
+
 export type Page =
   | "home"
   | "songs"
@@ -49,6 +49,9 @@ interface NavigationActions {
 type NavigationStore = NavigationState & NavigationActions;
 
 // --- Store Implementation ---
+/**
+ * Store for managing application navigation and UI state (pages, detail views, mini player).
+ */
 export const useNavigationStore = create<NavigationStore>((set) => ({
   // Initial State
   currentPage: "home",

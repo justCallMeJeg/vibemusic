@@ -41,38 +41,81 @@ export interface Artist {
   artwork_path: string | null;
 }
 
+/**
+ * Retrieves all tracks from the library.
+ * @returns {Promise<Track[]>} List of all tracks.
+ */
 export async function getTracks(): Promise<Track[]> {
   return await invoke("get_all_tracks");
 }
 
+/**
+ * Retrieves all albums from the library.
+ * @returns {Promise<Album[]>} List of all albums.
+ */
 export async function getAlbums(): Promise<Album[]> {
   return await invoke("get_all_albums");
 }
 
+/**
+ * Retrieves all artists from the library.
+ * @returns {Promise<Artist[]>} List of all artists.
+ */
 export async function getArtists(): Promise<Artist[]> {
   return await invoke("get_all_artists");
 }
 
+/**
+ * Retrieves a specific artist by ID.
+ * @param {number} id - The artist ID.
+ * @returns {Promise<Artist | null>} The artist object or null if not found.
+ */
 export async function getArtistById(id: number): Promise<Artist | null> {
   return await invoke("get_artist_by_id", { id });
 }
 
+/**
+ * Retrieves all albums by a specific artist.
+ * @param {number} id - The artist ID.
+ * @returns {Promise<Album[]>} List of albums by the artist.
+ */
 export async function getArtistAlbums(id: number): Promise<Album[]> {
   return await invoke("get_artist_albums", { id });
 }
 
+/**
+ * Retrieves all tracks by a specific artist.
+ * @param {number} id - The artist ID.
+ * @returns {Promise<Track[]>} List of tracks by the artist.
+ */
 export async function getArtistTracks(id: number): Promise<Track[]> {
   return await invoke("get_artist_tracks", { id });
 }
 
+/**
+ * Retrieves a specific album by ID.
+ * @param {number} id - The album ID.
+ * @returns {Promise<Album | null>} The album object or null if not found.
+ */
 export async function getAlbumById(id: number): Promise<Album | null> {
   return await invoke("get_album_by_id", { id });
 }
 
+/**
+ * Retrieves all tracks in a specific album.
+ * @param {number} albumId - The album ID.
+ * @returns {Promise<Track[]>} List of tracks in the album.
+ */
 export async function getAlbumTracks(albumId: number): Promise<Track[]> {
   return await invoke("get_album_tracks", { albumId });
 }
 
+/**
+ * Creates a new playlist.
+ * @param {string} name - The name of the playlist.
+ * @param {string} [description] - Optional description of the playlist.
+ * @returns {Promise<Playlist>} The created playlist object.
+ */
 export async function createPlaylist(
   name: string,
   description?: string
@@ -80,6 +123,14 @@ export async function createPlaylist(
   return await invoke("create_playlist", { name, description });
 }
 
+/**
+ * Updates an existing playlist.
+ * @param {number} id - The playlist ID.
+ * @param {string} name - The new name.
+ * @param {string} [description] - The new description.
+ * @param {string} [artwork_path] - The new artwork path.
+ * @returns {Promise<void>}
+ */
 export async function updatePlaylist(
   id: number,
   name: string,
@@ -94,6 +145,11 @@ export async function updatePlaylist(
   });
 }
 
+/**
+ * Deletes a playlist by ID.
+ * @param {number} id - The playlist ID.
+ * @returns {Promise<void>}
+ */
 export async function deletePlaylist(id: number): Promise<void> {
   return await invoke("delete_playlist", { id });
 }

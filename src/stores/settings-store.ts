@@ -4,7 +4,6 @@ import { toast } from "sonner"; // Added import
 import { logger } from "@/lib/logger";
 
 // Lazy store initialization
-// const storePromise: Promise<Store> | null = null;
 import { invoke } from "@tauri-apps/api/core";
 import { useLibraryStore } from "./library-store";
 
@@ -132,6 +131,10 @@ interface SettingsActions {
   loadSettings: (profileId?: string) => Promise<void>;
 }
 
+/**
+ * Store for managing application settings (theme, library paths, audio config).
+ * Settings are persisted per-profile via the Tauri store plugin.
+ */
 export const useSettingsStore = create<SettingsState & SettingsActions>(
   (set, get) => ({
     theme: "system", // Default to system preference

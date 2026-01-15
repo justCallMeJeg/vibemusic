@@ -43,6 +43,9 @@ const getStore = async () => {
   return storePromise;
 };
 
+/**
+ * Store for managing user profiles (settings, avatars, active profile).
+ */
 export const useProfileStore = create<ProfileState>((set, get) => ({
   profiles: [],
   activeProfileId: null,

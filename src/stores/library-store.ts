@@ -50,6 +50,9 @@ interface LibraryState {
   resetLibrary: (isLoading?: boolean) => void;
 }
 
+/**
+ * Store for managing the music library (tracks, albums, playlists, artists).
+ */
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   tracks: [],
   albums: [],

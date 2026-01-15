@@ -1,5 +1,11 @@
 import { useEffect, useRef } from "react";
 
+/**
+ * Applies a CSS mask to an element based on its scroll position to create a fade effect at the top.
+ * @param {number} threshold - The scroll threshold in pixels for the fade effect.
+ * @param {React.RefObject<HTMLDivElement | null>} [externalRef] - Optional external ref.
+ * @returns {React.RefObject<HTMLDivElement>} The ref to attach to the scrollable element.
+ */
 export function useScrollMask(
   threshold = 24,
   externalRef?: React.RefObject<HTMLDivElement | null>

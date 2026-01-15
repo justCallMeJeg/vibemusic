@@ -10,7 +10,6 @@ import MainContent from "./components/main-content";
 import { GlobalSearch } from "./components/dialogs/global-search";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-// import type { Track } from "@/lib/api";
 
 import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";

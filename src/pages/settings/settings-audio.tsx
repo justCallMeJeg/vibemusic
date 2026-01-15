@@ -19,8 +19,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-// import { listen } from "@tauri-apps/api/event"; // Removed unused import
-// import { DownloadProgress } from "@/stores/settings-store"; // Removed unused import
+
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import {

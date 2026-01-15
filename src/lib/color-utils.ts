@@ -1,3 +1,8 @@
+/**
+ * Extracts the dominant color from an image URL by drawing it to a 1x1 canvas.
+ * @param {string} imageUrl - The URL of the image.
+ * @returns {Promise<string>} The dominant color as an RGB string or hex fallback.
+ */
 export async function getDominantColor(imageUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();

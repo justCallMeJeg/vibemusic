@@ -84,6 +84,10 @@ interface AudioActions {
 type AudioStore = AudioState & AudioActions;
 
 // --- Store Implementation ---
+
+/**
+ * Store for managing audio playback, queue, and player state.
+ */
 export const useAudioStore = create<AudioStore>((set, get) => {
   // Internal helper for playing a track
   const playInternal = async (track: Track) => {
