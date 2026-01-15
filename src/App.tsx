@@ -74,8 +74,10 @@ export default function App() {
   // Library Store Initialization
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
   useEffect(() => {
-    fetchLibrary();
-  }, [fetchLibrary]);
+    if (!isSettingsLoading) {
+      fetchLibrary();
+    }
+  }, [fetchLibrary, isSettingsLoading]);
 
   const {
     activeProfileId,

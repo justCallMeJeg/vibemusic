@@ -79,15 +79,24 @@ export function GlobalSearch() {
   useEffect(() => {
     if (!isSearchOpen) return;
 
+    let cancelled = false;
+
     const handler = setTimeout(() => {
       setLoading(true);
       search(searchQuery)
-        .then(setResults)
+        .then((res) => {
+          if (!cancelled) setResults(res);
+        })
         .catch((e) => console.error("Search failed:", e))
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }, 300);
 
-    return () => clearTimeout(handler);
+    return () => {
+      cancelled = true;
+      clearTimeout(handler);
+    };
   }, [searchQuery, isSearchOpen]);
 
   // Actions
