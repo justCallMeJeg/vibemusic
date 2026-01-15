@@ -32,6 +32,7 @@ interface NavigationState {
   isMiniPlayer: boolean;
   previousWindowSize: { width: number; height: number } | null;
   previousWindowPosition: { x: number; y: number } | null;
+  wasMaximized: boolean;
 }
 
 interface NavigationActions {
@@ -60,6 +61,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
   isMiniPlayer: false,
   previousWindowSize: null,
   previousWindowPosition: null,
+  wasMaximized: false,
 
   // Actions
   setPage: (page) => set({ currentPage: page, detailView: null }),
@@ -98,39 +100,49 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
         await appWindow.setMinSize(new LogicalSize(1280, 720));
         await appWindow.setMaxSize(null); // Unset max size
 
-        // Restore Size
-        if (state.previousWindowSize) {
-          await appWindow.setSize(
-            new LogicalSize(
-              state.previousWindowSize.width,
-              state.previousWindowSize.height
-            )
-          );
+        // If window was maximized before, restore to maximized state
+        if (state.wasMaximized) {
+          await appWindow.maximize();
         } else {
-          await appWindow.setSize(new LogicalSize(1280, 720));
-        }
+          // Restore Size
+          if (state.previousWindowSize) {
+            await appWindow.setSize(
+              new LogicalSize(
+                state.previousWindowSize.width,
+                state.previousWindowSize.height
+              )
+            );
+          } else {
+            await appWindow.setSize(new LogicalSize(1280, 720));
+          }
 
-        // Restore Position
-        if (state.previousWindowPosition) {
-          await appWindow.setPosition(
-            new PhysicalPosition(
-              state.previousWindowPosition.x,
-              state.previousWindowPosition.y
-            )
-          );
-        } else {
-          // Default to top-left if no previous position
-          await appWindow.setPosition(new PhysicalPosition(50, 50));
+          // Restore Position
+          if (state.previousWindowPosition) {
+            await appWindow.setPosition(
+              new PhysicalPosition(
+                state.previousWindowPosition.x,
+                state.previousWindowPosition.y
+              )
+            );
+          } else {
+            // Default to top-left if no previous position
+            await appWindow.setPosition(new PhysicalPosition(50, 50));
+          }
         }
 
         set({
           isMiniPlayer: false,
           previousWindowSize: null,
           previousWindowPosition: null,
+          wasMaximized: false,
         });
       } else {
         // ENTERING MINI PLAYER
         logger.debug("Entering Mini Player...");
+
+        // Check if currently maximized before switching
+        const isCurrentlyMaximized = await appWindow.isMaximized();
+
         const factor = await appWindow.scaleFactor();
         const size = await appWindow.innerSize();
         const logicalSize = size.toLogical(factor);
@@ -145,6 +157,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
             x: position.x,
             y: position.y,
           },
+          wasMaximized: isCurrentlyMaximized,
         });
 
         await appWindow.setAlwaysOnTop(true);
