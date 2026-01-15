@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { debounce } from "@/lib/utils";
 
 interface VirtualizedGridProps<T> {
   items: T[];
@@ -13,22 +14,32 @@ interface VirtualizedGridProps<T> {
 
 // Helper hook to calculate grid columns based on window width (matching Tailwind breakpoints)
 function useGridColumns() {
-  const [columns, setColumns] = useState(2);
+  const [columns, setColumns] = useState(() => {
+    // Initialize with correct value to avoid flash
+    const width = typeof window !== "undefined" ? window.innerWidth : 1024;
+    if (width >= 1280) return 5;
+    if (width >= 1024) return 4;
+    if (width >= 768) return 3;
+    return 2;
+  });
+
+  // Create debounced handler with useMemo to maintain stable reference
+  const debouncedUpdateColumns = useMemo(
+    () =>
+      debounce(() => {
+        const width = window.innerWidth;
+        if (width >= 1280) setColumns(5); // xl
+        else if (width >= 1024) setColumns(4); // lg
+        else if (width >= 768) setColumns(3); // md
+        else setColumns(2); // default/sm
+      }, 150),
+    []
+  );
 
   useEffect(() => {
-    const updateColumns = () => {
-      const width = window.innerWidth;
-      if (width >= 1280) setColumns(5); // xl
-      else if (width >= 1024) setColumns(4); // lg
-      else if (width >= 768) setColumns(3); // md
-      else setColumns(2); // default/sm
-    };
-
-    updateColumns();
-    window.addEventListener("resize", updateColumns);
-
-    return () => window.removeEventListener("resize", updateColumns);
-  }, []);
+    window.addEventListener("resize", debouncedUpdateColumns);
+    return () => window.removeEventListener("resize", debouncedUpdateColumns);
+  }, [debouncedUpdateColumns]);
 
   return columns;
 }

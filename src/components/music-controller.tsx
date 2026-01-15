@@ -32,7 +32,7 @@ import {
 } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/logger";
 
 import placeholderArt from "@/assets/placeholder-art.png";
@@ -80,7 +80,7 @@ export default function MusicControler() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       pause();
     } else {
@@ -88,30 +88,42 @@ export default function MusicControler() {
         resume();
       }
     }
-  };
+  }, [isPlaying, pause, currentTrack, resume]);
 
-  const handleArtistClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentTrack?.artist_id) {
-      openArtistDetail(currentTrack.artist_id);
-    }
-  };
+  const handleArtistClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (currentTrack?.artist_id) {
+        openArtistDetail(currentTrack.artist_id);
+      }
+    },
+    [currentTrack?.artist_id, openArtistDetail]
+  );
 
-  const handleSeekChange = (value: number[]) => {
-    setIsDragging(true);
-    setDraggingSlider(true);
-    setSliderValue(value);
-  };
+  const handleSeekChange = useCallback(
+    (value: number[]) => {
+      setIsDragging(true);
+      setDraggingSlider(true);
+      setSliderValue(value);
+    },
+    [setDraggingSlider]
+  );
 
-  const handleSeekCommit = (value: number[]) => {
-    seek(value[0]);
-    setIsDragging(false);
-    setDraggingSlider(false);
-  };
+  const handleSeekCommit = useCallback(
+    (value: number[]) => {
+      seek(value[0]);
+      setIsDragging(false);
+      setDraggingSlider(false);
+    },
+    [seek, setDraggingSlider]
+  );
 
-  const handleVolume = (value: number[]) => {
-    setVolume(value[0]);
-  };
+  const handleVolume = useCallback(
+    (value: number[]) => {
+      setVolume(value[0]);
+    },
+    [setVolume]
+  );
 
   return (
     <div className="bg-popover/75 backdrop-blur-md rounded-lg outline outline-border w-full ml-auto h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4 transition-all duration-500 pointer-events-auto">

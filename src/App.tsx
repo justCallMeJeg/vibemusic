@@ -1,7 +1,7 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
 import MusicController from "./components/music-controller";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAudioStore } from "./stores/audio-store";
 
 import NavigationMenu from "./components/navigation-menu";
@@ -46,16 +46,19 @@ export default function App() {
   const [isFFmpegReady, setIsFFmpegReady] = useState(false);
   const hasCheckedForUpdate = useRef(false);
 
-  const {
-    resolvedTheme,
-    dynamicGradient,
-    loadSettings,
-    isLoading: isSettingsLoading,
-    addLibraryPath,
-    libraryPaths,
-    initSystemThemeListener,
-    updateFFmpegDownloadProgress,
-  } = useSettingsStore();
+  // Individual selectors for better re-render performance
+  const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
+  const dynamicGradient = useSettingsStore((s) => s.dynamicGradient);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const isSettingsLoading = useSettingsStore((s) => s.isLoading);
+  const addLibraryPath = useSettingsStore((s) => s.addLibraryPath);
+  const libraryPaths = useSettingsStore((s) => s.libraryPaths);
+  const initSystemThemeListener = useSettingsStore(
+    (s) => s.initSystemThemeListener
+  );
+  const updateFFmpegDownloadProgress = useSettingsStore(
+    (s) => s.updateFFmpegDownloadProgress
+  );
 
   // Global FFmpeg download listener
   useEffect(() => {
@@ -78,13 +81,12 @@ export default function App() {
     }
   }, [fetchLibrary, isSettingsLoading]);
 
-  const {
-    activeProfileId,
-    profiles,
-    loadProfiles,
-    selectProfile,
-    isLoading: isProfilesLoading,
-  } = useProfileStore();
+  // Individual selectors for profile store
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const profiles = useProfileStore((s) => s.profiles);
+  const loadProfiles = useProfileStore((s) => s.loadProfiles);
+  const selectProfile = useProfileStore((s) => s.selectProfile);
+  const isProfilesLoading = useProfileStore((s) => s.isLoading);
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
 
@@ -228,7 +230,7 @@ export default function App() {
     }
   }, [isQueueOpen, queue.length, toggleQueue]);
 
-  const handleFolderImport = async () => {
+  const handleFolderImport = useCallback(async () => {
     try {
       const selected = await open({
         directory: true,
@@ -281,7 +283,7 @@ export default function App() {
     } finally {
       setIsScanning(false);
     }
-  };
+  }, [addLibraryPath, fetchLibrary, libraryPaths]);
 
   const quitDialog = (
     <ConfirmDialog
