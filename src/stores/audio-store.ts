@@ -386,6 +386,12 @@ export const useAudioStore = create<AudioStore>((set, get) => {
             : "stopped";
 
           set((state) => {
+            // Ignore 'stopped' from backend when we're in 'loading' state
+            // This prevents flicker when starting playback
+            if (state.status === "loading" && newStatus === "stopped") {
+              return state; // Don't override loading with stopped
+            }
+
             if (state.status === newStatus && state.volume === s.volume) {
               return state; // No change
             }

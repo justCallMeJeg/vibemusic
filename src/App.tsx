@@ -212,9 +212,10 @@ export default function App() {
     };
   }, [fetchLibrary]);
 
-  // Update gradient when track changes
+  // Update gradient when track changes - only show when actually playing/paused
   useEffect(() => {
-    if (status === "stopped") {
+    // Only show gradient when playing or paused (not during loading/stopped)
+    if (status === "loading" || status === "stopped") {
       setGradientColor("transparent");
       return;
     }
