@@ -123,8 +123,8 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
             <p
               className={`text-xs text-muted-foreground truncate ${
                 track.artist_id
-                  ? "hover:underline hover:text-foreground cursor-pointer"
-                  : ""
+                  ? "hover:text-foreground cursor-pointer"
+                  : "text-muted-foreground"
               }`}
               onClick={handleArtistClick}
             >

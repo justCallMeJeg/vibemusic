@@ -139,8 +139,8 @@ const MusicListItem = memo(function MusicListItem({
                 <p
                   className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
                     track.artist_id
-                      ? "hover:underline hover:text-foreground cursor-pointer"
-                      : ""
+                      ? "hover:text-foreground cursor-pointer"
+                      : "text-muted-foreground"
                   }`}
                   onClick={handleArtistClick}
                 >

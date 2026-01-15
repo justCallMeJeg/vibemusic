@@ -231,8 +231,8 @@ export default function ArtistDetailPage() {
 
                   <div className="min-w-0 flex flex-col gap-0.5">
                     <ScrollingText
-                      className="text-foreground text-sm font-bold hover:[&_span]:underline cursor-pointer w-full text-left"
                       onClick={() => handleAlbumClick(album.id)}
+                      className="text-foreground text-sm font-bold cursor-pointer w-full text-left"
                     >
                       {album.title}
                     </ScrollingText>

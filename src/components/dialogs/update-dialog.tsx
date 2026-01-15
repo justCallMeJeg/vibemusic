@@ -42,7 +42,7 @@ export function UpdateDialog({
             prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
             prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
             prose-p:text-muted-foreground prose-p:leading-relaxed
-            prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline
+            prose-a:text-indigo-400 prose-a:no-underline
             prose-strong:text-foreground prose-strong:font-semibold
             prose-code:text-indigo-300 prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
             prose-pre:bg-background/50 prose-pre:border prose-pre:border-border

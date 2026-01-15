@@ -110,7 +110,7 @@ const ArtistCard = memo(function ArtistCard({ artist }: ArtistCardProps) {
 
           {/* Info */}
           <div className="min-w-0">
-            <ScrollingText className="font-semibold text-foreground hover:[&_span]:underline cursor-pointer w-full text-left">
+            <ScrollingText className="font-semibold text-foreground cursor-pointer w-full text-left">
               {artist.name}
             </ScrollingText>
             <p className="text-xs text-muted-foreground mt-1">

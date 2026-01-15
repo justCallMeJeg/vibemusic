@@ -134,7 +134,7 @@ export default function MusicControler() {
               <p
                 className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
                   currentTrack?.artist_id
-                    ? "hover:underline hover:text-foreground cursor-pointer"
+                    ? "hover:text-foreground cursor-pointer"
                     : ""
                 }`}
                 onClick={handleArtistClick}
