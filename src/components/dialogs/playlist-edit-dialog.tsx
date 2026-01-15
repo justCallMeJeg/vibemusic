@@ -211,10 +211,14 @@ export function PlaylistEditDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="resize-none h-20"
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="resize-none h-24"
               />
             </div>
           </div>

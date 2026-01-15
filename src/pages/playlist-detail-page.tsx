@@ -280,6 +280,7 @@ export default function PlaylistDetailPage() {
                     variant="default"
                     size="lg"
                     onClick={handlePlay}
+                    disabled={tracks.length === 0}
                     className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <Play size={20} fill="currentColor" />
@@ -369,6 +370,7 @@ export default function PlaylistDetailPage() {
               icon={Music}
               title="This playlist is empty"
               description="Add songs from your library to build this playlist."
+              variant="default"
               action={
                 <Button
                   variant="outline"
