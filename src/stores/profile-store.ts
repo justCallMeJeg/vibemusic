@@ -83,6 +83,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
           await invoke("set_active_profile", { profileId: activeProfileId });
         }
         set({ profiles, activeProfileId, isLoading: false });
+
+        // Fetch library for the active profile on app startup
+        if (activeProfileId) {
+          await useLibraryStore.getState().fetchLibrary();
+        }
       }
     } catch (e) {
       logger.error("Failed to load profiles", e);

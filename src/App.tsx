@@ -47,6 +47,7 @@ export default function App() {
     useState(false);
   const [isFFmpegReady, setIsFFmpegReady] = useState(false);
   const hasCheckedForUpdate = useRef(false);
+  const hasDoneInitialScan = useRef(false); // Prevent scan on profile switch
   const stop = useAudioStore((s) => s.stop);
 
   // Individual selectors for better re-render performance
@@ -77,12 +78,9 @@ export default function App() {
   }, [updateFFmpegDownloadProgress]);
 
   // Library Store Initialization
+  // NOTE: Library is fetched in selectProfile() when a profile is selected.
+  // We don't need to fetch here since that would race with profile selection.
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
-  useEffect(() => {
-    if (!isSettingsLoading) {
-      fetchLibrary();
-    }
-  }, [fetchLibrary, isSettingsLoading]);
 
   // Individual selectors for profile store
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
@@ -131,11 +129,14 @@ export default function App() {
         useNavigationStore.getState().setPage(settings.defaultPage as Page);
       }
 
+      // Only run scanOnStartup on INITIAL app load, not when switching profiles
       if (
+        !hasDoneInitialScan.current &&
         isFFmpegReady &&
         settings.scanOnStartup &&
         settings.libraryPaths.length > 0
       ) {
+        hasDoneInitialScan.current = true;
         logger.info(
           "Auto-scanning library paths on startup:",
           settings.libraryPaths
