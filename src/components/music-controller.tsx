@@ -39,6 +39,7 @@ import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/logger";
 
 import placeholderArt from "@/assets/placeholder-art.png";
+import { ScrollingText } from "./shared/scrolling-text";
 import { ArtistLinks } from "./shared/artist-links";
 
 export default function MusicControler() {
@@ -134,10 +135,10 @@ export default function MusicControler() {
               }
               alt={currentTrack.title}
             />
-            <div className="flex flex-col min-w-0">
-              <p className="text-foreground text-base font-bold line-clamp-1">
+            <div className="flex flex-col min-w-0 w-full pr-4">
+              <ScrollingText className="text-foreground text-base font-bold w-full">
                 {currentTrack.title}
-              </p>
+              </ScrollingText>
               <div className="text-muted-foreground text-xs font-normal line-clamp-1">
                 <ArtistLinks
                   names={currentTrack.artist_names}
