@@ -7,6 +7,7 @@ import { useMemo, useEffect, useState } from "react";
 import { probeFile, MediaMetadata } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidePanelLayout } from "@/components/shared/side-panel-layout";
+import { ArtistLinks } from "@/components/shared/artist-links";
 
 export default function TrackDetailPanel() {
   const currentTrack = useCurrentTrack();
@@ -109,9 +110,15 @@ export default function TrackDetailPanel() {
             <h2 className="text-base font-bold text-foreground mb-1 leading-tight wrap-break-word">
               {currentTrack.title}
             </h2>
-            <p className="text-sm text-primary font-medium wrap-break-word">
-              {currentTrack.artist || "Unknown Artist"}
-            </p>
+            <div className="text-sm text-primary font-medium wrap-break-word">
+              <ArtistLinks
+                names={currentTrack.artist_names}
+                ids={currentTrack.artist_ids}
+                fallbackName={currentTrack.artist}
+                fallbackId={currentTrack.artist_id}
+                className="justify-center whitespace-normal"
+              />
+            </div>
           </div>
         </div>
 

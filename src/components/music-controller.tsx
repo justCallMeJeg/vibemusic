@@ -32,12 +32,14 @@ import {
   usePosition,
   useDuration,
 } from "@/stores/audio-store";
+
 import { useNavigationStore } from "@/stores/navigation-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState, useCallback } from "react";
 import { logger } from "@/lib/logger";
 
 import placeholderArt from "@/assets/placeholder-art.png";
+import { ArtistLinks } from "./shared/artist-links";
 
 export default function MusicControler() {
   // Use atomic selectors for minimal re-renders
@@ -50,7 +52,6 @@ export default function MusicControler() {
   const sidePanel = useSidePanel();
   const position = usePosition();
   const duration = useDuration();
-  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   // Get actions directly (stable references)
   const pause = useAudioStore((s) => s.pause);
@@ -94,16 +95,6 @@ export default function MusicControler() {
     }
   }, [isPlaying, pause, currentTrack, resume]);
 
-  const handleArtistClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (currentTrack?.artist_id) {
-        openArtistDetail(currentTrack.artist_id);
-      }
-    },
-    [currentTrack?.artist_id, openArtistDetail]
-  );
-
   const handleSeekChange = useCallback(
     (value: number[]) => {
       setIsDragging(true);
@@ -143,20 +134,18 @@ export default function MusicControler() {
               }
               alt={currentTrack.title}
             />
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <p className="text-foreground text-base font-bold line-clamp-1">
                 {currentTrack.title}
               </p>
-              <p
-                className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
-                  currentTrack?.artist_id
-                    ? "hover:text-foreground cursor-pointer"
-                    : ""
-                }`}
-                onClick={handleArtistClick}
-              >
-                {currentTrack.artist || "Unknown Artist"}
-              </p>
+              <div className="text-muted-foreground text-xs font-normal line-clamp-1">
+                <ArtistLinks
+                  names={currentTrack.artist_names}
+                  ids={currentTrack.artist_ids}
+                  fallbackName={currentTrack.artist}
+                  fallbackId={currentTrack.artist_id}
+                />
+              </div>
             </div>
           </>
         ) : (

@@ -372,6 +372,8 @@ impl DbHelper {
                 t.title, 
                 ar.name as artist, 
                 t.artist_id,
+                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
                 al.title as album, 
                 t.album_id,
                 t.duration_ms, 
@@ -379,21 +381,44 @@ impl DbHelper {
                 al.artwork_path 
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
+            GROUP BY t.id
             ORDER BY t.created_at DESC",
         )?;
 
         let track_iter = stmt.query_map([], |row| {
+            let names_str: Option<String> = row.get(4)?;
+            let ids_str: Option<String> = row.get(5)?;
+
+            let artist_names = names_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            let artist_ids = ids_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter_map(|s| s.parse::<i64>().ok())
+                .collect();
+
             Ok(crate::library::LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
                 artist_id: row.get(3)?,
-                album: row.get(4)?,
-                album_id: row.get(5)?,
-                duration_ms: row.get(6)?,
-                file_path: row.get(7)?,
-                artwork_path: row.get(8)?,
+                artist_names,
+                artist_ids,
+                album: row.get(6)?,
+                album_id: row.get(7)?,
+                duration_ms: row.get(8)?,
+                file_path: row.get(9)?,
+                artwork_path: row.get(10)?,
             })
         })?;
 
@@ -486,6 +511,8 @@ impl DbHelper {
                 t.title, 
                 ar.name as artist, 
                 t.artist_id,
+                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
                 al.title as album, 
                 t.album_id,
                 t.duration_ms, 
@@ -493,22 +520,45 @@ impl DbHelper {
                 al.artwork_path 
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
             WHERE t.album_id = ?
+            GROUP BY t.id
             ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC",
         )?;
 
         let track_iter = stmt.query_map(params![album_id], |row| {
+            let names_str: Option<String> = row.get(4)?;
+            let ids_str: Option<String> = row.get(5)?;
+
+            let artist_names = names_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            let artist_ids = ids_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter_map(|s| s.parse::<i64>().ok())
+                .collect();
+
             Ok(crate::library::LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
                 artist_id: row.get(3)?,
-                album: row.get(4)?,
-                album_id: row.get(5)?,
-                duration_ms: row.get(6)?,
-                file_path: row.get(7)?,
-                artwork_path: row.get(8)?,
+                artist_names,
+                artist_ids,
+                album: row.get(6)?,
+                album_id: row.get(7)?,
+                duration_ms: row.get(8)?,
+                file_path: row.get(9)?,
+                artwork_path: row.get(10)?,
             })
         })?;
 
@@ -608,6 +658,8 @@ impl DbHelper {
                 t.title, 
                 ar.name as artist, 
                 t.artist_id,
+                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
                 al.title as album, 
                 t.album_id,
                 t.duration_ms, 
@@ -616,22 +668,45 @@ impl DbHelper {
             FROM tracks t
             JOIN playlist_tracks pt ON t.id = pt.track_id
             LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
             WHERE pt.playlist_id = ?
+            GROUP BY t.id, pt.position
             ORDER BY pt.position ASC",
         )?;
 
         let track_iter = stmt.query_map(params![playlist_id], |row| {
+            let names_str: Option<String> = row.get(4)?;
+            let ids_str: Option<String> = row.get(5)?;
+
+            let artist_names = names_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            let artist_ids = ids_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter_map(|s| s.parse::<i64>().ok())
+                .collect();
+
             Ok(crate::library::LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
                 artist_id: row.get(3)?,
-                album: row.get(4)?,
-                album_id: row.get(5)?,
-                duration_ms: row.get(6)?,
-                file_path: row.get(7)?,
-                artwork_path: row.get(8)?,
+                artist_names,
+                artist_ids,
+                album: row.get(6)?,
+                album_id: row.get(7)?,
+                duration_ms: row.get(8)?,
+                file_path: row.get(9)?,
+                artwork_path: row.get(10)?,
             })
         })?;
 
@@ -787,30 +862,55 @@ impl DbHelper {
                 t.title, 
                 ar.name as artist, 
                 t.artist_id,
+                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
                 al.title as album, 
                 t.album_id,
                 t.duration_ms, 
                 t.file_path, 
                 al.artwork_path 
             FROM tracks t
-            JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN track_artists ta_filter ON t.id = ta_filter.track_id
             LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
-            WHERE ta.artist_id = ?
+            WHERE ta_filter.artist_id = ?
+            GROUP BY t.id
             ORDER BY t.created_at DESC",
         )?;
 
         let track_iter = stmt.query_map(params![artist_id], |row| {
+             let names_str: Option<String> = row.get(4)?;
+            let ids_str: Option<String> = row.get(5)?;
+
+            let artist_names = names_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            let artist_ids = ids_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter_map(|s| s.parse::<i64>().ok())
+                .collect();
+
             Ok(crate::library::LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
                 artist_id: row.get(3)?,
-                album: row.get(4)?,
-                album_id: row.get(5)?,
-                duration_ms: row.get(6)?,
-                file_path: row.get(7)?,
-                artwork_path: row.get(8)?,
+                artist_names,
+                artist_ids,
+                album: row.get(6)?,
+                album_id: row.get(7)?,
+                duration_ms: row.get(8)?,
+                file_path: row.get(9)?,
+                artwork_path: row.get(10)?,
             })
         })?;
 
@@ -831,6 +931,8 @@ impl DbHelper {
                 t.title, 
                 ar.name as artist, 
                 t.artist_id,
+                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
                 al.title as album, 
                 t.album_id,
                 t.duration_ms, 
@@ -838,23 +940,46 @@ impl DbHelper {
                 al.artwork_path 
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
+            LEFT JOIN track_artists ta ON t.id = ta.track_id
+            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
             WHERE t.title LIKE ? OR ar.name LIKE ?
+            GROUP BY t.id
             ORDER BY t.created_at DESC
             LIMIT ?",
         )?;
 
         let track_iter = stmt.query_map(params![&pattern, &pattern, limit], |row| {
+             let names_str: Option<String> = row.get(4)?;
+            let ids_str: Option<String> = row.get(5)?;
+
+            let artist_names = names_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
+            let artist_ids = ids_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter_map(|s| s.parse::<i64>().ok())
+                .collect();
+
             Ok(crate::library::LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 artist: row.get(2)?,
                 artist_id: row.get(3)?,
-                album: row.get(4)?,
-                album_id: row.get(5)?,
-                duration_ms: row.get(6)?,
-                file_path: row.get(7)?,
-                artwork_path: row.get(8)?,
+                artist_names,
+                artist_ids,
+                album: row.get(6)?,
+                album_id: row.get(7)?,
+                duration_ms: row.get(8)?,
+                file_path: row.get(9)?,
+                artwork_path: row.get(10)?,
             })
         })?;
 

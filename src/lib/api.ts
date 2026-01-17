@@ -5,6 +5,8 @@ export interface Track {
   title: string;
   artist: string | null;
   artist_id: number | null;
+  artist_names: string[];
+  artist_ids: number[];
   album: string | null;
   album_id: number | null;
   duration_ms: number;

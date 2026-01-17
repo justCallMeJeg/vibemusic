@@ -10,6 +10,8 @@ pub struct LibraryTrack {
     pub title: String,
     pub artist: Option<String>,
     pub artist_id: Option<i64>,
+    pub artist_names: Vec<String>,
+    pub artist_ids: Vec<i64>,
     pub album: Option<String>,
     pub album_id: Option<i64>,
     pub duration_ms: u64,

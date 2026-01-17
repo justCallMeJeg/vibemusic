@@ -23,8 +23,8 @@ import { useAudioStore } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 import placeholderArt from "@/assets/placeholder-art.png";
-import { TrackListRow } from "@/components/shared/item/track-list-row";
 import { CompactPageHeader } from "@/components/shared/compact-page-header";
+import MusicListItem from "@/components/shared/item/music-list";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
@@ -128,7 +128,7 @@ export default function ArtistDetailPage() {
 
   return (
     <div
-      className="flex-1 min-w-0 h-full flex flex-col overflow-y-auto no-scrollbar relative"
+      className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative"
       onScroll={handleScroll}
     >
       <CompactPageHeader
@@ -140,7 +140,7 @@ export default function ArtistDetailPage() {
         onPlay={() => handleShuffleArtist()}
       />
       {/* Header with back button */}
-      <div className="mt-8 flex items-center gap-2 mb-4 px-8">
+      <div className="mt-8 flex items-center gap-2 mb-4">
         <Button
           variant="ghost"
           onClick={goBack}
@@ -152,7 +152,7 @@ export default function ArtistDetailPage() {
       </div>
 
       {/* Artist Info Header */}
-      <div className="flex gap-6 mb-8 px-8">
+      <div className="flex gap-6 mb-8">
         <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
           {artworkSrc ? (
             <img
@@ -199,7 +199,7 @@ export default function ArtistDetailPage() {
         </div>
       </div>
 
-      <div className="px-8 pb-48 space-y-10 w-full">
+      <div className="pb-48 space-y-10 w-full">
         {/* Albums Section (Horizontal Row) */}
         {albums.length > 0 && (
           <section>
@@ -283,8 +283,8 @@ export default function ArtistDetailPage() {
               Popular Songs
             </h2>
             <div className="flex flex-col gap-1">
-              {tracks.slice(0, 5).map((track, i) => (
-                <TrackListRow key={track.id} track={track} index={i + 1} />
+              {tracks.slice(0, 5).map((track) => (
+                <MusicListItem key={track.id} track={track} />
               ))}
             </div>
           </section>

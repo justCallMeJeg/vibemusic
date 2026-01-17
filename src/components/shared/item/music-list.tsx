@@ -7,7 +7,6 @@ import {
   useCurrentTrack,
   usePlayerStatus,
 } from "@/stores/audio-store";
-import { useNavigationStore } from "@/stores/navigation-store";
 
 import {
   ContextMenu,
@@ -20,6 +19,7 @@ import {
 } from "../../ui/context-menu";
 import { useLibraryStore } from "@/stores/library-store";
 import { ScrollingText } from "@/components/shared/scrolling-text";
+import { ArtistLinks } from "../artist-links";
 
 import placeholderArt from "@/assets/placeholder-art.png";
 
@@ -46,7 +46,6 @@ const MusicListItem = memo(function MusicListItem({
   // Use atomic selectors for minimal re-renders
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
-  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   // Playlist store - playlists fetched once in App.tsx
   const playlists = useLibraryStore((s) => s.playlists);
@@ -72,13 +71,6 @@ const MusicListItem = memo(function MusicListItem({
       }
     } else {
       play(track);
-    }
-  };
-
-  const handleArtistClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (track.artist_id) {
-      openArtistDetail(track.artist_id);
     }
   };
 
@@ -141,20 +133,18 @@ const MusicListItem = memo(function MusicListItem({
 
             <div className="flex w-full items-center justify-between">
               {/* ... rest of the component */}
-              <div className="flex flex-col h-min w-full">
+              <div className="flex flex-col h-min flex-1 min-w-0">
                 <ScrollingText className="text-foreground text-base font-bold w-full">
                   {track.title}
                 </ScrollingText>
-                <p
-                  className={`text-muted-foreground text-xs font-normal line-clamp-1 ${
-                    track.artist_id
-                      ? "hover:text-foreground cursor-pointer"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={handleArtistClick}
-                >
-                  {track.artist || "Unknown Artist"}
-                </p>
+                <div className="text-muted-foreground text-xs font-normal line-clamp-1">
+                  <ArtistLinks
+                    names={track.artist_names}
+                    ids={track.artist_ids}
+                    fallbackName={track.artist}
+                    fallbackId={track.artist_id}
+                  />
+                </div>
               </div>
               <div className="flex gap-1 h-min items-center shrink-0 w-16 justify-end">
                 <p className="text-muted-foreground text-xs font-normal tabular-nums text-right w-full">
