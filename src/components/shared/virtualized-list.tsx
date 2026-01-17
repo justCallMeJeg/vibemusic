@@ -38,10 +38,16 @@ export function VirtualizedList<T>({
   useScrollMask(24, parentRef);
 
   // Virtualizer
+  const hasHeader = !!header;
+  const totalItems = items.length + (hasHeader ? 1 : 0);
+
   const virtualizer = useVirtualizer({
-    count: items.length,
+    count: totalItems,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => itemHeight,
+    estimateSize: (index) => {
+      if (hasHeader && index === 0) return 300;
+      return itemHeight;
+    },
     overscan: 5,
   });
 
@@ -53,30 +59,23 @@ export function VirtualizedList<T>({
     >
       <div
         style={{
-          // We wrap content in a relative div to handle scrolling correctly
-          minHeight: "100%",
-          display: "flex",
-          flexDirection: "column",
+          height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+          width: "100%",
+          position: "relative",
         }}
       >
-        {header}
+        {items.length === 0 && !hasHeader
+          ? emptyState || (
+              <div className="flex items-center justify-center flex-1 text-muted-foreground p-8">
+                No items found
+              </div>
+            )
+          : virtualizer.getVirtualItems().map((virtualRow) => {
+              const isHeaderRow = hasHeader && virtualRow.index === 0;
+              const itemIndex = hasHeader
+                ? virtualRow.index - 1
+                : virtualRow.index;
 
-        {items.length === 0 ? (
-          emptyState || (
-            <div className="flex items-center justify-center flex-1 text-muted-foreground p-8">
-              No items found
-            </div>
-          )
-        ) : (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-              width: "100%",
-              position: "relative",
-              transition: "height 300ms ease-in-out",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
               return (
                 <div
                   key={virtualRow.index}
@@ -90,12 +89,14 @@ export function VirtualizedList<T>({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  {renderItem(items[virtualRow.index], virtualRow.index)}
+                  {isHeaderRow
+                    ? header
+                    : items[itemIndex] &&
+                      renderItem(items[itemIndex], itemIndex)}
+                  {/* Check items[itemIndex] existence to be safe, though virtualization logic should align */}
                 </div>
               );
             })}
-          </div>
-        )}
       </div>
     </div>
   );
