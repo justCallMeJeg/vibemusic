@@ -6,7 +6,7 @@ import {
   useAudioStore,
   useCurrentTrack,
   useQueue,
-  useQueueOpen,
+  useSidePanel,
   usePlayerStatus,
 } from "@/stores/audio-store";
 import QueueItem from "./shared/item/queue-item";
@@ -17,14 +17,14 @@ export default function QueueMenu() {
   // Use atomic selectors
   const currentTrack = useCurrentTrack();
   const queue = useQueue();
-  const isQueueOpen = useQueueOpen();
+  const sidePanel = useSidePanel();
   const status = usePlayerStatus();
 
   // Get actions directly (stable references)
   const reorderQueue = useAudioStore((s) => s.reorderQueue);
-  const toggleQueue = useAudioStore((s) => s.toggleQueue);
+  const setSidePanel = useAudioStore((s) => s.setSidePanel);
 
-  if (!isQueueOpen) return null;
+  if (sidePanel !== "queue") return null;
 
   return (
     <div
@@ -33,7 +33,11 @@ export default function QueueMenu() {
     >
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Queue</h1>
-        <Button size={"icon-sm"} variant="ghost" onClick={toggleQueue}>
+        <Button
+          size={"icon-sm"}
+          variant="ghost"
+          onClick={() => setSidePanel("none")}
+        >
           <X />
         </Button>
       </div>

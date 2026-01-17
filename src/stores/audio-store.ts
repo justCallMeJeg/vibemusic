@@ -35,7 +35,8 @@ interface AudioState {
   currentIndex: number;
   shuffle: boolean;
   repeat: RepeatMode;
-  isQueueOpen: boolean;
+
+  sidePanel: "none" | "queue" | "track-details";
 
   // Progress State (updated frequently)
   position: number;
@@ -65,6 +66,7 @@ interface AudioActions {
 
   // Queue Actions
   toggleQueue: () => void;
+  setSidePanel: (view: "none" | "queue" | "track-details") => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   addToQueue: (track: Track) => void;
@@ -171,8 +173,10 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     currentIndex: -1,
     shuffle: false,
     repeat: "off",
-    isQueueOpen: false,
+
+    sidePanel: "none",
     position: 0,
+
     duration: 0,
     _previousVolume: 1.0,
     _isDraggingSlider: false,
@@ -274,7 +278,11 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     },
 
     // Queue Actions
-    toggleQueue: () => set((s) => ({ isQueueOpen: !s.isQueueOpen })),
+    toggleQueue: () =>
+      set((s) => ({
+        sidePanel: s.sidePanel === "queue" ? "none" : "queue",
+      })),
+    setSidePanel: (view) => set({ sidePanel: view }),
     toggleShuffle: () => set((s) => ({ shuffle: !s.shuffle })),
     toggleRepeat: () =>
       set((s) => ({
@@ -555,7 +563,7 @@ export const usePlayerStatus = () => useAudioStore((s) => s.status);
 export const useCurrentTrack = () => useAudioStore((s) => s.currentTrack);
 export const useVolume = () => useAudioStore((s) => s.volume);
 export const useQueue = () => useAudioStore((s) => s.queue);
-export const useQueueOpen = () => useAudioStore((s) => s.isQueueOpen);
+export const useSidePanel = () => useAudioStore((s) => s.sidePanel);
 export const useRepeat = () => useAudioStore((s) => s.repeat);
 export const useShuffle = () => useAudioStore((s) => s.shuffle);
 export const usePosition = () => useAudioStore((s) => s.position);
@@ -589,6 +597,7 @@ export const getQueueActions = () => {
     removeFromQueue: s.removeFromQueue,
     reorderQueue: s.reorderQueue,
     toggleQueue: s.toggleQueue,
+    setSidePanel: s.setSidePanel,
     toggleShuffle: s.toggleShuffle,
     toggleRepeat: s.toggleRepeat,
   };

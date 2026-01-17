@@ -6,6 +6,7 @@ import { useAudioStore } from "./stores/audio-store";
 
 import NavigationMenu from "./components/navigation-menu";
 import QueueMenu from "./components/queue-menu";
+import TrackDetailPanel from "./components/track-detail-panel";
 import MainContent from "./components/main-content";
 import { GlobalSearch } from "./components/dialogs/global-search";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -36,7 +37,7 @@ import MiniPlayer from "./components/mini-player";
 
 export default function App() {
   const isMiniPlayer = useNavigationStore((s) => s.isMiniPlayer);
-  const isQueueOpen = useAudioStore((s) => s.isQueueOpen);
+  const sidePanel = useAudioStore((s) => s.sidePanel);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const status = useAudioStore((s) => s.status); // Get status directly or use selector
@@ -242,13 +243,13 @@ export default function App() {
 
   // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
-  const toggleQueue = useAudioStore((s) => s.toggleQueue);
+  const setSidePanel = useAudioStore((s) => s.setSidePanel);
 
   useEffect(() => {
-    if (isQueueOpen && queue.length === 0) {
-      toggleQueue();
+    if (sidePanel === "queue" && queue.length === 0) {
+      setSidePanel("none");
     }
-  }, [isQueueOpen, queue.length, toggleQueue]);
+  }, [sidePanel, queue.length, setSidePanel]);
 
   const handleFolderImport = useCallback(async () => {
     try {
@@ -403,13 +404,14 @@ export default function App() {
             <div className="flex-1 min-w-0 min-h-0 flex">
               <MainContent />
 
-              {/* Queue Menu */}
+              {/* Queue Menu / Track Detail Panel */}
               <div
                 className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
-                  isQueueOpen ? "w-96 p-1" : "w-0 p-0"
+                  sidePanel !== "none" ? "w-96 p-1" : "w-0 p-0"
                 } ${isPlayerVisible ? "pb-39" : "pb-6"}`}
               >
                 <QueueMenu />
+                <TrackDetailPanel />
               </div>
             </div>
           </div>

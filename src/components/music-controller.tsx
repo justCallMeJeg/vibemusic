@@ -11,6 +11,7 @@ import {
   Volume2,
   VolumeX,
   SquareArrowOutUpRight,
+  Info,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -26,7 +27,7 @@ import {
   useVolume,
   useRepeat,
   useShuffle,
-  useQueueOpen,
+  useSidePanel,
   usePosition,
   useDuration,
 } from "@/stores/audio-store";
@@ -42,9 +43,10 @@ export default function MusicControler() {
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
   const volume = useVolume();
+
   const repeat = useRepeat();
   const shuffle = useShuffle();
-  const isQueueOpen = useQueueOpen();
+  const sidePanel = useSidePanel();
   const position = usePosition();
   const duration = useDuration();
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
@@ -60,6 +62,7 @@ export default function MusicControler() {
   const toggleShuffle = useAudioStore((s) => s.toggleShuffle);
   const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
   const toggleQueue = useAudioStore((s) => s.toggleQueue);
+  const setSidePanel = useAudioStore((s) => s.setSidePanel);
   const setDraggingSlider = useAudioStore((s) => s.setDraggingSlider);
   const toggleMiniPlayer = useNavigationStore((s) => s.toggleMiniPlayer);
 
@@ -294,13 +297,38 @@ export default function MusicControler() {
               variant="ghost"
               onClick={toggleQueue}
               className={
-                isQueueOpen ? "text-purple-500 hover:text-purple-400" : ""
+                sidePanel === "queue"
+                  ? "text-purple-500 hover:text-purple-400"
+                  : ""
               }
             >
               <Logs size={20} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Queue</TooltipContent>
+        </Tooltip>
+
+        {/* Info Toggle */}
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger asChild>
+            <Button
+              id="info-button"
+              variant="ghost"
+              onClick={() =>
+                setSidePanel(
+                  sidePanel === "track-details" ? "none" : "track-details"
+                )
+              }
+              className={
+                sidePanel === "track-details"
+                  ? "text-purple-500 hover:text-purple-400"
+                  : ""
+              }
+            >
+              <Info size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Track Details</TooltipContent>
         </Tooltip>
 
         {/* Compact Mode Toggle */}

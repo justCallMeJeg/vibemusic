@@ -192,3 +192,19 @@ export interface SearchResults {
 export async function search(query: string): Promise<SearchResults> {
   return await invoke("search", { query });
 }
+
+export interface MediaMetadata {
+  duration_ms: number;
+  sample_rate: number;
+  channels: number;
+  format_name: string;
+  album_artist?: string;
+  composer?: string;
+  copyright?: string;
+  date?: string;
+  genre?: string;
+}
+
+export async function probeFile(path: string): Promise<MediaMetadata> {
+  return await invoke("probe_file", { path });
+}

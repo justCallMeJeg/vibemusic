@@ -24,11 +24,17 @@ pub struct DownloadProgress {
     pub total: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct MediaMetadata {
     pub duration_ms: u64,
     pub sample_rate: u32,
     pub channels: u16,
+    pub format_name: String,
+    pub album_artist: Option<String>,
+    pub composer: Option<String>,
+    pub copyright: Option<String>,
+    pub date: Option<String>,
+    pub genre: Option<String>,
 }
 
 /// Wrapper around a running FFmpeg process.
@@ -120,6 +126,7 @@ impl FFmpegProcess {
     }
 }
 
+#[tauri::command]
 pub fn probe_file(path: &str) -> Result<MediaMetadata, String> {
     let ffmpeg_path = resolve_ffmpeg_path_internal()
         .ok_or("FFmpeg binary not found")?;
@@ -169,6 +176,42 @@ pub fn probe_file(path: &str) -> Result<MediaMetadata, String> {
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
 
+    let format_name = json["format"]["format_name"]
+        .as_str()
+        .unwrap_or("unknown")
+        .to_string();
+
+    let tags = json["format"]["tags"].as_object();
+    
+    // Helper to find tag case-insensitively
+    let get_tag = |key: &str| -> Option<String> {
+        if let Some(map) = tags {
+            // Try exact match first
+            if let Some(val) = map.get(key) {
+                return val.as_str().map(|s| s.to_string());
+            }
+            // Try uppercase
+            if let Some(val) = map.get(&key.to_uppercase()) {
+                return val.as_str().map(|s| s.to_string());
+            }
+            // Try capitalized (Title Case) - simple version
+            let mut chars = key.chars();
+            if let Some(first) = chars.next() {
+                let capitalized = first.to_uppercase().to_string() + chars.as_str();
+                if let Some(val) = map.get(&capitalized) {
+                    return val.as_str().map(|s| s.to_string());
+                }
+            }
+        }
+        None
+    };
+
+    let album_artist = get_tag("album_artist");
+    let composer = get_tag("composer");
+    let copyright = get_tag("copyright");
+    let date = get_tag("date").or_else(|| get_tag("year")); // Fallback to YEAR
+    let genre = get_tag("genre");
+
     // Find audio stream
     let streams = json["streams"].as_array().ok_or("No streams found")?;
     let audio_stream = streams.iter().find(|s| s["codec_type"] == "audio")
@@ -188,6 +231,12 @@ pub fn probe_file(path: &str) -> Result<MediaMetadata, String> {
         duration_ms: (duration_secs * 1000.0) as u64,
         sample_rate,
         channels,
+        format_name,
+        album_artist,
+        composer,
+        copyright,
+        date,
+        genre,
     })
 }
 

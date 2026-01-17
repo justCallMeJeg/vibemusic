@@ -179,6 +179,7 @@ pub fn run() {
             ffmpeg::download_ffmpeg,
             ffmpeg::manual_set_ffmpeg_path,
             ffmpeg::get_supported_ffmpeg_versions,
+            ffmpeg::probe_file,
 
         ])
         .run(tauri::generate_context!())
