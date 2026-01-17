@@ -24,12 +24,14 @@ import { Button } from "@/components/ui/button";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 import placeholderArt from "@/assets/placeholder-art.png";
 import { TrackListRow } from "@/components/shared/item/track-list-row";
+import { CompactPageHeader } from "@/components/shared/compact-page-header";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const play = useAudioStore((s) => s.play);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const [artist, setArtist] = useState<Artist | null>(null);
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -104,8 +106,39 @@ export default function ArtistDetailPage() {
     ? convertFileSrc(artist.artwork_path)
     : undefined;
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const threshold = 300;
+    const header = headerRef.current;
+
+    if (header) {
+      if (scrollTop > threshold) {
+        if (header.dataset.visible !== "true") {
+          header.style.opacity = "1";
+          header.dataset.visible = "true";
+        }
+      } else {
+        if (header.dataset.visible !== "false") {
+          header.style.opacity = "0";
+          header.dataset.visible = "false";
+        }
+      }
+    }
+  };
+
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col overflow-y-auto no-scrollbar">
+    <div
+      className="flex-1 min-w-0 h-full flex flex-col overflow-y-auto no-scrollbar relative"
+      onScroll={handleScroll}
+    >
+      <CompactPageHeader
+        ref={headerRef}
+        title={artist.name}
+        subtitle={`${artist.album_count} Albums • ${artist.track_count} Songs`}
+        artworkSrc={artworkSrc}
+        onBack={goBack}
+        onPlay={() => handleShuffleArtist()}
+      />
       {/* Header with back button */}
       <div className="mt-8 flex items-center gap-2 mb-4 px-8">
         <Button

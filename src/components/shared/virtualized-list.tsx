@@ -11,6 +11,7 @@ interface VirtualizedListProps<T> {
   paddingBottom?: string; // Override dynamic padding if provided
   className?: string;
   header?: React.ReactNode;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
 export function VirtualizedList<T>({
@@ -21,6 +22,7 @@ export function VirtualizedList<T>({
   paddingBottom,
   className = "",
   header,
+  onScroll,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +48,7 @@ export function VirtualizedList<T>({
   return (
     <div
       ref={parentRef}
+      onScroll={onScroll}
       className={`flex-1 overflow-y-auto ${className} scroll-mask-y custom-scrollbar`}
     >
       <div

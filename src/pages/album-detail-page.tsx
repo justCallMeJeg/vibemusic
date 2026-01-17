@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import placeholderArt from "@/assets/placeholder-art.png";
 import { TrackListHeader } from "@/components/shared/track-list-header";
 import { TrackListRow } from "@/components/shared/item/track-list-row";
+import { CompactPageHeader } from "@/components/shared/compact-page-header";
 
 import { VirtualizedList } from "@/components/shared/virtualized-list";
 
@@ -17,6 +18,7 @@ export default function AlbumDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const play = useAudioStore((s) => s.play);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -92,10 +94,39 @@ export default function AlbumDetailPage() {
     ? convertFileSrc(album.artwork_path)
     : placeholderArt;
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const threshold = 300; // Show compact header after 300px
+    const header = headerRef.current;
+
+    if (header) {
+      if (scrollTop > threshold) {
+        if (header.dataset.visible !== "true") {
+          header.style.opacity = "1";
+          header.dataset.visible = "true";
+        }
+      } else {
+        if (header.dataset.visible !== "false") {
+          header.style.opacity = "0";
+          header.dataset.visible = "false";
+        }
+      }
+    }
+  };
+
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative">
+      <CompactPageHeader
+        ref={headerRef}
+        title={album.title}
+        subtitle={album.artist_name || undefined}
+        artworkSrc={artworkSrc || undefined}
+        onBack={goBack}
+        onPlay={handlePlay}
+      />
       <VirtualizedList
         items={tracks}
+        onScroll={handleScroll}
         header={
           <div className="w-full min-w-0 flex flex-col">
             {/* Header with back button */}

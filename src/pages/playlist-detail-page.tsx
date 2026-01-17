@@ -16,6 +16,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { useLibraryStore } from "@/stores/library-store";
@@ -28,6 +29,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { TrackSelectDialog } from "@/components/dialogs/track-select-dialog";
 import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
 import { TrackListHeader } from "@/components/shared/track-list-header";
+import { CompactPageHeader } from "@/components/shared/compact-page-header";
+import { useRef } from "react";
 
 interface SortableTrackItemProps {
   track: Track;
@@ -101,6 +104,7 @@ export default function PlaylistDetailPage() {
   const play = useAudioStore((s) => s.play);
   const reorderPlaylist = useLibraryStore((s) => s.reorderPlaylist);
   const refreshPlaylists = useLibraryStore((s) => s.refreshPlaylists);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -200,10 +204,43 @@ export default function PlaylistDetailPage() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const threshold = 300;
+    const header = headerRef.current;
+
+    if (header) {
+      if (scrollTop > threshold) {
+        if (header.dataset.visible !== "true") {
+          header.style.opacity = "1";
+          header.dataset.visible = "true";
+        }
+      } else {
+        if (header.dataset.visible !== "false") {
+          header.style.opacity = "0";
+          header.dataset.visible = "false";
+        }
+      }
+    }
+  };
+
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative">
+      <CompactPageHeader
+        ref={headerRef}
+        title={playlist.name}
+        subtitle={`${tracks.length} songs`}
+        artworkSrc={
+          playlist.artwork_path
+            ? convertFileSrc(playlist.artwork_path)
+            : undefined
+        }
+        onBack={goBack}
+        onPlay={handlePlay}
+      />
       <VirtualizedSortableList
         items={tracks}
+        onScroll={handleScroll}
         getItemId={(item) => item.id}
         onReorder={async (activeId, overId) => {
           const oldIndex = tracks.findIndex((t) => t.id === activeId);
