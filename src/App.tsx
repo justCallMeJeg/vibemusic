@@ -34,7 +34,17 @@ import { DownloadProgress } from "@/stores/settings-store";
 
 import { FFmpegSetupDialog } from "./components/dialogs/ffmpeg-setup-dialog";
 import MiniPlayer from "./components/mini-player";
-// ... (imports)
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function App() {
   const isMiniPlayer = useNavigationStore((s) => s.isMiniPlayer);
@@ -51,6 +61,10 @@ export default function App() {
   const hasCheckedForUpdate = useRef(false);
   const hasDoneInitialScan = useRef(false); // Prevent scan on profile switch
   const stop = useAudioStore((s) => s.stop);
+
+  // Refresh Warning State
+  const [isRefreshWarningOpen, setIsRefreshWarningOpen] = useState(false);
+  const isPlaying = status === "playing";
 
   // Individual selectors for better re-render performance
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
@@ -78,6 +92,30 @@ export default function App() {
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, [updateFFmpegDownloadProgress]);
+
+  // Intercept Refresh Keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for F5 or Ctrl+R (Cmd+R on Mac)
+      const isRefresh =
+        e.key === "F5" ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r");
+
+      if (isRefresh && isPlaying) {
+        e.preventDefault();
+        setIsRefreshWarningOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying]);
+
+  const handleConfirmRefresh = async () => {
+    await stop();
+    setIsRefreshWarningOpen(false);
+    window.location.reload();
+  };
 
   // Library Store Initialization
   // NOTE: Library is fetched in selectProfile() when a profile is selected.
@@ -445,6 +483,28 @@ export default function App() {
         confirmText="Switch Profile"
         onConfirm={confirmProfileSwitch}
       />
+
+      <AlertDialog
+        open={isRefreshWarningOpen}
+        onOpenChange={setIsRefreshWarningOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Stop Playback and Refresh?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Refreshing the app will stop the current playback. Are you sure
+              you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRefresh}>
+              Refresh
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Toaster />
     </main>
   );
