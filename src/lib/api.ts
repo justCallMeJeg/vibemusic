@@ -208,3 +208,18 @@ export interface MediaMetadata {
 export async function probeFile(path: string): Promise<MediaMetadata> {
   return await invoke("probe_file", { path });
 }
+// --- Lyrics ---
+export interface LyricLine {
+  text: string;
+  timestamp_ms: number | null;
+}
+
+export interface LyricsData {
+  lines: LyricLine[];
+  is_synced: boolean;
+  source: string;
+}
+
+export async function getLyrics(path: string): Promise<LyricsData> {
+  return await invoke("get_lyrics", { path });
+}

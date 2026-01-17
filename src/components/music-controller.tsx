@@ -12,6 +12,7 @@ import {
   VolumeX,
   SquareArrowOutUpRight,
   Info,
+  Mic2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -265,9 +266,10 @@ export default function MusicControler() {
           </p>
         </div>
       </div>
-      <div id="actions" className=" flex items-center gap-2 justify-end">
+      <div id="actions" className="flex items-center gap-2 justify-end">
         {/* Volume */}
-        <div className="flex items-center gap-2 w-32">
+        <div className="flex items-center gap-2 w-36">
+          {/* Mute Button */}
           <Tooltip delayDuration={1000}>
             <TooltipTrigger asChild>
               <Button variant="ghost" onClick={toggleMute}>
@@ -289,47 +291,71 @@ export default function MusicControler() {
             onValueChange={handleVolume}
           />
         </div>
-        {/* Queue Menu Toggle */}
-        <Tooltip delayDuration={1000}>
-          <TooltipTrigger asChild>
-            <Button
-              id="queue-menu-button"
-              variant="ghost"
-              onClick={toggleQueue}
-              className={
-                sidePanel === "queue"
-                  ? "text-purple-500 hover:text-purple-400"
-                  : ""
-              }
-            >
-              <Logs size={20} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Queue</TooltipContent>
-        </Tooltip>
 
-        {/* Info Toggle */}
-        <Tooltip delayDuration={1000}>
-          <TooltipTrigger asChild>
-            <Button
-              id="info-button"
-              variant="ghost"
-              onClick={() =>
-                setSidePanel(
-                  sidePanel === "track-details" ? "none" : "track-details"
-                )
-              }
-              className={
-                sidePanel === "track-details"
-                  ? "text-purple-500 hover:text-purple-400"
-                  : ""
-              }
-            >
-              <Info size={20} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Track Details</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center">
+          {/* Queue Menu Toggle */}
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                id="queue-menu-button"
+                variant="ghost"
+                onClick={toggleQueue}
+                className={
+                  sidePanel === "queue"
+                    ? "text-purple-500 hover:text-purple-400"
+                    : ""
+                }
+              >
+                <Logs size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Queue</TooltipContent>
+          </Tooltip>
+
+          {/* Lyrics Menu Toggle */}
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                id="lyrics-button"
+                variant="ghost"
+                onClick={() =>
+                  setSidePanel(sidePanel === "lyrics" ? "none" : "lyrics")
+                }
+                className={
+                  sidePanel === "lyrics"
+                    ? "text-purple-500 hover:text-purple-400"
+                    : ""
+                }
+              >
+                <Mic2 size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Lyrics</TooltipContent>
+          </Tooltip>
+
+          {/* Info Toggle */}
+          <Tooltip delayDuration={1000}>
+            <TooltipTrigger asChild>
+              <Button
+                id="info-button"
+                variant="ghost"
+                onClick={() =>
+                  setSidePanel(
+                    sidePanel === "track-details" ? "none" : "track-details"
+                  )
+                }
+                className={
+                  sidePanel === "track-details"
+                    ? "text-purple-500 hover:text-purple-400"
+                    : ""
+                }
+              >
+                <Info size={20} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Track Details</TooltipContent>
+          </Tooltip>
+        </div>
 
         {/* Compact Mode Toggle */}
         <Tooltip delayDuration={1000}>

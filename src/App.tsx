@@ -7,6 +7,7 @@ import { useAudioStore } from "./stores/audio-store";
 import NavigationMenu from "./components/navigation-menu";
 import QueueMenu from "./components/queue-menu";
 import TrackDetailPanel from "./components/track-detail-panel";
+import LyricsPanel from "./components/lyrics-panel";
 import MainContent from "./components/main-content";
 import { GlobalSearch } from "./components/dialogs/global-search";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -412,6 +413,7 @@ export default function App() {
               >
                 <QueueMenu />
                 <TrackDetailPanel />
+                <LyricsPanel />
               </div>
             </div>
           </div>

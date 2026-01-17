@@ -36,7 +36,7 @@ interface AudioState {
   shuffle: boolean;
   repeat: RepeatMode;
 
-  sidePanel: "none" | "queue" | "track-details";
+  sidePanel: "none" | "queue" | "track-details" | "lyrics";
 
   // Progress State (updated frequently)
   position: number;
@@ -66,7 +66,7 @@ interface AudioActions {
 
   // Queue Actions
   toggleQueue: () => void;
-  setSidePanel: (view: "none" | "queue" | "track-details") => void;
+  setSidePanel: (view: "none" | "queue" | "track-details" | "lyrics") => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   addToQueue: (track: Track) => void;
@@ -600,6 +600,7 @@ export const getQueueActions = () => {
     setSidePanel: s.setSidePanel,
     toggleShuffle: s.toggleShuffle,
     toggleRepeat: s.toggleRepeat,
+    clearQueue: s.clearQueue,
   };
 };
 

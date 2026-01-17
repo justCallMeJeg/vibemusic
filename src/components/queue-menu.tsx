@@ -1,17 +1,17 @@
-import { X } from "lucide-react";
-import { Button } from "./ui/button";
+import { SidePanelLayout } from "@/components/shared/side-panel-layout";
 import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
-  useAudioStore,
   useCurrentTrack,
   useQueue,
   useSidePanel,
   usePlayerStatus,
+  getQueueActions,
 } from "@/stores/audio-store";
 import QueueItem from "./shared/item/queue-item";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import placeholderArt from "@/assets/placeholder-art.png";
+import { Button } from "./ui/button";
 
 export default function QueueMenu() {
   // Use atomic selectors
@@ -20,28 +20,19 @@ export default function QueueMenu() {
   const sidePanel = useSidePanel();
   const status = usePlayerStatus();
 
-  // Get actions directly (stable references)
-  const reorderQueue = useAudioStore((s) => s.reorderQueue);
-  const setSidePanel = useAudioStore((s) => s.setSidePanel);
+  // Get actions using helper to avoid re-renders or direct store usage
+  const { reorderQueue, setSidePanel, clearQueue } = getQueueActions();
 
   if (sidePanel !== "queue") return null;
 
   return (
-    <div
-      id="queue-menu"
-      className="h-full flex flex-col rounded-lg outline outline-border w-full p-4 bg-popover/50 backdrop-blur-xl overflow-hidden"
+    <SidePanelLayout
+      title="Queue"
+      onClose={() => setSidePanel("none")}
+      className="p-0" // Let layout handle padding internally if needed, or matched behavior
+      // The original had p-4 on container. SidePanelLayout has p-4 on header and content.
+      // So passing nothing is fine.
     >
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Queue</h1>
-        <Button
-          size={"icon-sm"}
-          variant="ghost"
-          onClick={() => setSidePanel("none")}
-        >
-          <X />
-        </Button>
-      </div>
-
       {currentTrack && (
         <div className="mb-6 shrink-0">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
@@ -76,49 +67,47 @@ export default function QueueMenu() {
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden h-full">
-        <div className="h-full flex flex-col">
-          {/* Tracks list header */}
-          <div className="flex items-center justify-between mb-3 shrink-0">
-            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-              Tracks
-            </h2>
-            {queue.length > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-6 px-2 text-muted-foreground hover:text-red-400"
-                onClick={useAudioStore.getState().clearQueue}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-          <VirtualizedSortableList
-            items={queue}
-            getItemId={(track) => track.id}
-            onReorder={(activeId, overId) => {
-              const oldIndex = queue.findIndex((t) => t.id === activeId);
-              const newIndex = queue.findIndex((t) => t.id === overId);
-              if (oldIndex !== -1 && newIndex !== -1) {
-                reorderQueue(arrayMove(queue, oldIndex, newIndex));
-              }
-            }}
-            renderItem={(track) => {
-              const isCurrent = currentTrack?.id === track.id;
-              return (
-                <QueueItem key={track.id} track={track} isActive={isCurrent} />
-              );
-            }}
-            paddingBottom="0px"
-            emptyState={
-              <p className="text-muted-foreground text-sm italic p-2">
-                Queue is empty
-              </p>
-            }
-          />
+      <div className="flex-1 overflow-hidden h-full flex flex-col">
+        {/* Tracks list header */}
+        <div className="flex items-center justify-between mb-3 shrink-0">
+          <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+            Tracks
+          </h2>
+          {queue.length > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6 px-2 text-muted-foreground hover:text-red-400"
+              onClick={clearQueue}
+            >
+              Clear
+            </Button>
+          )}
         </div>
+        <VirtualizedSortableList
+          items={queue}
+          getItemId={(track) => track.id}
+          onReorder={(activeId, overId) => {
+            const oldIndex = queue.findIndex((t) => t.id === activeId);
+            const newIndex = queue.findIndex((t) => t.id === overId);
+            if (oldIndex !== -1 && newIndex !== -1) {
+              reorderQueue(arrayMove(queue, oldIndex, newIndex));
+            }
+          }}
+          renderItem={(track) => {
+            const isCurrent = currentTrack?.id === track.id;
+            return (
+              <QueueItem key={track.id} track={track} isActive={isCurrent} />
+            );
+          }}
+          paddingBottom="0px"
+          emptyState={
+            <p className="text-muted-foreground text-sm italic p-2">
+              Queue is empty
+            </p>
+          }
+        />
       </div>
-    </div>
+    </SidePanelLayout>
   );
 }

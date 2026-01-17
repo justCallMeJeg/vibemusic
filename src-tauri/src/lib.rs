@@ -11,6 +11,7 @@ mod profile;
 mod scanner;
 mod updater;
 mod watcher;
+mod lyrics;
 
 use audio::{AudioEngine, AudioState};
 use profile::ProfileState;
@@ -180,6 +181,8 @@ pub fn run() {
             ffmpeg::manual_set_ffmpeg_path,
             ffmpeg::get_supported_ffmpeg_versions,
             ffmpeg::probe_file,
+            // Lyrics
+            lyrics::get_lyrics,
 
         ])
         .run(tauri::generate_context!())
