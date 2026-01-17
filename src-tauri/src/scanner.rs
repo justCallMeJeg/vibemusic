@@ -88,9 +88,10 @@ fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
              let safe_re = SAFE_SPLIT_RE.get_or_init(|| {
                 // Split by:
                 // 1. Semicolon ;
-                // 2. " feat. ", " ft. " etc (surrounded by bounds or spaces)
-                // 3. " via ", " pres. "
-                 Regex::new(r"(?i)\s*(?:;|[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|vs\.?)\s+|(?:\s+)(?:feat\.?|ft\.?|featuring|with|vs\.?)(?:\s+))\s*").unwrap()
+                // 2. Comma , (with space)
+                // 3. Ampersand & (with spaces)
+                // 4. " feat. ", " ft. " etc
+                Regex::new(r"(?i)\s*(?:;|,\s+|\s+&\s+|[\(\[]\s*(?:feat\.?|ft\.?|featuring|with|vs\.?)\s+|(?:\s+)(?:feat\.?|ft\.?|featuring|with|vs\.?)(?:\s+))\s*").unwrap()
              });
 
             let mut artists = Vec::new();
@@ -201,15 +202,7 @@ fn extract_metadata(path: &Path, cache_dir: &Path) -> Result<TrackMetadata, Stri
 
                 let artist_str = tag
                     .artist()
-                    .map(|s| s.to_string())
-                    .or_else(|| {
-                        tag.get_string(&lofty::tag::ItemKey::AlbumArtist)
-                            .map(|s| s.to_string())
-                    })
-                    .or_else(|| {
-                        tag.get_string(&lofty::tag::ItemKey::TrackArtist)
-                            .map(|s| s.to_string())
-                    });
+                    .map(|s| s.to_string());
 
                 if artist_str.is_none() {
                     warn!(

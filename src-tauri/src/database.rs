@@ -690,7 +690,7 @@ impl DbHelper {
                 a.id, 
                 a.name, 
                 (SELECT COUNT(*) FROM albums WHERE artist_id = a.id) as album_count,
-                (SELECT COUNT(*) FROM tracks WHERE artist_id = a.id) as track_count,
+                (SELECT COUNT(*) FROM track_artists WHERE artist_id = a.id) as track_count,
                 (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
             FROM artists a
             ORDER BY a.name ASC",
@@ -708,7 +708,11 @@ impl DbHelper {
 
         let mut artists = Vec::new();
         for artist in artist_iter {
-            artists.push(artist?);
+            let a = artist?;
+            // Filter out artists with no content (likely "Display Artist" ghosts or old data)
+            if a.album_count > 0 || a.track_count > 0 {
+                artists.push(a);
+            }
         }
         Ok(artists)
     }
@@ -718,14 +722,11 @@ impl DbHelper {
             "SELECT 
                 a.id, 
                 a.name, 
-                COUNT(DISTINCT al.id) as album_count,
-                COUNT(DISTINCT t.id) as track_count,
+                (SELECT COUNT(*) FROM albums WHERE artist_id = a.id) as album_count,
+                (SELECT COUNT(*) FROM track_artists WHERE artist_id = a.id) as track_count,
                 (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
             FROM artists a
-            LEFT JOIN albums al ON al.artist_id = a.id
-            LEFT JOIN tracks t ON t.artist_id = a.id
-            WHERE a.id = ?
-            GROUP BY a.id",
+            WHERE a.id = ?",
         )?;
 
         let mut rows = stmt.query(params![id])?;
@@ -751,13 +752,11 @@ impl DbHelper {
                 ar.name as artist_name,
                 al.year,
                 al.artwork_path,
-                COUNT(t.id) as track_count,
-                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+                (SELECT COUNT(*) FROM tracks WHERE album_id = al.id) as track_count,
+                (SELECT COALESCE(SUM(duration_ms), 0) FROM tracks WHERE album_id = al.id) as total_duration_ms
             FROM albums al
             LEFT JOIN artists ar ON al.artist_id = ar.id
-            LEFT JOIN tracks t ON t.album_id = al.id
             WHERE al.artist_id = ?
-            GROUP BY al.id
             ORDER BY al.year DESC, al.title ASC",
         )?;
 
@@ -794,10 +793,11 @@ impl DbHelper {
                 t.file_path, 
                 al.artwork_path 
             FROM tracks t
+            JOIN track_artists ta ON t.id = ta.track_id
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN albums al ON t.album_id = al.id
-            WHERE t.artist_id = ?
-            ORDER BY t.created_at DESC", 
+            WHERE ta.artist_id = ?
+            ORDER BY t.created_at DESC",
         )?;
 
         let track_iter = stmt.query_map(params![artist_id], |row| {
