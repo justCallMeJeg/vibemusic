@@ -6,6 +6,7 @@ import { useLibraryStore } from "./library-store";
 import { toast } from "sonner";
 import { Track } from "@/lib/api";
 import { logger } from "@/lib/logger";
+import { useStatsStore } from "./stats-store";
 
 // --- Types ---
 type PlaybackStatus = "playing" | "paused" | "stopped" | "loading";
@@ -107,10 +108,27 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     }
   };
 
+  // Helper to record stats
+  const checkAndRecordStats = (
+    track: Track | null,
+    durationMs: number,
+    positionMs: number
+  ) => {
+    if (!track) return;
+    // Rule: Record if listened for at least 30 seconds OR 50% of the song
+    const threshold = Math.min(30000, durationMs * 0.5);
+    if (positionMs >= threshold) {
+      useStatsStore.getState().recordPlayback(track.id, positionMs);
+    }
+  };
+
   // Internal next handler
   // Internal next handler
   const handleNext = async () => {
     const state = get();
+    // Record stats for the finishing track
+    checkAndRecordStats(state.currentTrack, state.duration, state.position);
+
     logger.debug("[handleNext] Start", {
       queue: state.queue.length,
       currentIndex: state.currentIndex,
@@ -197,6 +215,14 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         queue = [track];
         index = 0;
       }
+
+      // Record stats for previous track if we are switching contexts
+      const currentState = get();
+      checkAndRecordStats(
+        currentState.currentTrack,
+        currentState.duration,
+        currentState.position
+      );
 
       set({
         currentTrack: track,

@@ -12,6 +12,7 @@ const ArtistsPage = lazy(() => import("@/pages/artists-page"));
 const ArtistDetailPage = lazy(() => import("@/pages/artist-detail-page"));
 const HomePage = lazy(() => import("@/pages/home-page"));
 const SettingsPage = lazy(() => import("@/pages/settings-page"));
+const InsightsPage = lazy(() => import("@/pages/insights-page"));
 
 export default function MainContent() {
   const currentPage = useCurrentPage();
@@ -34,6 +35,7 @@ export default function MainContent() {
           {currentPage === "albums" && <AlbumsPage />}
           {currentPage === "playlists" && <PlaylistsPage />}
           {currentPage === "artists" && <ArtistsPage />}
+          {currentPage === "insights" && <InsightsPage />}
           {(currentPage === "settings" || currentPage === "about") && (
             <SettingsPage />
           )}

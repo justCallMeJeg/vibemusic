@@ -7,6 +7,7 @@ import {
   Settings,
   Search,
   Home,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -43,6 +44,7 @@ export default function NavigationMenu({
     albums: <Disc />,
     playlists: <ListMusic />,
     artists: <Users />,
+    insights: <BarChart2 />,
     settings: <Settings />,
   };
 
@@ -53,6 +55,7 @@ export default function NavigationMenu({
     albums: "Albums",
     playlists: "Playlists",
     artists: "Artists",
+    insights: "Insights",
     settings: "Settings",
   };
 

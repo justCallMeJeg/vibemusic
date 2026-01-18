@@ -12,6 +12,8 @@ mod scanner;
 mod updater;
 mod watcher;
 mod lyrics;
+mod stats;
+
 
 use audio::{AudioEngine, AudioState};
 use profile::ProfileState;
@@ -183,7 +185,9 @@ pub fn run() {
             ffmpeg::probe_file,
             // Lyrics
             lyrics::get_lyrics,
-
+            // Stats
+            stats::record_playback,
+            stats::get_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -17,6 +17,7 @@ export type Page =
   | "playlists"
   | "artists"
   | "settings"
+  | "insights"
   | "about";
 
 export type DetailView =
