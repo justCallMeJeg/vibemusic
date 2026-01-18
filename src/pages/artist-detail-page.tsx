@@ -21,10 +21,12 @@ import {
 } from "lucide-react";
 import { useAudioStore } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
-import { ScrollingText } from "@/components/shared/scrolling-text";
 import placeholderArt from "@/assets/placeholder-art.png";
 import { CompactPageHeader } from "@/components/shared/compact-page-header";
-import MusicListItem from "@/components/shared/item/music-list";
+import { TrackListRow } from "@/components/shared/item/track-list-row";
+import { VirtualizedList } from "@/components/shared/virtualized-list";
+import { TrackListHeader } from "@/components/shared/track-list-header";
+import { ScrollingText } from "@/components/shared/scrolling-text";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
@@ -127,10 +129,7 @@ export default function ArtistDetailPage() {
   };
 
   return (
-    <div
-      className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative"
-      onScroll={handleScroll}
-    >
+    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative">
       <CompactPageHeader
         ref={headerRef}
         title={artist.name}
@@ -139,157 +138,172 @@ export default function ArtistDetailPage() {
         onBack={goBack}
         onPlay={() => handleShuffleArtist()}
       />
-      {/* Header with back button */}
-      <div className="mt-8 flex items-center gap-2 mb-4">
-        <Button
-          variant="ghost"
-          onClick={goBack}
-          className="text-muted-foreground hover:text-foreground gap-2 pl-2"
-        >
-          <ArrowLeft size={24} />
-          <span className="text-sm font-medium">Back to Artists</span>
-        </Button>
-      </div>
 
-      {/* Artist Info Header */}
-      <div className="flex gap-6 mb-8">
-        <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
-          {artworkSrc ? (
-            <img
-              src={artworkSrc}
-              alt={artist.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = placeholderArt;
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <Users className="w-20 h-20" />
+      <VirtualizedList
+        items={tracks}
+        onScroll={handleScroll}
+        header={
+          <div className="w-full min-w-0 flex flex-col">
+            {/* Back Button Row */}
+            <div className="mt-8 flex items-center gap-2 mb-4">
+              <Button
+                variant="ghost"
+                onClick={goBack}
+                className="text-muted-foreground hover:text-foreground gap-2 pl-2"
+              >
+                <ArrowLeft size={24} />
+                <span className="text-sm font-medium">Back to Artists</span>
+              </Button>
             </div>
-          )}
-        </div>
 
-        <div className="flex flex-col justify-center min-w-0">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
-            {artist.name}
-          </h1>
-          <div className="flex items-center gap-4 text-muted-foreground font-medium text-sm">
-            <span>
-              {artist.album_count}{" "}
-              {artist.album_count === 1 ? "Album" : "Albums"}
-            </span>
-            <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-            <span>
-              {artist.track_count} {artist.track_count === 1 ? "Song" : "Songs"}
-            </span>
-          </div>
+            {/* Artist Info Header */}
+            <div className="flex gap-6 mb-8">
+              <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
+                {artworkSrc ? (
+                  <img
+                    src={artworkSrc}
+                    alt={artist.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = placeholderArt;
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <Users className="w-20 h-20" />
+                  </div>
+                )}
+              </div>
 
-          <div className="flex gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShuffleArtist}
-              className="gap-2"
-            >
-              <Shuffle size={14} />
-              Shuffle
-            </Button>
-          </div>
-        </div>
-      </div>
+              <div className="flex flex-col justify-center min-w-0">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+                  {artist.name}
+                </h1>
+                <div className="flex items-center gap-4 text-muted-foreground font-medium text-sm">
+                  <span>
+                    {artist.album_count}{" "}
+                    {artist.album_count === 1 ? "Album" : "Albums"}
+                  </span>
+                  <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                  <span>
+                    {artist.track_count}{" "}
+                    {artist.track_count === 1 ? "Song" : "Songs"}
+                  </span>
+                </div>
 
-      <div className="pb-48 space-y-10 w-full">
-        {/* Albums Section (Horizontal Row) */}
-        {albums.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                Albums
-              </h2>
-              {/* Scroll Controls */}
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => scrollAlbums("left")}
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => scrollAlbums("right")}
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShuffleArtist}
+                    className="gap-2"
+                  >
+                    <Shuffle size={14} />
+                    Shuffle
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div
-              ref={albumsScrollRef}
-              className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
-            >
-              {albums.map((album) => (
-                <div
-                  key={album.id}
-                  className="flex flex-col w-[160px] min-w-[160px] gap-2"
-                >
-                  <div
-                    className="relative aspect-square w-full rounded-lg overflow-hidden group cursor-pointer shadow-md"
-                    onClick={(e) => handlePlayAlbum(e, album.id)}
-                  >
-                    <img
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      src={
-                        album.artwork_path
-                          ? convertFileSrc(album.artwork_path)
-                          : placeholderArt
-                      }
-                      alt={album.title}
-                      onError={(e) => {
-                        e.currentTarget.src = placeholderArt;
-                      }}
-                    />
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="bg-primary rounded-full p-3 text-primary-foreground transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
-                        <Play size={24} fill="currentColor" className="ml-1" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 flex flex-col gap-0.5">
-                    <ScrollingText
-                      onClick={() => handleAlbumClick(album.id)}
-                      className="text-foreground text-sm font-bold cursor-pointer w-full text-left"
+            {/* Albums Section (Horizontal Row) */}
+            {albums.length > 0 && (
+              <section className="pb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    Albums
+                  </h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => scrollAlbums("left")}
                     >
-                      {album.title}
-                    </ScrollingText>
-                    <p className="text-muted-foreground text-xs line-clamp-1">
-                      {album.year || "Unknown Year"}
-                    </p>
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => scrollAlbums("right")}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
 
-        {/* Songs Section (Top 5) */}
-        {tracks.length > 0 && (
-          <section>
-            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              Popular Songs
-            </h2>
-            <div className="flex flex-col gap-1">
-              {tracks.slice(0, 5).map((track) => (
-                <MusicListItem key={track.id} track={track} />
-              ))}
-            </div>
-          </section>
+                <div
+                  ref={albumsScrollRef}
+                  className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
+                >
+                  {albums.map((album) => (
+                    <div
+                      key={album.id}
+                      className="flex flex-col w-[160px] min-w-[160px] gap-2"
+                    >
+                      <div
+                        className="relative aspect-square w-full rounded-lg overflow-hidden group cursor-pointer shadow-md"
+                        onClick={(e) => handlePlayAlbum(e, album.id)}
+                      >
+                        <img
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          src={
+                            album.artwork_path
+                              ? convertFileSrc(album.artwork_path)
+                              : placeholderArt
+                          }
+                          alt={album.title}
+                          onError={(e) => {
+                            e.currentTarget.src = placeholderArt;
+                          }}
+                        />
+                        {/* Hover Overlay */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="bg-primary rounded-full p-3 text-primary-foreground transform scale-90 group-hover:scale-100 transition-transform shadow-lg">
+                            <Play
+                              size={24}
+                              fill="currentColor"
+                              className="ml-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 flex flex-col gap-0.5">
+                        <ScrollingText
+                          onClick={() => handleAlbumClick(album.id)}
+                          className="text-foreground text-sm font-bold cursor-pointer w-full text-left"
+                        >
+                          {album.title}
+                        </ScrollingText>
+                        <p className="text-muted-foreground text-xs line-clamp-1">
+                          {album.year || "Unknown Year"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Songs Header */}
+            {tracks.length > 0 && (
+              <div className="pb-2">
+                <h2 className="text-xl font-bold text-foreground mb-4">
+                  Songs
+                </h2>
+                <TrackListHeader />
+              </div>
+            )}
+          </div>
+        }
+        renderItem={(track, index) => (
+          <TrackListRow
+            key={track.id}
+            track={track}
+            index={index + 1}
+            showArtwork={true}
+          />
         )}
-      </div>
+      />
     </div>
   );
 }
