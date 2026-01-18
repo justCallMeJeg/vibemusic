@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { load } from "@tauri-apps/plugin-store";
-import { toast } from "sonner"; // Added import
+import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 // Lazy store initialization
@@ -85,6 +85,13 @@ interface SettingsState {
   songsSortKey: string;
   songsSortDirection: string;
 
+  albumsSortKey: string;
+  albumsSortDirection: string;
+  artistsSortKey: string;
+  artistsSortDirection: string;
+  playlistsSortKey: string;
+  playlistsSortDirection: string;
+
   // Mini Player
   miniPlayerStyle: "square" | "wide" | "bar";
   miniPlayerPosition: "bottom-right" | "bottom-left" | "top-right" | "top-left";
@@ -126,6 +133,9 @@ interface SettingsActions {
 
   // Sorting Actions
   setSongsSort: (key: string, direction: string) => void;
+  setAlbumsSort: (key: string, direction: string) => void;
+  setArtistsSort: (key: string, direction: string) => void;
+  setPlaylistsSort: (key: string, direction: string) => void;
 
   setMiniPlayerStyle: (style: "square" | "wide" | "bar") => void;
   setMiniPlayerPosition: (
@@ -218,8 +228,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         // Auto-scan the new path
         try {
-          // Define ScanStats locally or treat as any/unknown if interface not available globally
-          // But better to just return it.
           const stats = await invoke<{
             scanned_count: number;
             success_count: number;
@@ -382,12 +390,42 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     // Sorting
     songsSortKey: "date_added",
     songsSortDirection: "desc",
+    albumsSortKey: "title",
+    albumsSortDirection: "asc",
+    artistsSortKey: "name",
+    artistsSortDirection: "asc",
+    playlistsSortKey: "name",
+    playlistsSortDirection: "asc",
 
     setSongsSort: async (key, direction) => {
       set({ songsSortKey: key, songsSortDirection: direction });
       const store = await getStore();
       await store.set("songsSortKey", key);
       await store.set("songsSortDirection", direction);
+      await store.save();
+    },
+
+    setAlbumsSort: async (key, direction) => {
+      set({ albumsSortKey: key, albumsSortDirection: direction });
+      const store = await getStore();
+      await store.set("albumsSortKey", key);
+      await store.set("albumsSortDirection", direction);
+      await store.save();
+    },
+
+    setArtistsSort: async (key, direction) => {
+      set({ artistsSortKey: key, artistsSortDirection: direction });
+      const store = await getStore();
+      await store.set("artistsSortKey", key);
+      await store.set("artistsSortDirection", direction);
+      await store.save();
+    },
+
+    setPlaylistsSort: async (key, direction) => {
+      set({ playlistsSortKey: key, playlistsSortDirection: direction });
+      const store = await getStore();
+      await store.set("playlistsSortKey", key);
+      await store.set("playlistsSortDirection", direction);
       await store.save();
     },
 
@@ -406,24 +444,15 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     loadSettings: async (profileId?: string) => {
-      // If no profileId provided, verify if we already have one loaded or just stop?
-      // Actually, we should REQUIRE profileId now, or use a default.
-
       if (!profileId) {
-        // If called without ID (legacy/init), maybe do nothing until selectProfile is called?
-        // Or load "default" if we want a fallback.
         return;
       }
 
       set({ isLoading: true });
 
       try {
-        // Dynamic load
-        // Note: checking if load() creates a new instance or reuses.
-        // tauri-plugin-store manages instances by path.
         const store = await load(`settings_${profileId}.json`);
 
-        // Helper to get with default
         const getVal = async <T>(
           key: string
         ): Promise<T | null | undefined> => {
@@ -444,7 +473,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           "sidebarItems"
         );
 
-        // Enforce settings visibility
         if (sidebarItems) {
           sidebarItems = sidebarItems.map((item) =>
             item.id === "settings" ? { ...item, hidden: false } : item
@@ -454,6 +482,17 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         const songsSortKey = await getVal<string>("songsSortKey");
         const songsSortDirection = await getVal<string>("songsSortDirection");
+
+        const albumsSortKey = await getVal<string>("albumsSortKey");
+        const albumsSortDirection = await getVal<string>("albumsSortDirection");
+        const artistsSortKey = await getVal<string>("artistsSortKey");
+        const artistsSortDirection = await getVal<string>(
+          "artistsSortDirection"
+        );
+        const playlistsSortKey = await getVal<string>("playlistsSortKey");
+        const playlistsSortDirection = await getVal<string>(
+          "playlistsSortDirection"
+        );
         const miniPlayerStyle = await getVal<"square" | "wide" | "bar">(
           "miniPlayerStyle"
         );
@@ -461,11 +500,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           "bottom-right" | "bottom-left" | "top-right" | "top-left"
         >("miniPlayerPosition");
 
-        // Update Store State
         const themeValue = theme ?? "system";
         const resolvedTheme = applyThemeClass(themeValue);
         set({
-          currentProfileId: profileId, // <--- FIX: valid profile ID set here
+          currentProfileId: profileId,
           theme: themeValue,
           resolvedTheme,
           dynamicGradient: dynamicGradient ?? true,
@@ -487,12 +525,16 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           defaultPage: defaultPage ?? "home",
           songsSortKey: songsSortKey ?? "date_added",
           songsSortDirection: songsSortDirection ?? "desc",
+          albumsSortKey: albumsSortKey ?? "title",
+          albumsSortDirection: albumsSortDirection ?? "asc",
+          artistsSortKey: artistsSortKey ?? "name",
+          artistsSortDirection: artistsSortDirection ?? "asc",
+          playlistsSortKey: playlistsSortKey ?? "name",
+          playlistsSortDirection: playlistsSortDirection ?? "asc",
           miniPlayerStyle: miniPlayerStyle ?? "square",
           miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
           isLoading: false,
         });
-
-        // Note: Theme is already applied above via applyThemeClass
 
         if (selectedDevice) {
           await invoke("audio_set_device", { deviceName: selectedDevice });
@@ -508,11 +550,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         );
 
         get().refreshAudioDevices();
-
-        // Update global store reference for future saves
-        // Warning: 'storePromise' global var in this file needs to be updated or removed.
-        // We should attach the current store instance to the state or a closure variable.
-        // Let's update the global `getStore` function implementation below.
       } catch (e) {
         logger.error("Failed to load settings", e);
         set({ isLoading: false });
@@ -520,8 +557,3 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
   })
 );
-
-// Helper to get the CURRENT active store file.
-// We need to track which file is active.
-// Ideally, we pass the profileId to every action, OR we store `activeStore` in the state.
-// Since actions are closures, we can store it in the state.
