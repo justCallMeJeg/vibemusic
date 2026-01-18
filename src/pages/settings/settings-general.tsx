@@ -9,8 +9,8 @@ export function SettingsGeneral() {
     setCloseToTray,
     scanOnStartup,
     setScanOnStartup,
-    autoplay,
-    setAutoplay,
+    // autoplay,
+    // setAutoplay,
   } = useSettingsStore();
 
   return (
@@ -50,7 +50,7 @@ export function SettingsGeneral() {
         </div>
 
         {/* Autoplay */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+        {/* <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="font-medium">Autoplay</div>
@@ -60,7 +60,7 @@ export function SettingsGeneral() {
             </div>
           </div>
           <Switch checked={autoplay} onCheckedChange={setAutoplay} />
-        </div>
+        </div> */}
       </div>
     </div>
   );
