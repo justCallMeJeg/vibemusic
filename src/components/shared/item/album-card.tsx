@@ -5,7 +5,6 @@ import { useNavigationStore } from "@/stores/navigation-store";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { EntityCard } from "@/components/shared/entity-card";
-import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface AlbumCardProps {
   album: Album;
@@ -82,13 +81,11 @@ const AlbumCard = memo(function AlbumCard({
       tertiaryText={
         size === "default"
           ? `${album.track_count} tracks • ${formatDuration(
-              album.total_duration_ms
+              album.total_duration_ms,
             )}`
           : undefined
       }
-      artworkSrc={
-        album.artwork_path ? convertFileSrc(album.artwork_path) : undefined
-      }
+      artworkSrc={album.artwork_path || undefined}
       variant={size === "compact" ? "compact" : "portrait"}
       onClick={() => openAlbumDetail(album.id)}
       onPlay={() => handlePlay(false)}
