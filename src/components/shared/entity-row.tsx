@@ -1,6 +1,8 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
+import { ScrollingText } from "@/components/shared/scrolling-text";
+import { Play, Pause } from "lucide-react";
 
 const rowVariants = cva(
   "group flex items-center gap-3 rounded-md px-2 transition-colors cursor-default select-none relative",
@@ -20,14 +22,15 @@ const rowVariants = cva(
       variant: "default",
       active: false,
     },
-  }
+  },
 );
 
 interface EntityRowProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "contextMenu">,
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "contextMenu" | "title">,
     VariantProps<typeof rowVariants> {
-  title: string;
-  subtitle?: string;
+  title: string | React.ReactNode;
+  subtitle?: string | React.ReactNode;
   artworkSrc?: string;
   index?: number;
   leading?: React.ReactNode;
@@ -35,6 +38,7 @@ interface EntityRowProps
   /** Optional context menu wrapper component */
   contextMenuWrapper?: React.ReactNode;
   showArtwork?: boolean;
+  playing?: boolean;
 }
 
 export function EntityRow({
@@ -48,7 +52,8 @@ export function EntityRow({
   active,
   className,
   showArtwork = true,
-  contextMenuWrapper, // Destructure to avoid passing to div
+  playing = false,
+  contextMenuWrapper: _contextMenuWrapper, // Destructure to avoid passing to div
   ...props
 }: EntityRowProps) {
   return (
@@ -58,18 +63,47 @@ export function EntityRow({
       {...props}
     >
       {/* Leading Section (Index or Icon) */}
-      {(index !== undefined || leading) && (
-        <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums group-hover:text-foreground">
-          {leading || index}
-        </div>
-      )}
+      <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
+        {!active ? (
+          <>
+            {/* Default State: Show Leading/Index (Hidden on Hover) */}
+            <span className="group-hover:hidden">{leading || index}</span>
+
+            {/* Hover State: Show Play */}
+            <span className="hidden group-hover:block text-foreground">
+              <Play size={16} fill="currentColor" />
+            </span>
+          </>
+        ) : (
+          <>
+            {/* Active Normal: Play (Primary color). No AudioLines. */}
+            <span
+              className={cn(
+                "group-hover:hidden",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Pause size={16} fill="currentColor" />
+            </span>
+
+            {/* Active Hover: Pause (if playing) or Play (if paused/inactive) */}
+            <span className="hidden group-hover:block text-foreground">
+              {active && playing ? (
+                <Pause size={16} fill="currentColor" />
+              ) : (
+                <Play size={16} fill="currentColor" />
+              )}
+            </span>
+          </>
+        )}
+      </div>
 
       {/* Artwork Section */}
       {showArtwork && artworkSrc !== undefined && (
         <div className="relative shrink-0">
           <ArtworkImage
             src={artworkSrc}
-            alt={title}
+            alt={typeof title === "string" ? title : "Artwork"}
             className="w-10 h-10 rounded shadow-sm object-cover bg-secondary"
           />
         </div>
@@ -80,10 +114,15 @@ export function EntityRow({
         <div
           className={cn(
             "text-sm font-medium truncate",
-            active && "text-primary"
+            active && "text-primary",
+            "w-full",
           )}
         >
-          {title}
+          {typeof title === "string" ? (
+            <ScrollingText>{title}</ScrollingText>
+          ) : (
+            title
+          )}
         </div>
         {subtitle && (
           <div className="text-xs text-muted-foreground truncate">

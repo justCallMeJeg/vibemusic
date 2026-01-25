@@ -1,9 +1,10 @@
 import { memo } from "react";
 import { Track } from "@/lib/api";
-import { useCurrentTrack } from "@/stores/audio-store";
+import { useCurrentTrack, usePlayerStatus } from "@/stores/audio-store";
 import { EntityRow } from "@/components/shared/entity-row";
+import { ArtistLinks } from "@/components/shared/artist-links";
 
-interface TrackListRowProps {
+interface TrackListRowProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The track to display */
   track: Track;
   /** The 1-based index to show (optional, will display if provided) */
@@ -32,22 +33,40 @@ const TrackListRow = memo(function TrackListRow({
   rightContent,
   leftContent,
   className,
+  ...props
 }: TrackListRowProps) {
   const currentTrack = useCurrentTrack();
+  const status = usePlayerStatus();
   const isCurrentTrack = currentTrack?.id === track.id;
 
   return (
     <EntityRow
       title={track.title}
-      subtitle={track.artist || "Unknown Artist"}
+      subtitle={
+        <ArtistLinks
+          names={track.artist_names}
+          ids={
+            track.artist_ids?.length
+              ? track.artist_ids
+              : track.artist_id
+                ? [track.artist_id]
+                : []
+          }
+          fallbackName={track.artist}
+          fallbackId={track.artist_id}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        />
+      }
       artworkSrc={track.artwork_path || undefined}
       showArtwork={showArtwork}
       index={index}
       active={isCurrentTrack}
+      playing={isCurrentTrack && status === "playing"}
       leading={leftContent}
       trailing={rightContent}
       className={className}
       variant="default"
+      {...props}
     />
   );
 });

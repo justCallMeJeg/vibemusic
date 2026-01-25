@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
-import { useAudioStore } from "@/stores/audio-store";
+import {
+  useAudioStore,
+  usePlayerStatus,
+  useCurrentTrack,
+} from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Music, ChevronLeft } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -18,6 +22,10 @@ export default function AlbumDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const play = useAudioStore((s) => s.play);
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
+  const status = usePlayerStatus();
+  const currentTrack = useCurrentTrack();
 
   const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -38,7 +46,7 @@ export default function AlbumDetailPage() {
         setAlbum(albumData);
         // Sort by track number by default
         const sortedTracks = tracksData.sort(
-          (a, b) => (a.track_number || 0) - (b.track_number || 0)
+          (a, b) => (a.track_number || 0) - (b.track_number || 0),
         );
         setTracks(sortedTracks);
       } catch (error) {
@@ -139,6 +147,14 @@ export default function AlbumDetailPage() {
               track={track}
               index={index + 1}
               showArtwork={false}
+              onClick={() => {
+                if (currentTrack?.id === track.id) {
+                  if (status === "playing") pause();
+                  else resume();
+                } else {
+                  play(track, tracks);
+                }
+              }}
             />
           )}
           emptyState={
