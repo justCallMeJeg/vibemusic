@@ -11,6 +11,7 @@ interface VirtualizedListProps<T> {
   paddingBottom?: string; // Override dynamic padding if provided
   className?: string;
   header?: React.ReactNode;
+  headerHeight?: number;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
@@ -22,6 +23,7 @@ export function VirtualizedList<T>({
   paddingBottom,
   className = "",
   header,
+  headerHeight = 300,
   onScroll,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -41,11 +43,14 @@ export function VirtualizedList<T>({
   const hasHeader = !!header;
   const totalItems = items.length + (hasHeader ? 1 : 0);
 
+  // Custom header height or default to 300
+  const headerHeightPx = headerHeight;
+
   const virtualizer = useVirtualizer({
     count: totalItems,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
-      if (hasHeader && index === 0) return 300;
+      if (hasHeader && index === 0) return headerHeightPx;
       return itemHeight;
     },
     overscan: 5,

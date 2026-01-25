@@ -1,24 +1,23 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
 import { useAudioStore } from "@/stores/audio-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ChevronLeft, Play, Shuffle, Music } from "lucide-react";
+import { Music, ChevronLeft } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import placeholderArt from "@/assets/placeholder-art.png";
 import { TrackListHeader } from "@/components/shared/track-list-header";
 import { TrackListRow } from "@/components/shared/item/track-list-row";
-import { CompactPageHeader } from "@/components/shared/compact-page-header";
-
 import { VirtualizedList } from "@/components/shared/virtualized-list";
+import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
+import { DetailHero } from "@/components/shared/detail-hero";
 
 export default function AlbumDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const play = useAudioStore((s) => s.play);
-  const headerRef = useRef<HTMLDivElement>(null);
 
   const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -94,120 +93,65 @@ export default function AlbumDetailPage() {
     ? convertFileSrc(album.artwork_path)
     : placeholderArt;
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const threshold = 300; // Show compact header after 300px
-    const header = headerRef.current;
-
-    if (header) {
-      if (scrollTop > threshold) {
-        if (header.dataset.visible !== "true") {
-          header.style.opacity = "1";
-          header.dataset.visible = "true";
-        }
-      } else {
-        if (header.dataset.visible !== "false") {
-          header.style.opacity = "0";
-          header.dataset.visible = "false";
-        }
-      }
-    }
-  };
-
   return (
-    <div className="flex-1 min-w-0 h-full flex flex-col overflow-hidden relative">
-      <CompactPageHeader
-        ref={headerRef}
-        title={album.title}
-        subtitle={album.artist_name || undefined}
-        artworkSrc={artworkSrc || undefined}
-        onBack={goBack}
-        onPlay={handlePlay}
-      />
-      <VirtualizedList
-        items={tracks}
-        onScroll={handleScroll}
-        header={
-          <div className="w-full min-w-0 flex flex-col">
-            {/* Header with back button */}
-            <div className="mt-8 flex items-center gap-2 mb-4">
-              <Button
-                variant="ghost"
-                onClick={goBack}
-                className="text-muted-foreground hover:text-foreground gap-2 pl-2"
-              >
-                <ChevronLeft size={24} />
-                <span className="text-sm font-medium">Back to Albums</span>
-              </Button>
-            </div>
-
-            {/* Album info header */}
-            <div className="flex gap-6 mb-6 px-2">
-              <img
-                className="w-40 h-40 rounded-lg object-cover bg-card shrink-0"
-                src={artworkSrc}
-                onError={(e) => {
-                  e.currentTarget.src = placeholderArt;
-                }}
-                alt={album.title}
-              />
-              <div className="flex flex-col justify-center min-w-0">
-                <h2 className="text-2xl font-bold text-foreground line-clamp-2">
-                  {album.title}
-                </h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  {formatDuration(album.total_duration_ms)}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {album.artist_name || "Unknown Artist"}
-                </p>
-
-                {/* Action buttons */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="default"
-                    size="lg"
-                    onClick={handlePlay}
-                    className="gap-2 rounded-full px-8 bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Play size={20} fill="currentColor" />
-                    Play
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleShuffle}
-                    className="gap-2 rounded-full"
-                  >
-                    <Shuffle size={20} />
-                    Shuffle
-                  </Button>
-                </div>
+    <DetailPageTemplate
+      title={album.title}
+      subtitle={album.artist_name || undefined}
+      artworkSrc={artworkSrc || undefined}
+      onBack={goBack}
+      onPlay={handlePlay}
+    >
+      {(onScroll: (e: React.UIEvent<HTMLDivElement>) => void) => (
+        <VirtualizedList
+          items={tracks}
+          onScroll={onScroll}
+          headerHeight={320} // Adjusted height for hero + track list header
+          header={
+            <div className="w-full min-w-0 flex flex-col">
+              {/* Back button area */}
+              <div className="mt-8 flex items-center gap-2 mb-4">
+                <Button
+                  variant="ghost"
+                  onClick={goBack}
+                  className="text-muted-foreground hover:text-foreground gap-2 pl-2"
+                >
+                  <ChevronLeft size={24} />
+                  <span className="text-sm font-medium">Back to Albums</span>
+                </Button>
               </div>
-            </div>
 
-            {/* Header Row */}
-            <TrackListHeader />
-          </div>
-        }
-        renderItem={(track, index) => (
-          <TrackListRow
-            key={track.id}
-            track={track}
-            index={index + 1}
-            showArtwork={false}
-          />
-        )}
-        emptyState={
-          !isLoading ? (
-            <EmptyState
-              icon={Music}
-              title="No tracks found"
-              description="This album appears to be empty."
+              <DetailHero
+                title={album.title}
+                subtitle={album.artist_name || "Unknown Artist"}
+                tertiaryText={formatDuration(album.total_duration_ms)}
+                artworkSrc={artworkSrc}
+                onPlay={handlePlay}
+                onShuffle={handleShuffle}
+              />
+
+              {/* Keep Track List Header in the scrollable content */}
+              <TrackListHeader />
+            </div>
+          }
+          renderItem={(track: Track, index: number) => (
+            <TrackListRow
+              key={track.id}
+              track={track}
+              index={index + 1}
+              showArtwork={false}
             />
-          ) : null
-        }
-      />
-    </div>
+          )}
+          emptyState={
+            !isLoading ? (
+              <EmptyState
+                icon={Music}
+                title="No tracks found"
+                description="This album appears to be empty."
+              />
+            ) : null
+          }
+        />
+      )}
+    </DetailPageTemplate>
   );
 }

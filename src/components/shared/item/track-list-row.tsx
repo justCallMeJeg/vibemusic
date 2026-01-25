@@ -1,8 +1,7 @@
 import { memo } from "react";
 import { Track } from "@/lib/api";
 import { useCurrentTrack } from "@/stores/audio-store";
-import { cn } from "@/lib/utils";
-import MusicListItem from "./music-list";
+import { EntityRow } from "@/components/shared/entity-row";
 
 interface TrackListRowProps {
   /** The track to display */
@@ -17,14 +16,14 @@ interface TrackListRowProps {
   leftContent?: React.ReactNode;
   /** Custom class names for the container */
   className?: string;
-  /** Width of the index column */
+  /** Width of the index column - unused in new implementation but kept for compat */
   indexWidth?: string;
 }
 
 /**
  * Reusable row component for track lists.
  * Handles hover and active (currently playing) styling consistently.
- * Used in album detail, playlist detail, and artist detail pages.
+ * Now wraps EntityRow for consistency.
  */
 const TrackListRow = memo(function TrackListRow({
   track,
@@ -33,41 +32,23 @@ const TrackListRow = memo(function TrackListRow({
   rightContent,
   leftContent,
   className,
-  indexWidth = "w-12",
 }: TrackListRowProps) {
   const currentTrack = useCurrentTrack();
   const isCurrentTrack = currentTrack?.id === track.id;
 
   return (
-    <div
-      className={cn(
-        "group flex items-center gap-2 hover:bg-accent/50 rounded-md pr-2 transition-colors px-2",
-        isCurrentTrack && "bg-accent/50 outline outline-border",
-        className
-      )}
-    >
-      {/* Left content (e.g., drag handle) or index number */}
-      {leftContent ? (
-        leftContent
-      ) : index !== undefined ? (
-        <span
-          className={cn(
-            "text-muted-foreground text-sm text-center shrink-0 font-variant-numeric tabular-nums group-hover:text-foreground transition-colors",
-            indexWidth
-          )}
-        >
-          {index}
-        </span>
-      ) : null}
-
-      {/* Main track content */}
-      <div className="flex-1 min-w-0">
-        <MusicListItem track={track} showArtwork={showArtwork} disableHover />
-      </div>
-
-      {/* Right content (e.g., remove button) */}
-      {rightContent}
-    </div>
+    <EntityRow
+      title={track.title}
+      subtitle={track.artist || "Unknown Artist"}
+      artworkSrc={track.artwork_path || undefined}
+      showArtwork={showArtwork}
+      index={index}
+      active={isCurrentTrack}
+      leading={leftContent}
+      trailing={rightContent}
+      className={className}
+      variant="default"
+    />
   );
 });
 
