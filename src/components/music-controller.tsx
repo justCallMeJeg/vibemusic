@@ -102,7 +102,7 @@ export default function MusicControler() {
       setDraggingSlider(true);
       setSliderValue(value);
     },
-    [setDraggingSlider]
+    [setDraggingSlider],
   );
 
   const handleSeekCommit = useCallback(
@@ -111,14 +111,14 @@ export default function MusicControler() {
       setIsDragging(false);
       setDraggingSlider(false);
     },
-    [seek, setDraggingSlider]
+    [seek, setDraggingSlider],
   );
 
   const handleVolume = useCallback(
     (value: number[]) => {
       setVolume(value[0]);
     },
-    [setVolume]
+    [setVolume],
   );
 
   return (
@@ -134,6 +134,9 @@ export default function MusicControler() {
                   : placeholderArt
               }
               alt={currentTrack.title}
+              width={96}
+              height={96}
+              decoding="async"
             />
             <div className="flex flex-col min-w-0 w-full pr-4">
               <ScrollingText className="text-foreground text-base font-bold w-full">
@@ -331,7 +334,7 @@ export default function MusicControler() {
                 variant="ghost"
                 onClick={() =>
                   setSidePanel(
-                    sidePanel === "track-details" ? "none" : "track-details"
+                    sidePanel === "track-details" ? "none" : "track-details",
                   )
                 }
                 className={

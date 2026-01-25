@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
@@ -41,7 +42,7 @@ interface EntityRowProps
   playing?: boolean;
 }
 
-export function EntityRow({
+export const EntityRow = memo(function EntityRow({
   title,
   subtitle,
   artworkSrc,
@@ -139,4 +140,4 @@ export function EntityRow({
       )}
     </div>
   );
-}
+});

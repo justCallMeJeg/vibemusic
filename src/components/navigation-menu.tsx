@@ -35,7 +35,7 @@ export default function NavigationMenu({
   const setPage = useNavigationStore((s) => s.setPage);
   const toggleSearch = useNavigationStore((s) => s.toggleSearch);
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
-  const { sidebarItems } = useSettingsStore();
+  const sidebarItems = useSettingsStore((s) => s.sidebarItems);
 
   const iconMap: Record<string, React.ReactNode> = {
     home: <Home />,

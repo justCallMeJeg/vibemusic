@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useIsPlayerVisible } from "@/stores/audio-store";
@@ -33,8 +33,8 @@ export function VirtualizedList<T>({
   const bottomPadding = paddingBottom
     ? parseInt(paddingBottom, 10)
     : isPlayerVisible
-    ? 156
-    : 24;
+      ? 156
+      : 24;
 
   // Apply visual scroll mask
   useScrollMask(24, parentRef);
@@ -46,13 +46,20 @@ export function VirtualizedList<T>({
   // Custom header height or default to 300
   const headerHeightPx = headerHeight;
 
-  const virtualizer = useVirtualizer({
-    count: totalItems,
-    getScrollElement: () => parentRef.current,
-    estimateSize: (index) => {
+  // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
+  const getScrollElement = useCallback(() => parentRef.current, []);
+  const estimateSize = useCallback(
+    (index: number) => {
       if (hasHeader && index === 0) return headerHeightPx;
       return itemHeight;
     },
+    [hasHeader, headerHeightPx, itemHeight],
+  );
+
+  const virtualizer = useVirtualizer({
+    count: totalItems,
+    getScrollElement,
+    estimateSize,
     overscan: 5,
   });
 

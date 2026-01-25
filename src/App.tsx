@@ -16,7 +16,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { getDominantColor } from "./lib/color-utils";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { listen } from "@tauri-apps/api/event";
+import {
+  useFFmpegProgressListener,
+  useWindowCloseHandler,
+  useRefreshInterceptor,
+  useScanProgressListener,
+} from "@/hooks/use-app-init";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 
@@ -30,7 +35,6 @@ import { logger } from "@/lib/logger";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { useUpdateStore } from "./stores/update-store";
-import { DownloadProgress } from "@/stores/settings-store";
 
 import { FFmpegSetupDialog } from "./components/dialogs/ffmpeg-setup-dialog";
 import MiniPlayer from "./components/mini-player";
@@ -74,42 +78,13 @@ export default function App() {
   const addLibraryPath = useSettingsStore((s) => s.addLibraryPath);
   const libraryPaths = useSettingsStore((s) => s.libraryPaths);
   const initSystemThemeListener = useSettingsStore(
-    (s) => s.initSystemThemeListener
+    (s) => s.initSystemThemeListener,
   );
-  const updateFFmpegDownloadProgress = useSettingsStore(
-    (s) => s.updateFFmpegDownloadProgress
-  );
+  // Global FFmpeg download listener - extracted to custom hook
+  useFFmpegProgressListener();
 
-  // Global FFmpeg download listener
-  useEffect(() => {
-    const unlistenPromise = listen<DownloadProgress>(
-      "download-progress",
-      (event) => {
-        updateFFmpegDownloadProgress(event.payload);
-      }
-    );
-    return () => {
-      unlistenPromise.then((unlisten) => unlisten());
-    };
-  }, [updateFFmpegDownloadProgress]);
-
-  // Intercept Refresh Keys
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for F5 or Ctrl+R (Cmd+R on Mac)
-      const isRefresh =
-        e.key === "F5" ||
-        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r");
-
-      if (isRefresh && isPlaying) {
-        e.preventDefault();
-        setIsRefreshWarningOpen(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying]);
+  // Intercept Refresh Keys - extracted to custom hook
+  useRefreshInterceptor(isPlaying, () => setIsRefreshWarningOpen(true));
 
   const handleConfirmRefresh = async () => {
     await stop();
@@ -179,7 +154,7 @@ export default function App() {
         hasDoneInitialScan.current = true;
         logger.info(
           "Auto-scanning library paths on startup:",
-          settings.libraryPaths
+          settings.libraryPaths,
         );
         setIsScanning(true);
         invoke("scan_music_library", { folders: settings.libraryPaths })
@@ -212,45 +187,11 @@ export default function App() {
     }
   }, [isSettingsLoading, activeProfileId, fetchLibrary, isFFmpegReady]);
 
-  // Handle Close-to-Tray and Quit Confirmation
-  useEffect(() => {
-    const appWindow = getCurrentWindow();
-    const unlistenPromise = appWindow.onCloseRequested(async (event) => {
-      // Prevent default close to handle everything manually
-      event.preventDefault();
+  // Handle Close-to-Tray and Quit Confirmation - extracted to custom hook
+  useWindowCloseHandler(() => setIsQuitDialogOpen(true));
 
-      const { closeToTray } = useSettingsStore.getState();
-
-      if (closeToTray) {
-        await appWindow.hide();
-      } else {
-        setIsQuitDialogOpen(true);
-      }
-    });
-
-    // Show window once App is ready to prevent white flash
-    appWindow.show();
-
-    return () => {
-      unlistenPromise.then((unlisten) => unlisten());
-    };
-  }, []);
-
-  // Listen for global scan progress to refresh library
-  useEffect(() => {
-    const unlistenPromise = listen(
-      "scan-progress",
-      (event: { payload: { status: string } }) => {
-        if (event.payload?.status === "complete") {
-          logger.info("Scan complete event received, refreshing library...");
-          fetchLibrary();
-        }
-      }
-    );
-    return () => {
-      unlistenPromise.then((u) => u());
-    };
-  }, [fetchLibrary]);
+  // Listen for global scan progress to refresh library - extracted to custom hook
+  useScanProgressListener(fetchLibrary);
 
   // Update gradient when track changes - only show when actually playing/paused
   useEffect(() => {

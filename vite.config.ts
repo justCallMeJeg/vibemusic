@@ -49,6 +49,9 @@ export default defineConfig(async () => ({
             "lucide-react",
           ],
           "utils-vendor": ["date-fns", "clsx", "tailwind-merge", "uuid"],
+          // Separate heavy libraries for better code splitting
+          charts: ["recharts"],
+          dnd: ["@dnd-kit/core", "@dnd-kit/sortable", "@dnd-kit/utilities"],
         },
       },
     },

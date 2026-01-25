@@ -1,9 +1,18 @@
+// Cache for already-computed colors
+const colorCache = new Map<string, string>();
+
 /**
  * Extracts the dominant color from an image URL by drawing it to a 1x1 canvas.
+ * Results are cached to avoid re-computation for the same URL.
  * @param {string} imageUrl - The URL of the image.
  * @returns {Promise<string>} The dominant color as an RGB string or hex fallback.
  */
 export async function getDominantColor(imageUrl: string): Promise<string> {
+  // Return cached result if available
+  if (colorCache.has(imageUrl)) {
+    return colorCache.get(imageUrl)!;
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
@@ -27,7 +36,9 @@ export async function getDominantColor(imageUrl: string): Promise<string> {
 
       try {
         const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-        resolve(`rgb(${r}, ${g}, ${b})`);
+        const color = `rgb(${r}, ${g}, ${b})`;
+        colorCache.set(imageUrl, color);
+        resolve(color);
       } catch (e) {
         // Can happen with CORS issues even with crossOrigin set
         console.warn("Failed to extract color", e);

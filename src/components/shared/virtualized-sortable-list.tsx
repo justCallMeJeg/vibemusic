@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useIsPlayerVisible } from "@/stores/audio-store";
@@ -49,17 +49,21 @@ export function VirtualizedSortableList<T>({
   const bottomPadding = paddingBottom
     ? parseInt(paddingBottom, 10)
     : isPlayerVisible
-    ? 156
-    : 24;
+      ? 156
+      : 24;
 
   // Apply visual scroll mask
   useScrollMask(24, parentRef);
 
+  // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
+  const getScrollElement = useCallback(() => parentRef.current, []);
+  const estimateSize = useCallback(() => itemHeight, [itemHeight]);
+
   // Virtualizer
   const virtualizer = useVirtualizer({
     count: items.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => itemHeight,
+    getScrollElement,
+    estimateSize,
     overscan: 5,
   });
 
@@ -67,7 +71,7 @@ export function VirtualizedSortableList<T>({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {

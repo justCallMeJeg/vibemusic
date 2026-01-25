@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { debounce } from "@/lib/utils";
@@ -29,12 +29,15 @@ function useGridColumns() {
     () =>
       debounce(() => {
         const width = window.innerWidth;
-        if (width >= 1280) setColumns(5); // xl
-        else if (width >= 1024) setColumns(4); // lg
-        else if (width >= 768) setColumns(3); // md
+        if (width >= 1280)
+          setColumns(5); // xl
+        else if (width >= 1024)
+          setColumns(4); // lg
+        else if (width >= 768)
+          setColumns(3); // md
         else setColumns(2); // default/sm
       }, 150),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -60,8 +63,8 @@ export function VirtualizedGrid<T>({
   const bottomPadding = paddingBottom
     ? parseInt(paddingBottom, 10)
     : isPlayerVisible
-    ? 156
-    : 24;
+      ? 156
+      : 24;
 
   // Apply visual scroll mask
   useScrollMask(24, parentRef);
@@ -72,11 +75,15 @@ export function VirtualizedGrid<T>({
   // Calculate rows
   const rowCount = Math.ceil(items.length / columns);
 
+  // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
+  const getScrollElement = useCallback(() => parentRef.current, []);
+  const estimateSize = useCallback(() => itemHeight, [itemHeight]);
+
   // Virtualizer
   const virtualizer = useVirtualizer({
     count: rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => itemHeight,
+    getScrollElement,
+    estimateSize,
     overscan: 3,
   });
 

@@ -30,6 +30,7 @@ export function ArtworkImage({
       className={cn("w-full h-full object-cover", className)}
       onError={() => setError(true)}
       loading="lazy"
+      decoding="async"
       {...props}
     />
   );

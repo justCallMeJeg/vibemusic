@@ -178,7 +178,7 @@ export default function MiniPlayer() {
   const status = usePlayerStatus();
   const position = usePosition();
   const duration = useDuration();
-  const { miniPlayerStyle } = useSettingsStore();
+  const miniPlayerStyle = useSettingsStore((s) => s.miniPlayerStyle);
   const toggleMiniPlayer = useNavigationStore((s) => s.toggleMiniPlayer);
 
   // Use hook for actions to ensure stability

@@ -109,6 +109,9 @@ const MusicListItem = memo(function MusicListItem({
                   className="aspect-square h-10 rounded-lg object-cover bg-card"
                   src={artworkSrc}
                   loading="lazy"
+                  decoding="async"
+                  width={40}
+                  height={40}
                   onError={(e) => {
                     e.currentTarget.src = placeholderArt;
                   }}

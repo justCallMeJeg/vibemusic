@@ -31,8 +31,10 @@ export default function SongsPage() {
   const isLoading = useLibraryStore((s) => s.isLoading);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Use persistent settings
-  const { songsSortKey, songsSortDirection, setSongsSort } = useSettingsStore();
+  // Use persistent settings - individual selectors for better re-render performance
+  const songsSortKey = useSettingsStore((s) => s.songsSortKey);
+  const songsSortDirection = useSettingsStore((s) => s.songsSortDirection);
+  const setSongsSort = useSettingsStore((s) => s.setSongsSort);
 
   // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -53,7 +55,7 @@ export default function SongsPage() {
         (t) =>
           t.title.toLowerCase().includes(query) ||
           (t.artist && t.artist.toLowerCase().includes(query)) ||
-          (t.album && t.album.toLowerCase().includes(query))
+          (t.album && t.album.toLowerCase().includes(query)),
       );
     }
 

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Play } from "lucide-react";
@@ -18,7 +19,7 @@ const cardVariants = cva(
     defaultVariants: {
       variant: "portrait",
     },
-  }
+  },
 );
 
 const imageVariants = cva("relative bg-card overflow-hidden shadow-sm", {
@@ -36,7 +37,8 @@ const imageVariants = cva("relative bg-card overflow-hidden shadow-sm", {
 });
 
 interface EntityCardProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "contextMenu">,
+  extends
+    Omit<React.HTMLAttributes<HTMLDivElement>, "contextMenu">,
     VariantProps<typeof cardVariants> {
   title: string;
   subtitle?: string;
@@ -53,7 +55,7 @@ interface EntityCardProps
   };
 }
 
-export function EntityCard({
+export const EntityCard = memo(function EntityCard({
   title,
   subtitle,
   tertiaryText,
@@ -115,4 +117,4 @@ export function EntityCard({
   }
 
   return CardContent;
-}
+});

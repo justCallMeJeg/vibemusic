@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
 import MusicListItem from "@/components/shared/item/music-list";
@@ -30,7 +30,7 @@ export default function HomePage() {
   // Delete Dialog State
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(
-    null
+    null,
   );
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -58,9 +58,9 @@ export default function HomePage() {
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
 
-  // Derived state for display
-  const recentTracks = tracks.slice(0, 20);
-  const displayAlbums = albums.slice(0, 10);
+  // Derived state for display - memoized to prevent new array creation on each render
+  const recentTracks = useMemo(() => tracks.slice(0, 20), [tracks]);
+  const displayAlbums = useMemo(() => albums.slice(0, 10), [albums]);
   const displayPlaylists = playlists;
 
   const isEmpty =
@@ -86,7 +86,7 @@ export default function HomePage() {
           "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
             (isPlayerVisible ? "pb-39" : "pb-8"),
-          isEmpty && "flex flex-col"
+          isEmpty && "flex flex-col",
         )}
       >
         {/* Albums Section */}
