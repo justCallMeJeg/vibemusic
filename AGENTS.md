@@ -69,3 +69,16 @@ Library: `get_all_tracks`, `get_all_albums`, `get_album_by_id`, `get_album_track
 Scanner: `scan_folder`, `scan_music_library`, `get_file_metadata`, `check_files_exist`, `prune_library`
 Playlists: `create_playlist`, `delete_playlist`, `update_playlist`, `get_playlists`, `get_playlist_tracks`, `add_track_to_playlist`, `remove_track_from_playlist`, `reorder_playlist`
 Other: profile CRUD, lyrics fetch, stats record/get, updater, file watcher
+
+## Design Context
+
+- **PRODUCT.md** (root): Strategic doc — register `product` for the desktop app, `brand` for `landing/`
+- **DESIGN.md** (root): Visual system — North Star "The Dark Room", achromatic shell, Instrument Sans single face, tonal layering
+- **`landing/PRODUCT.md`**: Strategic doc — register `brand` for the marketing site
+- **`landing/DESIGN.md`**: Visual system — North Star "The Gallery", pure white canvas + indigo primary, Inter + Instrument Sans pair, soft shadow hover on cards
+- **Design tokens**: `src/styles/globals.css` (app), `landing/src/styles/globals.css` (landing) — OKLCH throughout
+- **Components**: shadcn/ui (New York) in `src/components/ui/`; custom landing UI in `landing/src/components/ui/`
+- **Profile theme**: `use-profile-theme.ts` extracts HSL from user color and applies to CSS vars at runtime
+- **Live mode configured**: `.impeccable/live/config.json` — `files: ["index.html", "landing/index.html"]`
+- **Design sidecar**: `.impeccable/design.json` — component snippets, tonal ramps, motion tokens
+- **Key rules**: One Chroma Rule, Single Face Rule, Flat-By-Default Rule, Gallery Wall Rule, One-Heading Rule

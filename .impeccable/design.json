@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 2,
+  "title": "Design System: VibeMusic",
+  "extensions": {
+    "colorMeta": {
+      "bg-dark": { "role": "neutral", "displayName": "Dark Canvas", "canonical": "oklch(14.5% 0 0deg)" },
+      "ink-dark": { "role": "neutral", "displayName": "Dark Ink", "canonical": "oklch(98.5% 0 0deg)" },
+      "brand-indigo": { "role": "primary", "displayName": "Brand Indigo", "canonical": "oklch(48.8% 0.243 264.376deg)" },
+      "primary": { "role": "primary", "displayName": "Landing Primary", "canonical": "oklch(20.5% 0.042 265.755deg)" }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "All app body text — track titles, descriptions, settings." },
+      "display": { "displayName": "Display", "purpose": "Landing page hero headline only." }
+    },
+    "shadows": [
+      { "name": "card-hover", "value": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)", "purpose": "Feature card hover on landing page." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "duration-fade", "value": "0.2s", "purpose": "Fade transitions for hover and focus." },
+      { "name": "duration-enter", "value": "0.6s", "purpose": "Landing page entrance animation duration." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (App)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default action button in the desktop app. Uses content-adaptive colors.",
+      "html": "<button class=\"ds-btn-primary\">Button</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 8px 16px; border-radius: 6px; font-family: 'Instrument Sans', sans-serif; font-size: 12px; font-weight: 500; line-height: 1.4; border: none; cursor: pointer; transition: opacity 0.2s cubic-bezier(0.16,1,0.3,1); background: oklch(98.5% 0 0deg); color: oklch(20.5% 0 0deg); } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid oklch(70.8% 0 0deg); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button (App Nav)",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Icon-only navigation button in the sidebar.",
+      "html": "<button class=\"ds-btn-ghost\" aria-label=\"Navigate\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><polyline points=\"9 22 9 12 15 12 15 22\"/></svg></button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: none; background: transparent; cursor: pointer; transition: background 0.2s cubic-bezier(0.16,1,0.3,1), color 0.2s cubic-bezier(0.16,1,0.3,1); color: oklch(70.8% 0 0deg); } .ds-btn-ghost:hover { background: oklch(26.9% 0 0deg / 0.25); color: oklch(98.5% 0 0deg); } .ds-btn-ghost:focus-visible { outline: 2px solid oklch(43.9% 0 0deg); outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Button (Landing)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Download CTA on the landing page. Deep indigo with hover lift.",
+      "html": "<a href=\"#\" class=\"ds-btn-landing-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/></svg> Download</a>",
+      "css": ".ds-btn-landing-primary { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 12px 24px; border-radius: 8px; font-family: 'Instrument Sans', 'Inter', sans-serif; font-size: 13px; font-weight: 600; line-height: 1.3; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); background: oklch(20.5% 0.042 265.755deg); color: oklch(98.5% 0 0deg); box-shadow: 0 4px 6px -1px oklch(20.5% 0.042 265.755deg / 0.2); } .ds-btn-landing-primary:hover { transform: scale(1.02); box-shadow: 0 10px 15px -3px oklch(20.5% 0.042 265.755deg / 0.3); } .ds-btn-landing-primary:focus-visible { outline: 2px solid oklch(20.5% 0.042 265.755deg); outline-offset: 2px; }"
+    },
+    {
+      "name": "Slider (App)",
+      "kind": "custom",
+      "refersTo": "slider-track",
+      "description": "Seek position and volume slider used in the player bar.",
+      "html": "<div class=\"ds-slider\"><div class=\"ds-slider-track\"><div class=\"ds-slider-range\" style=\"width: 45%\"></div></div><div class=\"ds-slider-thumb\" style=\"left: 45%\"></div></div>",
+      "css": ".ds-slider { position: relative; display: flex; width: 100%; height: 24px; align-items: center; cursor: pointer; touch-action: none; user-select: none; } .ds-slider-track { position: relative; height: 6px; width: 100%; overflow: hidden; border-radius: 9999px; background: oklch(100% 0 0deg / 0.2); } .ds-slider-range { position: absolute; height: 100%; background: oklch(98.5% 0 0deg); border-radius: 9999px; } .ds-slider-thumb { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 9999px; background: oklch(98.5% 0 0deg); transform: translate(-50%, -50%); transition: box-shadow 0.2s; } .ds-slider-thumb:focus-visible { outline: 2px solid oklch(43.9% 0 0deg); outline-offset: 2px; }"
+    },
+    {
+      "name": "Feature Card (Landing)",
+      "kind": "card",
+      "refersTo": "feature-card",
+      "description": "Gallery-style feature card with icon and description. Lifts on hover.",
+      "html": "<div class=\"ds-feature-card\"><div class=\"ds-feature-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18V5l12-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"18\" cy=\"16\" r=\"3\"/></svg></div><div><h3 class=\"ds-feature-title\">Multi-Format Playback</h3><p class=\"ds-feature-desc\">MP3, FLAC, OGG, M4A, AAC, WAV, AIFF — no conversion needed.</p></div></div>",
+      "css": ".ds-feature-card { display: flex; gap: 14px; padding: 16px; border-radius: 12px; border: 1px solid oklch(92.2% 0.004 286.375deg / 0.6); background: oklch(100% 0 0deg); transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: default; } .ds-feature-card:hover { border-color: oklch(20.5% 0.042 265.755deg / 0.3); transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); } .ds-feature-icon { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; background: oklch(20.5% 0.042 265.755deg / 0.08); color: oklch(20.5% 0.042 265.755deg); } .ds-feature-title { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; line-height: 1.25; color: oklch(14.5% 0 0deg); margin: 0 0 2px 0; } .ds-feature-desc { font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.4; color: oklch(55.6% 0.013 286.375deg); margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Dark Room + The Gallery",
+    "overview": "VibeMusic has two faces, one design language. The app is The Dark Room — a receding dark chrome where the album art provides the color. The landing is The Gallery — a white canvas where the indigo brand color commands attention. Both share Instrument Sans typography, restrained color strategies, and a precision-over-ornament ethos.",
+    "keyCharacteristics": [
+      "Dark-by-default app, light-as-user-choice landing",
+      "Achromatic app shell gives album art full color authority",
+      "Tonal layering (not shadows) for depth in the app",
+      "Gentle shadow-on-hover for cards on the landing",
+      "Single typeface for the app; complementary display+body pair for the landing"
+    ],
+    "rules": [
+      { "name": "The One Chroma Rule", "body": "The interface chrome carries zero chroma at rest. Color enters only through dynamic content (album art, background gradient) or explicit user choice.", "section": "colors" },
+      { "name": "The Single Face Rule", "body": "One family, four weight/scale combinations. Hierarchy comes from scale and weight, not from font switching.", "section": "typography" },
+      { "name": "The Gallery Wall Rule", "body": "The landing background is always pure white. No tints, no gradients, no patterns on the body canvas.", "section": "colors" },
+      { "name": "The One-Heading Rule", "body": "The hero heading is the only Display-sized text on the landing page. No section headers compete at display scale.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "App surfaces are flat at rest. Depth is conveyed by lightness, not by shadow. Landing cards are the only exception, and only on hover.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do let album art and the dynamic background gradient be the primary color source on screen.",
+      "Do use tonal layering (lighter backgrounds) to show hierarchy — never box-shadow in the app.",
+      "Do keep the sidebar receded (muted icons, no labels at rest).",
+      "Do use pure white as the landing canvas.",
+      "Do show platform badges and open-source license in the landing footer.",
+      "Do ensure body text hits ≥4.5:1 against the background at all times."
+    ],
+    "donts": [
+      "Don't use gradient text, glassmorphism-as-default, or numbered section markers.",
+      "Don't use side-stripe borders (colored border-left >1px on cards or list items).",
+      "Don't add box-shadow to any app surface — depth is conveyed by lightness.",
+      "Don't use two similar typefaces. App uses one family; landing uses Instrument Sans + Inter as a deliberate contrast pair.",
+      "Don't gate content visibility on class-triggered animations.",
+      "Don't use the AI-template landing reflexes: no glass cards, no numbered section eyebrows, no tiny uppercase tracked section headers."
+    ]
+  }
+}
