@@ -169,7 +169,7 @@ The landing uses a hybrid approach: flat at rest, shadows on interaction.
 
 ### Don't:
 - **Don't** use the AI-template landing reflexes: no glass cards, no numbered section markers (01 / 02 / 03), no tiny uppercase tracked eyebrows above every section ("FEATURES", "DOWNLOAD", "ABOUT").
-- **Don't** use gradient text decoratively — the hero heading uses a mild indigo gradient on "Your way." as a deliberate brand moment, but no other gradient text appears anywhere.
+- **Don't** use gradient text anywhere. No exceptions.
 - **Don't** use side-stripe borders (colored `border-left` >1px on cards or list items).
 - **Don't** add a pricing tier section, a "start free trial" CTA, or hero-metric statistics. This is a free, open-source desktop app landing, not a SaaS signup page.
 - **Don't** gate content visibility on class-triggered animations. All sections are visible at rest; animations enhance but never hide.
