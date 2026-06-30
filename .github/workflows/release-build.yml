@@ -189,9 +189,7 @@ jobs:
           }
 
           $rows = @()
-          $shaBlock = ""
           Get-ChildItem -Path artifacts -Recurse -File | Where-Object { $_.Name -match '^VibeMusic-' -and $_.Name -notmatch '\.sig$' -and $_.Name -ne 'latest.json' } | ForEach-Object {
-            $sha = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
             $filename = $_.Name
             $url = "$baseUrl/$([Uri]::EscapeDataString($filename))"
             $osLabel = ""
@@ -201,8 +199,13 @@ jobs:
                 break
               }
             }
-            $rows += "| $osLabel | [$filename]($url) | $sha |"
-            $shaBlock += "$sha  $filename`n"
+            $installerType = if ($filename -match '\.msi$') { '.msi' }
+              elseif ($filename -match '\.exe$') { '.exe' }
+              elseif ($filename -match '\.app\.tar\.gz$') { '.app.tar.gz' }
+              elseif ($filename -match '\.AppImage\.tar\.gz$') { '.AppImage.tar.gz' }
+              elseif ($filename -match '\.AppImage$') { '.AppImage' }
+              else { $filename -replace '^VibeMusic-[^-]+-', '' }
+            $rows += "| $osLabel | $installerType | [$filename]($url) |"
           }
 
           $nl = [Environment]::NewLine
@@ -213,15 +216,10 @@ jobs:
             "",
             "## Downloads",
             "",
-            "| OS | File | SHA256 |",
+            "| OS | Installer Type | Download |",
             "|---|---|---|"
           )
           foreach ($r in $rows) { $bodyLines += $r }
-          $bodyLines += ""
-          $bodyLines += "### SHA256 Checksums"
-          $bodyLines += '```'
-          $bodyLines += $shaBlock.Trim()
-          $bodyLines += '```'
           $body = $bodyLines -join $nl
           $bodyPath = Join-Path artifacts "body.md"
           Set-Content $bodyPath $body
