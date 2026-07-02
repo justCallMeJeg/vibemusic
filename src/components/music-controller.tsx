@@ -108,6 +108,7 @@ export default function MusicControler() {
             <ArtworkImage
               src={currentTrack.artwork_path}
               alt={currentTrack.title}
+              placeholderType="track"
               className="aspect-square h-24 w-fit rounded-lg"
               width={96}
               height={96}

@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Clock, Music, Radio, Sparkles, BarChart2 } from "lucide-react";
-import artistPlaceholderArt from "@/assets/artist-placeholder-art.png";
 import { ListItem } from "@/components/shared/list-item";
 import { ListeningHeatmap } from "@/components/insights/listening-heatmap";
 import { TrendIndicator } from "@/components/insights/trend-indicator";
@@ -266,7 +265,7 @@ export default function InsightsPage() {
                     subtitle={`${artist.play_count} plays`}
                     artworkSrc={artist.cover_image ?? undefined}
                     artworkCircular
-                    artworkFallback={artistPlaceholderArt}
+                    placeholderType="artist"
                     index={i + 1}
                     variant="compact"
                     showArtwork

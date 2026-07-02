@@ -41,6 +41,7 @@ export default function QueueMenu() {
             <ArtworkImage
               src={currentTrack.artwork_path}
               alt={currentTrack.title}
+              placeholderType="track"
               className="w-12 h-12 rounded shadow-lg"
             />
             <div className="min-w-0 flex-1">

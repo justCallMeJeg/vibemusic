@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Play, Shuffle, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtworkImage } from "@/components/shared/artwork-image";
+import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
 import { formatDuration } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ export function PlaylistHero({
 
   return (
     <div className={cn("flex gap-6 mb-6 px-2", className)}>
-      <div className="w-40 h-40 rounded-lg bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center text-muted-foreground text-6xl font-bold select-none shrink-0 overflow-hidden shadow-xl">
+      <div className="w-40 h-40 rounded-lg shrink-0 overflow-hidden shadow-xl">
         {showImage ? (
           <ArtworkImage
             src={coverUrl}
@@ -49,7 +50,7 @@ export function PlaylistHero({
             onError={() => setFailedCoverUrl(coverUrl ?? null)}
           />
         ) : (
-          title.slice(0, 2).toUpperCase()
+          <DynamicPlaceholder type="playlist" title={title} />
         )}
       </div>
       <div className="flex flex-col justify-center min-w-0">

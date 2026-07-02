@@ -147,6 +147,7 @@ export function TrackSelectDialog({
                     <ArtworkImage
                       src={track.artwork_path}
                       className="w-10 h-10 rounded bg-card shrink-0"
+                      placeholderType="track"
                       alt=""
                     />
                     <div className="flex-1 min-w-0">

@@ -8,6 +8,7 @@ interface DetailHeroProps {
   subtitle?: string;
   tertiaryText?: string;
   artworkPath?: string | null;
+  placeholderType?: "artist" | "track";
   onPlay?: () => void;
   onShuffle?: () => void;
   className?: string;
@@ -19,6 +20,7 @@ export function DetailHero({
   subtitle,
   tertiaryText,
   artworkPath,
+  placeholderType,
   onPlay,
   onShuffle,
   className,
@@ -29,6 +31,7 @@ export function DetailHero({
       <ArtworkImage
         src={artworkPath}
         alt={title}
+        placeholderType={placeholderType}
         className="w-40 h-40 rounded-lg shrink-0 shadow-md"
       />
       <div className="flex flex-col justify-center min-w-0 flex-1">

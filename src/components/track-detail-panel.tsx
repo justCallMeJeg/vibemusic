@@ -83,6 +83,7 @@ export default function TrackDetailPanel() {
             <ArtworkImage
               src={currentTrack.artwork_path}
               alt={currentTrack.title}
+              placeholderType="track"
               className="w-full h-full object-cover"
             />
           </div>

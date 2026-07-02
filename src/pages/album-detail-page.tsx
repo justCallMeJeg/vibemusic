@@ -110,14 +110,15 @@ export default function AlbumDetailPage() {
                 </Button>
               </div>
 
-              <DetailHero
-                title={album.title}
-                subtitle={album.artist_name || "Unknown Artist"}
-                tertiaryText={formatDuration(album.total_duration_ms)}
-                artworkPath={album.artwork_path}
-                onPlay={handlePlay}
-                onShuffle={handleShuffle}
-              />
+<DetailHero
+  title={album.title}
+  subtitle={album.artist_name || "Unknown Artist"}
+  tertiaryText={formatDuration(album.total_duration_ms)}
+  artworkPath={album.artwork_path}
+  placeholderType="track"
+  onPlay={handlePlay}
+  onShuffle={handleShuffle}
+/>
 
               {/* Keep Track List Header in the scrollable content */}
               <TrackListHeader />

@@ -22,7 +22,6 @@ import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useAudioStore, useCurrentTrack, usePlayerStatus } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
-import artistPlaceholderArt from "@/assets/artist-placeholder-art.png";
 import { CompactPageHeader } from "@/components/shared/compact-page-header";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
@@ -181,7 +180,7 @@ export default function ArtistDetailPage() {
               <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
                 <ArtworkImage
                   src={artist.artwork_path}
-                  fallback={artistPlaceholderArt}
+                  placeholderType="artist"
                   alt={artist.name}
                   className="w-full h-full object-cover"
                 />

@@ -198,6 +198,7 @@ function Art({ track, className }: { track: Track | null; className: string }) {
     <ArtworkImage
       src={track?.artwork_path}
       className={className}
+      placeholderType="track"
       alt="Art"
     />
   );

@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { MediaContextMenu } from "@/components/shared/media-context-menu";
 import { Button } from "@/components/ui/button";
-import artistPlaceholderArt from "@/assets/artist-placeholder-art.png";
+import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
 
 const cardVariants = cva(
   "flex flex-col cursor-pointer transition-colors group relative debug-card-item",
@@ -85,22 +85,23 @@ export const CardItem = memo(function CardItem({
       className="group-hover:scale-[1.02] transition-transform duration-300"
     />
   ) : artworkType === "playlist" ? (
-    <div className="w-full h-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
-      <span className="text-4xl font-bold text-muted-foreground select-none group-hover:scale-[1.02] transition-transform">
-        {title.slice(0, 2).toUpperCase()}
-      </span>
-    </div>
+    <DynamicPlaceholder
+      type="playlist"
+      title={title}
+      className="group-hover:scale-[1.02] transition-transform"
+    />
   ) : artworkType === "artist" ? (
     <ArtworkImage
       src={undefined}
       alt={title}
-      fallback={artistPlaceholderArt}
+      placeholderType="artist"
       className="group-hover:scale-[1.02] transition-transform duration-300"
     />
   ) : (
     <ArtworkImage
       src={undefined}
       alt={title}
+      placeholderType="track"
       className="group-hover:scale-[1.02] transition-transform duration-300"
     />
   );
