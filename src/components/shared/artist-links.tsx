@@ -19,9 +19,9 @@ export function ArtistLinks({
 }: ArtistLinksProps) {
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
-  const handleArtistClick = (e: React.MouseEvent, id: number) => {
+  const handleArtistClick = (e: React.MouseEvent, id: number, name?: string) => {
     e.stopPropagation(); // Prevent row click
-    openArtistDetail(id);
+    openArtistDetail(id, name);
   };
 
   if (names && ids && names.length > 0 && names.length === ids.length) {
@@ -38,7 +38,7 @@ export function ArtistLinks({
                     ids[index],
                   );
               }}
-              onClick={(e) => handleArtistClick(e, ids[index])}
+              onClick={(e) => handleArtistClick(e, ids[index], names[index])}
               className="hover:underline cursor-pointer transition-colors"
             >
               {name}
@@ -64,7 +64,7 @@ export function ArtistLinks({
           className,
         )}
         onClick={(e) => {
-          if (fallbackId) handleArtistClick(e, fallbackId);
+          if (fallbackId) handleArtistClick(e, fallbackId, fallbackName || undefined);
         }}
       >
         {fallbackName}

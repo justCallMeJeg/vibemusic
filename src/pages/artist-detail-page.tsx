@@ -11,33 +11,31 @@ import {
 } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { ArtworkImage } from "@/components/shared/artwork-image";
-import {
-  ArrowLeft,
-  Shuffle,
-  ChevronLeft,
-  ChevronRight,
-  Music,
-} from "lucide-react";
+import { Shuffle, ChevronLeft, ChevronRight, Music } from "lucide-react";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
-import { useAudioStore, useCurrentTrack, usePlayerStatus } from "@/stores/audio-store";
+import {
+  useAudioStore,
+  useCurrentTrack,
+  usePlayerStatus,
+} from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
-import { CompactPageHeader } from "@/components/shared/compact-page-header";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
-import { VirtualizedList } from "@/components/shared/virtualized-list";
-import { TrackListHeader } from "@/components/shared/track-list-header";
-import { PageLayout } from "@/components/shared/page-layout";
+import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
+import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailSkeleton } from "@/components/skeletons";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
+  const updateBreadcrumbLabel = useNavigationStore(
+    (s) => s.updateBreadcrumbLabel,
+  );
   const play = useAudioStore((s) => s.play);
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
-  const headerRef = useRef<HTMLDivElement>(null);
 
   const [artist, setArtist] = useState<Artist | null>(null);
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -64,9 +62,16 @@ export default function ArtistDetailPage() {
               getArtistAlbums(detailView.id),
               getArtistTracks(detailView.id),
             ]);
-          if (artistResult.status === "fulfilled")
+          if (artistResult.status === "fulfilled" && artistResult.value) {
             setArtist(artistResult.value);
-          else logger.error("Failed to load artist", artistResult.reason);
+            updateBreadcrumbLabel(
+              "artist",
+              detailView.id,
+              artistResult.value.name,
+            );
+          } else if (artistResult.status === "rejected") {
+            logger.error("Failed to load artist", artistResult.reason);
+          }
           if (albumsResult.status === "fulfilled")
             setAlbums(albumsResult.value);
           else logger.error("Failed to load albums", albumsResult.reason);
@@ -78,14 +83,16 @@ export default function ArtistDetailPage() {
         }
       })();
     }
-  }, [detailView]);
+  }, [detailView, updateBreadcrumbLabel]);
 
   if (isLoading || !artist) {
     if (isLoading) return <DetailSkeleton />;
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 text-muted-foreground">
         <span>Artist not found</span>
-        <Button variant="ghost" onClick={goBack}>Go back</Button>
+        <Button variant="ghost" onClick={goBack}>
+          Go back
+        </Button>
       </div>
     );
   }
@@ -125,98 +132,59 @@ export default function ArtistDetailPage() {
     }
   };
 
-
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const threshold = 300;
-    const header = headerRef.current;
-
-    if (header) {
-      if (scrollTop > threshold) {
-        if (header.dataset.visible !== "true") {
-          header.style.opacity = "1";
-          header.dataset.visible = "true";
-        }
-      } else {
-        if (header.dataset.visible !== "false") {
-          header.style.opacity = "0";
-          header.dataset.visible = "false";
-        }
-      }
-    }
-  };
-
   return (
-    <PageLayout overflowHidden className="relative">
-      <CompactPageHeader
-        ref={headerRef}
-        title={artist.name}
-        subtitle={`${artist.album_count} Albums • ${artist.track_count} Songs`}
-        artworkPath={artist.artwork_path}
-        onBack={goBack}
-        onPlay={() => handleShuffleArtist()}
-      />
-
-      <VirtualizedList
-        items={tracks}
-        onScroll={handleScroll}
-        header={
-          <div className="w-full min-w-0 flex flex-col">
-            {/* Back Button Row */}
-            <div className="mt-8 flex items-center gap-2 mb-4">
-              <Button
-                variant="ghost"
-                onClick={goBack}
-                className="text-muted-foreground hover:text-foreground gap-2 pl-2"
-              >
-                <ArrowLeft size={24} />
-                <span className="text-sm font-medium">Back to Artists</span>
-              </Button>
+    <DetailPageTemplate
+      title={artist.name}
+      subtitle={`${artist.album_count} Albums • ${artist.track_count} Songs`}
+      artworkPath={artist.artwork_path}
+      onBack={goBack}
+      onPlay={() => handleShuffleArtist()}
+    >
+      <TrackList
+        tracks={tracks}
+        headerContent={
+          <div className="flex gap-6 mb-8">
+            <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
+              <ArtworkImage
+                src={artist.artwork_path}
+                placeholderType="artist"
+                alt={artist.name}
+                className="w-full h-full object-cover"
+              />
             </div>
 
-            {/* Artist Info Header */}
-            <div className="flex gap-6 mb-8">
-              <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
-                <ArtworkImage
-                  src={artist.artwork_path}
-                  placeholderType="artist"
-                  alt={artist.name}
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex flex-col justify-center min-w-0">
+              <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+                {artist.name}
+              </h1>
+              <div className="flex items-center gap-4 text-muted-foreground font-medium text-sm">
+                <span>
+                  {artist.album_count}{" "}
+                  {artist.album_count === 1 ? "Album" : "Albums"}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                <span>
+                  {artist.track_count}{" "}
+                  {artist.track_count === 1 ? "Song" : "Songs"}
+                </span>
               </div>
 
-              <div className="flex flex-col justify-center min-w-0">
-                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
-                  {artist.name}
-                </h1>
-                <div className="flex items-center gap-4 text-muted-foreground font-medium text-sm">
-                  <span>
-                    {artist.album_count}{" "}
-                    {artist.album_count === 1 ? "Album" : "Albums"}
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-                  <span>
-                    {artist.track_count}{" "}
-                    {artist.track_count === 1 ? "Song" : "Songs"}
-                  </span>
-                </div>
-
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleShuffleArtist}
-                    className="gap-2"
-                  >
-                    <Shuffle size={14} />
-                    Shuffle
-                  </Button>
-                </div>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShuffleArtist}
+                  className="gap-2"
+                >
+                  <Shuffle size={14} />
+                  Shuffle
+                </Button>
               </div>
             </div>
-
-            {/* Albums Section (Horizontal Row) */}
+          </div>
+        }
+        headerExtras={
+          <>
             {albums.length > 0 && (
               <section className="pb-8">
                 <div className="flex items-center justify-between mb-4">
@@ -249,7 +217,9 @@ export default function ArtistDetailPage() {
                     <div key={album.id} className="w-40 min-w-40">
                       <CardItem
                         title={album.title}
-                        subtitle={album.year ? String(album.year) : "Unknown Year"}
+                        subtitle={
+                          album.year ? String(album.year) : "Unknown Year"
+                        }
                         artworkSrc={album.artwork_path || undefined}
                         artworkType="album"
                         variant="compact"
@@ -262,17 +232,12 @@ export default function ArtistDetailPage() {
               </section>
             )}
 
-            {/* Songs Header */}
             {tracks.length > 0 && (
-              <div className="pb-2">
-                <h2 className="text-xl font-bold text-foreground mb-4">
-                  Songs
-                </h2>
-                <TrackListHeader />
-              </div>
+              <h2 className="text-xl font-bold text-foreground mb-4">
+                Songs
+              </h2>
             )}
 
-            {/* Empty State */}
             {albums.length === 0 && tracks.length === 0 && (
               <div className="py-16">
                 <EmptyState
@@ -283,9 +248,9 @@ export default function ArtistDetailPage() {
                 />
               </div>
             )}
-          </div>
+          </>
         }
-        renderItem={(track, index) => {
+        renderItem={(track: Track, index: number) => {
           const isCurrentTrack = currentTrack?.id === track.id;
           return (
             <ListItem
@@ -294,7 +259,13 @@ export default function ArtistDetailPage() {
               subtitle={
                 <ArtistLinks
                   names={track.artist_names}
-                  ids={track.artist_ids?.length ? track.artist_ids : track.artist_id ? [track.artist_id] : []}
+                  ids={
+                    track.artist_ids?.length
+                      ? track.artist_ids
+                      : track.artist_id
+                        ? [track.artist_id]
+                        : []
+                  }
                   fallbackName={track.artist}
                   fallbackId={track.artist_id}
                 />
@@ -305,11 +276,15 @@ export default function ArtistDetailPage() {
               showArtwork
               active={isCurrentTrack}
               isPlaying={isCurrentTrack && status === "playing"}
-              trailing={<span className="tabular-nums text-xs">{formatDuration(track.duration_ms)}</span>}
+              trailing={
+                <span className="tabular-nums text-xs">
+                  {formatDuration(track.duration_ms)}
+                </span>
+              }
             />
           );
         }}
       />
-    </PageLayout>
+    </DetailPageTemplate>
   );
 }

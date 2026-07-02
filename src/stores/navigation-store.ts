@@ -24,22 +24,41 @@ export type DetailView =
   | { type: "artist"; id: number }
   | null;
 
+export interface BreadcrumbEntry {
+  label: string;
+  page: Page;
+  detailView?: DetailView;
+}
+
+export const PAGE_LABELS: Record<Page, string> = {
+  home: "Home",
+  songs: "Songs",
+  albums: "Albums",
+  playlists: "Playlists",
+  artists: "Artists",
+  settings: "Settings",
+  insights: "Insights",
+  about: "About",
+};
+
 interface NavigationState {
   currentPage: Page;
   detailView: DetailView;
   isSearchOpen: boolean;
   isMiniPlayer: boolean;
+  history: BreadcrumbEntry[];
 }
 
 interface NavigationActions {
   setPage: (page: Page) => void;
   setSearchOpen: (open: boolean) => void;
   toggleSearch: () => void;
-  openAlbumDetail: (albumId: number) => void;
-  openPlaylistDetail: (playlistId: number) => void;
-
-  openArtistDetail: (artistId: number) => void;
+  openAlbumDetail: (albumId: number, title?: string) => void;
+  openPlaylistDetail: (playlistId: number, title?: string) => void;
+  openArtistDetail: (artistId: number, title?: string) => void;
   goBack: () => void;
+  navigateToHistoryIndex: (index: number) => void;
+  updateBreadcrumbLabel: (type: "album" | "artist" | "playlist", id: number, label: string) => void;
   toggleMiniPlayer: () => Promise<void>;
 }
 
@@ -49,34 +68,108 @@ type NavigationStore = NavigationState & NavigationActions;
 /**
  * Store for managing application navigation and UI state (pages, detail views, mini player).
  */
+const MAX_HISTORY = 20;
+
 export const useNavigationStore = create<NavigationStore>((set) => ({
   // Initial State
   currentPage: "home",
   detailView: null,
   isSearchOpen: false,
   isMiniPlayer: false,
+  history: [{ label: PAGE_LABELS.home, page: "home" }],
 
   // Actions
-  setPage: (page) => set({ currentPage: page, detailView: null }),
+  setPage: (page) =>
+    set({
+      currentPage: page,
+      detailView: null,
+      history: [{ label: PAGE_LABELS[page], page }],
+    }),
   setSearchOpen: (open) => set({ isSearchOpen: open }),
   toggleSearch: () => set((state) => ({ isSearchOpen: !state.isSearchOpen })),
 
-  openAlbumDetail: (albumId) =>
-    set({ currentPage: "albums", detailView: { type: "album", id: albumId } }),
-
-  openPlaylistDetail: (playlistId) =>
-    set({
-      currentPage: "playlists",
-      detailView: { type: "playlist", id: playlistId },
+  openAlbumDetail: (albumId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Album",
+        page: "albums",
+        detailView: { type: "album", id: albumId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "albums",
+        detailView: { type: "album", id: albumId },
+      };
     }),
 
-  openArtistDetail: (artistId) =>
-    set({
-      currentPage: "artists",
-      detailView: { type: "artist", id: artistId },
+  openPlaylistDetail: (playlistId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Playlist",
+        page: "playlists",
+        detailView: { type: "playlist", id: playlistId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "playlists",
+        detailView: { type: "playlist", id: playlistId },
+      };
     }),
 
-  goBack: () => set({ detailView: null }),
+  openArtistDetail: (artistId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Artist",
+        page: "artists",
+        detailView: { type: "artist", id: artistId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "artists",
+        detailView: { type: "artist", id: artistId },
+      };
+    }),
+
+  goBack: () =>
+    set((state) => {
+      if (state.history.length <= 1) {
+        return { detailView: null };
+      }
+      const newHistory = state.history.slice(0, -1);
+      const lastEntry = newHistory[newHistory.length - 1];
+      return {
+        history: newHistory,
+        currentPage: lastEntry.page,
+        detailView: lastEntry.detailView || null,
+      };
+    }),
+
+  navigateToHistoryIndex: (index) =>
+    set((state) => {
+      if (index < 0 || index >= state.history.length) return state;
+      const newHistory = state.history.slice(0, index + 1);
+      const entry = newHistory[index];
+      return {
+        history: newHistory,
+        currentPage: entry.page,
+        detailView: entry.detailView || null,
+      };
+    }),
+
+  updateBreadcrumbLabel: (type, id, label) =>
+    set((state) => ({
+      history: state.history.map((entry) =>
+        entry.detailView?.type === type && entry.detailView?.id === id
+          ? { ...entry, label }
+          : entry,
+      ),
+    })),
 
   toggleMiniPlayer: async () => {
     const cleanup: (() => void)[] = [];
@@ -241,5 +334,13 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
 // --- Selectors ---
 export const useCurrentPage = () => useNavigationStore((s) => s.currentPage);
 export const useDetailView = () => useNavigationStore((s) => s.detailView);
+export const useBreadcrumbs = () => useNavigationStore((s) => s.history);
+export const useHistoryIndex = () =>
+  useNavigationStore((s) => s.history.length - 1);
+export const useGoBack = () => useNavigationStore((s) => s.goBack);
+export const useNavigateToHistoryIndex = () =>
+  useNavigationStore((s) => s.navigateToHistoryIndex);
+export const useUpdateBreadcrumbLabel = () =>
+  useNavigationStore((s) => s.updateBreadcrumbLabel);
 
 

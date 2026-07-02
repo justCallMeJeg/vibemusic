@@ -27,22 +27,22 @@ export function DetailHero({
   children,
 }: DetailHeroProps) {
   return (
-    <div className={cn("flex gap-6 mb-6 px-2", className)}>
+    <div className={cn("flex gap-6 mb-6 ", className)}>
       <ArtworkImage
         src={artworkPath}
         alt={title}
         placeholderType={placeholderType}
         className="w-40 h-40 rounded-lg shrink-0 shadow-md"
       />
-      <div className="flex flex-col justify-center min-w-0 flex-1">
-        <h2 className="text-3xl font-bold text-foreground line-clamp-2 leading-tight">
+      <div className="flex flex-col justify-center min-w-0 flex-1  ">
+        <h2 className="text-3xl font-bold text-foreground line-clamp-2 leading-tight ">
           {title}
         </h2>
         {tertiaryText && (
-          <p className="text-muted-foreground text-sm mt-2">{tertiaryText}</p>
+          <p className="text-muted-foreground text-sm ">{tertiaryText}</p>
         )}
         {subtitle && (
-          <p className="text-muted-foreground text-lg font-medium mt-1">
+          <p className="text-muted-foreground text-lg font-medium ">
             {subtitle}
           </p>
         )}

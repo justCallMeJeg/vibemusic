@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   getPlaylistTracks,
   deletePlaylist,
@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { ChevronLeft, Plus, Music } from "lucide-react";
+import { Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -19,10 +19,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PlaylistEditDialog } from "@/components/dialogs/playlist-edit-dialog";
 import { arrayMove } from "@dnd-kit/sortable";
 import { TrackSelectDialog } from "@/components/dialogs/track-select-dialog";
-import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
-import { TrackListHeader } from "@/components/shared/track-list-header";
-import { CompactPageHeader } from "@/components/shared/compact-page-header";
-import { PageLayout } from "@/components/shared/page-layout";
+import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
+import { TrackList } from "@/components/shared/templates/track-list";
 import { PlaylistHero } from "@/components/shared/playlist-hero";
 import { DetailSkeleton } from "@/components/skeletons";
 import { SortableTrackItem } from "@/components/shared/sortable-track-item";
@@ -30,11 +28,12 @@ import { SortableTrackItem } from "@/components/shared/sortable-track-item";
 export default function PlaylistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
+  const updateBreadcrumbLabel = useNavigationStore(
+    (s) => s.updateBreadcrumbLabel,
+  );
   const play = useAudioStore((s) => s.play);
   const reorderPlaylist = useLibraryStore((s) => s.reorderPlaylist);
   const refreshPlaylists = useLibraryStore((s) => s.refreshPlaylists);
-  const headerRef = useRef<HTMLDivElement>(null);
-
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,14 +54,17 @@ export default function PlaylistDetailPage() {
       ]);
 
       const found = allPlaylists.find((p) => p.id === playlistId);
-      if (found) setPlaylist(found);
+      if (found) {
+        setPlaylist(found);
+        updateBreadcrumbLabel("playlist", playlistId, found.name);
+      }
       setTracks(tracksData);
     } catch (error) {
       logger.error("Failed to load playlist", error);
     } finally {
       setIsLoading(false);
     }
-  }, [playlistId]);
+  }, [playlistId, updateBreadcrumbLabel]);
 
   useEffect(() => {
     loadData();
@@ -124,48 +126,25 @@ export default function PlaylistDetailPage() {
 
   const totalDurationMs = tracks.reduce((acc, t) => acc + t.duration_ms, 0);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const threshold = 300;
-    const header = headerRef.current;
-
-    if (header) {
-      if (scrollTop > threshold) {
-        if (header.dataset.visible !== "true") {
-          header.style.opacity = "1";
-          header.dataset.visible = "true";
-        }
-      } else {
-        if (header.dataset.visible !== "false") {
-          header.style.opacity = "0";
-          header.dataset.visible = "false";
-        }
-      }
-    }
-  };
-
   return (
-    <PageLayout overflowHidden className="relative">
-      <CompactPageHeader
-        ref={headerRef}
-        title={playlist.name}
-        subtitle={`${tracks.length} songs`}
-        artworkPath={playlist.artwork_path || undefined}
-        onBack={goBack}
-        onPlay={handlePlay}
-      />
-      <VirtualizedSortableList
-        items={tracks}
-        onScroll={handleScroll}
-        getItemId={(item) => item.id}
-        onReorder={async (activeId, overId) => {
+    <DetailPageTemplate
+      title={playlist.name}
+      subtitle={`${tracks.length} songs`}
+      artworkPath={playlist.artwork_path || undefined}
+      onBack={goBack}
+      onPlay={handlePlay}
+    >
+      <TrackList
+        tracks={tracks}
+        sortable
+        getItemId={(item: Track) => item.id}
+        onReorder={async (activeId: string | number, overId: string | number) => {
           const oldIndex = tracks.findIndex((t) => t.id === activeId);
           const newIndex = tracks.findIndex((t) => t.id === overId);
           const newOrder = arrayMove(tracks, oldIndex, newIndex);
 
           setTracks(newOrder);
 
-          // Optimistic update
           const trackIds = newOrder.map((t) => t.id);
           if (playlistId) {
             try {
@@ -175,51 +154,45 @@ export default function PlaylistDetailPage() {
             }
           }
         }}
-        renderItem={(track, index) => (
+        renderItem={(track: Track, index: number) => (
           <SortableTrackItem
             key={track.id}
             track={track}
             index={index}
-            onRemove={(e) => handleRemoveTrack(track.id, e)}
+            onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
           />
         )}
-        header={
-          <div className="w-full min-w-0 flex flex-col">
-            {/* Header with back button */}
-            <div className="mt-8 flex items-center gap-2 mb-4">
-              <Button
-                variant="ghost"
-                onClick={goBack}
-                className="text-muted-foreground hover:text-foreground gap-2 pl-2"
-              >
-                <ChevronLeft size={24} />
-                <span className="text-sm font-medium">Back to Playlists</span>
-              </Button>
-            </div>
-
-            <PlaylistHero
-              coverUrl={playlist.artwork_path || undefined}
-              title={playlist.name}
-              description={playlist.description || undefined}
-              trackCount={tracks.length}
-              totalDurationMs={totalDurationMs}
-              lastModified={playlist.created_at}
-              onEdit={() => setIsEditOpen(true)}
-              onDelete={() => setIsDeleteDialogOpen(true)}
-              onPlayAll={handlePlay}
-              onShuffle={handleShuffle}
+        trackListHeaderProps={{
+          showDuration: true,
+          indexWidth: "w-8",
+          className: "gap-4 px-2",
+        }}
+        headerContent={
+          <PlaylistHero
+            coverUrl={playlist.artwork_path || undefined}
+            title={playlist.name}
+            description={playlist.description || undefined}
+            trackCount={tracks.length}
+            totalDurationMs={totalDurationMs}
+            lastModified={playlist.created_at}
+            onEdit={() => setIsEditOpen(true)}
+            onDelete={() => setIsDeleteDialogOpen(true)}
+            onPlayAll={handlePlay}
+            onShuffle={handleShuffle}
+          >
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 rounded-full"
+              onClick={() => setIsAddSongOpen(true)}
             >
-              <Button
-                variant="outline"
-                size="lg"
-                className="gap-2 rounded-full"
-                onClick={() => setIsAddSongOpen(true)}
-              >
-                <Plus size={20} />
-                Add Songs
-              </Button>
-            </PlaylistHero>
-
+              <Plus size={20} />
+              Add Songs
+            </Button>
+          </PlaylistHero>
+        }
+        headerExtras={
+          <>
             <ConfirmDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
@@ -252,16 +225,7 @@ export default function PlaylistDetailPage() {
                 existingTrackIds={new Set(tracks.map((t) => t.id))}
               />
             )}
-
-            {/* Header Row - Only show if has tracks */}
-            {tracks.length > 0 && (
-              <TrackListHeader
-                showDuration
-                indexWidth="w-8"
-                className="gap-4 px-2"
-              />
-            )}
-          </div>
+          </>
         }
         emptyState={
           !isLoading ? (
@@ -282,6 +246,6 @@ export default function PlaylistDetailPage() {
           ) : null
         }
       />
-    </PageLayout>
+    </DetailPageTemplate>
   );
 }
