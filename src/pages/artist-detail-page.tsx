@@ -84,8 +84,9 @@ export default function ArtistDetailPage() {
   if (isLoading || !artist) {
     if (isLoading) return <DetailSkeleton />;
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Artist not found
+      <div className="h-full flex flex-col items-center justify-center gap-4 text-muted-foreground">
+        <span>Artist not found</span>
+        <Button variant="ghost" onClick={goBack}>Go back</Button>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import { useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 
 interface VirtualizedListProps<T> {
@@ -33,7 +34,7 @@ export function VirtualizedList<T>({
   const bottomPadding = paddingBottom
     ? parseInt(paddingBottom, 10)
     : isPlayerVisible
-      ? 156
+      ? PLAYER_BAR_HEIGHT
       : 24;
 
   // Apply visual scroll mask

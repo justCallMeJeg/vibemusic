@@ -95,6 +95,15 @@ export const ListItem = memo(function ListItem({
       menuActions.onEdit ||
       menuActions.onDelete);
 
+  const handleKeyDown = onClick
+    ? (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }
+    : undefined;
+
   const row = (
     <div
       className={cn(
@@ -104,6 +113,9 @@ export const ListItem = memo(function ListItem({
       )}
       data-active={active}
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={handleKeyDown}
       {...props}
     >
       {variant === "indexed" && (

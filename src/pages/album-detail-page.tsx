@@ -7,7 +7,7 @@ import {
   usePlayerStatus,
   useCurrentTrack,
 } from "@/stores/audio-store";
-import { Music, ChevronLeft } from "lucide-react";
+import { Music, ArrowLeft } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { TrackListHeader } from "@/components/shared/track-list-header";
@@ -76,8 +76,9 @@ export default function AlbumDetailPage() {
   if (!album) {
     if (isLoading) return <DetailSkeleton />;
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="text-muted-foreground">Album not found</div>
+        <Button variant="ghost" onClick={goBack}>Go back</Button>
       </div>
     );
   }
@@ -104,7 +105,7 @@ export default function AlbumDetailPage() {
                   onClick={goBack}
                   className="text-muted-foreground hover:text-foreground gap-2 pl-2"
                 >
-                  <ChevronLeft size={24} />
+                  <ArrowLeft size={24} />
                   <span className="text-sm font-medium">Back to Albums</span>
                 </Button>
               </div>

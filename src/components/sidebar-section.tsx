@@ -23,7 +23,7 @@ export function SidebarSection({ activeProfile, onProfileClick, onImport, isScan
           }
         }}
         className="aspect-square w-full shrink-0 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform relative"
-        style={!activeProfile?.avatarPath ? { backgroundColor: activeProfile?.color || "#6b7280" } : undefined}
+        style={!activeProfile?.avatarPath ? { backgroundColor: activeProfile?.color || "var(--muted-foreground)" } : undefined}
         title={`Current: ${
           activeProfile?.name || "User"
         } (Click to switch)`}

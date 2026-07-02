@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Play } from "lucide-react";
+import { ArrowLeft, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { memo } from "react";
 import { ArtworkImage } from "@/components/shared/artwork-image";
@@ -28,7 +28,7 @@ export const CompactPageHeader = memo(
       >
           <div className="flex items-center gap-2">
             <Button aria-label="Back" variant="ghost" size="icon" onClick={onBack}>
-              <ChevronLeft size={20} />
+              <ArrowLeft size={20} />
             </Button>
             {onPlay && (
               <Button

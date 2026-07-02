@@ -13,6 +13,7 @@
   height: 100%;
   overflow: hidden;
 
+  --player-bar-height: 156px;
   --background: oklch(100% 0.0001 271.152deg);
   --foreground: oklch(14.5% 0 0deg);
   --card: oklch(100% 0 0deg);
@@ -215,4 +216,33 @@
     black calc(100% - 24px),
     rgb(0 0 0 / var(--scroll-mask-right)) 100%
   );
+}
+
+@utility pb-player-bar {
+  padding-bottom: var(--player-bar-height);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [class*="animate-"] {
+    animation: none !important;
+  }
+
+  .animate-marquee,
+  .animate-scroll-text {
+    animation: none !important;
+    white-space: normal !important;
+  }
+
+  .scroll-mask-y,
+  .scroll-mask-x {
+    mask-image: none !important;
+  }
 }

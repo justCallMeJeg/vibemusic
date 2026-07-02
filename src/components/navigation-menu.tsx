@@ -68,7 +68,7 @@ export default function NavigationMenu({
             const isSearch = item.id === "search";
             const isActive = !isSearch && currentPage === item.id;
             return (
-              <Tooltip key={item.id} delayDuration={1000}>
+              <Tooltip key={item.id} delayDuration={500}>
                 <TooltipTrigger asChild>
                   <Button
                     size="icon-lg"
@@ -99,7 +99,7 @@ export default function NavigationMenu({
           isScanning ? "animate-pulse border border-blue-400" : ""
         }`}
       >
-        <Tooltip delayDuration={1000}>
+        <Tooltip delayDuration={500}>
           <TooltipTrigger asChild>
             <Button
               size="icon-lg"

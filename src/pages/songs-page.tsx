@@ -230,7 +230,6 @@ export default function SongsPage() {
             className="relative w-full"
             style={{
               height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-              transition: "height 300ms ease-in-out",
             }}
           >
             {virtualizer.getVirtualItems().map((virtualItem) => {

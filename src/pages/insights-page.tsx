@@ -32,7 +32,7 @@ function StatCard({
       <div className="flex items-center justify-between gap-2 text-muted-foreground z-10">
         <div className="flex items-center gap-2">
           <Icon size={16} />
-          <span className="text-xs font-medium uppercase tracking-wide">
+          <span className="text-xs font-medium text-muted-foreground">
             {label}
           </span>
         </div>
@@ -114,7 +114,7 @@ export default function InsightsPage() {
 
   if (!data) {
     return (
-      <PageLayout overflowHidden className={cn("p-8 space-y-6 animate-pulse", isPlayerVisible ? "pb-39" : "")}>
+      <PageLayout overflowHidden className={cn("p-8 space-y-6 animate-pulse", isPlayerVisible ? "pb-player-bar" : "pb-8")}>
         <Skeleton className="h-12 w-48" />
         <Skeleton className="h-32 w-full rounded-xl" />
         <div className="grid grid-cols-4 gap-3">
@@ -141,7 +141,7 @@ export default function InsightsPage() {
 
   if (isEmpty) {
     return (
-      <PageLayout overflowHidden className={cn(isPlayerVisible ? "pb-39" : "")}>
+      <PageLayout overflowHidden className={cn(isPlayerVisible ? "pb-player-bar" : "pb-8")}>
         <div className="flex flex-col shrink-0">
           <PageHeader title="Insights" />
         </div>
@@ -170,7 +170,7 @@ export default function InsightsPage() {
         ref={insightsScrollRef}
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden space-y-6 scroll-mask-y",
-          isPlayerVisible ? "pb-39" : "pb-8",
+          isPlayerVisible ? "pb-player-bar" : "pb-8",
         )}
       >
         {/* Overview (replaces stat cards — dynamic based on timeRange) */}

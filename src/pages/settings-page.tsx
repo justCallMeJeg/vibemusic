@@ -7,9 +7,12 @@ import { SettingsAudio } from "./settings/settings-audio";
 import { SettingsAbout } from "./settings/settings-about";
 
 import { useCurrentPage } from "@/stores/navigation-store";
+import { useIsPlayerVisible } from "@/stores/audio-store";
+import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const currentPage = useCurrentPage();
+  const isPlayerVisible = useIsPlayerVisible();
   const [activeTab, setActiveTab] = useState("general");
 
   useEffect(() => {
@@ -23,7 +26,7 @@ export default function SettingsPage() {
       <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-8 pt-8 pb-42">
+        <div className={cn("max-w-3xl mx-auto px-8 pt-8", isPlayerVisible ? "pb-player-bar" : "pb-8")}>
           {activeTab === "general" && <SettingsGeneral />}
           {activeTab === "appearance" && <SettingsAppearance />}
           {activeTab === "library" && <SettingsLibrary />}

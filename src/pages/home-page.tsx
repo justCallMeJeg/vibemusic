@@ -180,7 +180,7 @@ export default function HomePage() {
     <PageLayout overflowHidden>
       {/* Header */}
       <div className="mt-8 mb-6 px-2">
-        <h1 className="text-4xl font-bold brightness-50 dark:brightness-100 text-primary dark:text-primary">
+        <h1 className="text-4xl font-bold text-primary">
           Welcome Back
         </h1>
         <p className="text-muted-foreground mt-1">
@@ -192,7 +192,7 @@ export default function HomePage() {
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
-            (isPlayerVisible ? "pb-39" : "pb-8"),
+            (isPlayerVisible ? "pb-player-bar" : "pb-8"),
           isEmpty && "flex flex-col",
         )}
       >

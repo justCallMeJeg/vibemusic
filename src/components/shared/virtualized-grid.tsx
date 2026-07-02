@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { debounce } from "@/lib/utils";
+import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 
 interface VirtualizedGridProps<T> {
@@ -63,7 +64,7 @@ export function VirtualizedGrid<T>({
   const bottomPadding = paddingBottom
     ? parseInt(paddingBottom, 10)
     : isPlayerVisible
-      ? 156
+      ? PLAYER_BAR_HEIGHT
       : 24;
 
   // Apply visual scroll mask
