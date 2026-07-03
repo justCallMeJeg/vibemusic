@@ -42,7 +42,7 @@ function useGridColumns() {
   );
 
   useEffect(() => {
-    window.addEventListener("resize", debouncedUpdateColumns);
+    window.addEventListener("resize", debouncedUpdateColumns, { passive: true });
     return () => window.removeEventListener("resize", debouncedUpdateColumns);
   }, [debouncedUpdateColumns]);
 
