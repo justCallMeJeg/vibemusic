@@ -1,16 +1,12 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
 import MusicController from "./components/music-controller";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
 
-import QueueMenu from "./components/queue-menu";
-import TrackDetailPanel from "./components/track-detail-panel";
-import LyricsPanel from "./components/lyrics-panel";
 import MainContent from "./components/main-content";
 import { BackgroundGradient } from "./components/background-gradient";
 import { SidebarSection } from "./components/sidebar-section";
-import { GlobalSearch } from "./components/dialogs/global-search";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
@@ -36,6 +32,15 @@ import { logger } from "@/lib/logger";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
 
 
+
+const QueueMenu = lazy(() => import("./components/queue-menu"));
+const TrackDetailPanel = lazy(() => import("./components/track-detail-panel"));
+const LyricsPanel = lazy(() => import("./components/lyrics-panel"));
+const GlobalSearch = lazy(() =>
+  import("./components/dialogs/global-search").then((m) => ({
+    default: m.GlobalSearch,
+  })),
+);
 
 export default function App() {
   const sidePanel = useAudioStore((s) => s.sidePanel);
@@ -232,9 +237,11 @@ export default function App() {
               sidePanel !== "none" ? "w-96 p-1" : "w-0 p-0"
             } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
           >
-            <QueueMenu />
-            <TrackDetailPanel />
-            <LyricsPanel />
+            <Suspense fallback={null}>
+              <QueueMenu />
+              <TrackDetailPanel />
+              <LyricsPanel />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -249,7 +256,9 @@ export default function App() {
       >
         <MusicController />
       </div>
-      <GlobalSearch />
+      <Suspense fallback={null}>
+        <GlobalSearch />
+      </Suspense>
 
       <AppDialogs
         onConfirmQuit={handleQuitApp}
