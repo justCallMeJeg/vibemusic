@@ -4,6 +4,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/lib/logger";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useAudioStore } from "@/stores/audio-store";
+import { useProfileStore } from "@/stores/profile-store";
+import { useNavigationStore, Page } from "@/stores/navigation-store";
+import { useUpdateStore } from "@/stores/update-store";
+import { toast } from "sonner";
 
 export type CloseAction =
   | "show-quit-dialog"
@@ -97,4 +101,47 @@ export function useScanProgressListener(fetchLibrary: () => Promise<void>) {
       unlistenPromise.then((u) => u());
     };
   }, [fetchLibrary]);
+}
+
+export function useAppInit() {
+  const loadProfiles = useProfileStore((s) => s.loadProfiles);
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const isSettingsLoading = useSettingsStore((s) => s.isLoading);
+
+  useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      loadSettings(activeProfileId);
+    }
+  }, [activeProfileId, loadSettings]);
+
+  useEffect(() => {
+    if (!isSettingsLoading && activeProfileId) {
+      const settings = useSettingsStore.getState();
+
+      if (settings.defaultPage) {
+        useNavigationStore.getState().setPage(settings.defaultPage as Page);
+      }
+
+      const updateStore = useUpdateStore.getState();
+      updateStore.check(true).then((hasUpdate) => {
+        if (hasUpdate) {
+          toast.info("Update Available", {
+            description: "A new version of vibemusic is available.",
+            action: {
+              label: "View",
+              onClick: () => {
+                useNavigationStore.getState().setPage("about");
+              },
+            },
+            duration: 10000,
+          });
+        }
+      });
+    }
+  }, [isSettingsLoading, activeProfileId]);
 }

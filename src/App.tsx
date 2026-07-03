@@ -19,11 +19,11 @@ import {
   useWindowCloseHandler,
   useRefreshInterceptor,
   useScanProgressListener,
+  useAppInit,
 } from "@/hooks/use-app-init";
 import type { CloseAction } from "@/hooks/use-app-init";
 import { useFolderImport } from "@/hooks/use-folder-import";
 import { useSettingsStore } from "@/stores/settings-store";
-import { useNavigationStore, Page } from "@/stores/navigation-store";
 
 import { TitleBar } from "./components/titlebar";
 import { useProfileStore } from "@/stores/profile-store";
@@ -34,8 +34,6 @@ import { useDialogStore } from "@/stores/dialog-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { logger } from "@/lib/logger";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
-import { toast } from "sonner";
-import { useUpdateStore } from "./stores/update-store";
 
 
 
@@ -46,16 +44,12 @@ export default function App() {
   const status = useAudioStore((s) => s.status);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
 
-  const hasCheckedForUpdate = useRef(false);
-  const hasDoneInitialScan = useRef(false); // Prevent scan on profile switch
   const stop = useAudioStore((s) => s.stop);
 
   // Refresh Warning State
   const isPlaying = status === "playing";
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
-  const loadSettings = useSettingsStore((s) => s.loadSettings);
-  const isSettingsLoading = useSettingsStore((s) => s.isLoading);
   const initSystemThemeListener = useSettingsStore(
     (s) => s.initSystemThemeListener,
   );
@@ -73,7 +67,6 @@ export default function App() {
 
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const profiles = useProfileStore((s) => s.profiles);
-  const loadProfiles = useProfileStore((s) => s.loadProfiles);
   const selectProfile = useProfileStore((s) => s.selectProfile);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
 
@@ -98,69 +91,29 @@ export default function App() {
     selectProfile(null);
   };
 
-  // Load profiles on mount
-  useEffect(() => {
-    loadProfiles();
-  }, [loadProfiles]);
+  useAppInit();
 
-  // Load settings when profile changes
+
+  const hasDoneInitialScan = useRef(false);
+
   useEffect(() => {
     if (activeProfileId) {
-      loadSettings(activeProfileId);
-    }
-  }, [activeProfileId, loadSettings]);
-
-
-  useEffect(() => {
-    if (!isSettingsLoading && activeProfileId) {
-      // Apply settings logic
       const settings = useSettingsStore.getState();
-      if (settings.defaultPage) {
-        useNavigationStore.getState().setPage(settings.defaultPage as Page);
-      }
-
-      // Only run scanOnStartup on INITIAL app load, not when switching profiles
       if (
         !hasDoneInitialScan.current &&
         settings.scanOnStartup &&
         settings.libraryPaths.length > 0
       ) {
         hasDoneInitialScan.current = true;
-        logger.info(
-          "Auto-scanning library paths on startup:",
-          settings.libraryPaths,
-        );
         setIsScanning(true);
         invoke("scan_music_library", { folders: settings.libraryPaths })
-          .then(async () => {
-            await fetchLibrary();
-          })
+          .then(() => fetchLibrary())
           .catch((err) => logger.error("Startup scan failed:", err))
           .finally(() => setIsScanning(false));
       }
-
-      // Check for updates
-      if (!hasCheckedForUpdate.current) {
-        hasCheckedForUpdate.current = true;
-        const updateStore = useUpdateStore.getState();
-        updateStore.check(true).then((hasUpdate) => {
-          if (hasUpdate) {
-            toast.info("Update Available", {
-              description: "A new version of vibemusic is available.",
-              action: {
-                label: "View",
-                onClick: () => {
-                  useNavigationStore.getState().setPage("about"); // Navigate to settings/about
-                },
-              },
-              duration: 10000,
-            });
-          }
-        });
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSettingsLoading, activeProfileId, fetchLibrary]);
+  }, [activeProfileId, fetchLibrary]);
 
   const handleQuitApp = async () => {
     useDialogStore.getState().closeQuitDialog();
