@@ -1,4 +1,4 @@
-import { useMemo, useState, memo, useCallback } from "react";
+import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
@@ -23,6 +23,7 @@ export default function ArtistsPage() {
   const artistsSortDirection = useSettingsStore((s) => s.artistsSortDirection);
   const setArtistsSort = useSettingsStore((s) => s.setArtistsSort);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
 
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
   const play = useAudioStore((s) => s.play);
@@ -97,8 +98,8 @@ export default function ArtistsPage() {
     let result = [...artists];
 
     // Filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (deferredQuery) {
+      const query = deferredQuery.toLowerCase();
       result = result.filter((a) => a.name.toLowerCase().includes(query));
     }
 
@@ -128,7 +129,7 @@ export default function ArtistsPage() {
       if (valA > valB) return artistsSortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [artists, artistsSortKey, artistsSortDirection, searchQuery]);
+  }, [artists, artistsSortKey, artistsSortDirection, deferredQuery]);
 
   if (isLoading && artists.length === 0) {
     return <ArtistsSkeleton />;

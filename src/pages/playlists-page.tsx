@@ -1,4 +1,4 @@
-import { useState, useMemo, memo, useCallback } from "react";
+import { useState, useMemo, memo, useCallback, useDeferredValue } from "react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
 import { Plus, ListMusic, Search } from "lucide-react";
@@ -33,13 +33,14 @@ export default function PlaylistsPage() {
   const setPlaylistsSort = useSettingsStore((s) => s.setPlaylistsSort);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
 
   const filteredAndSortedPlaylists = useMemo(() => {
     let result = [...playlists];
 
     // Filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (deferredQuery) {
+      const query = deferredQuery.toLowerCase();
       result = result.filter((p) => p.name.toLowerCase().includes(query));
     }
 
@@ -69,7 +70,7 @@ export default function PlaylistsPage() {
       if (valA > valB) return playlistsSortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [playlists, playlistsSortKey, playlistsSortDirection, searchQuery]);
+  }, [playlists, playlistsSortKey, playlistsSortDirection, deferredQuery]);
 
   // Create Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -250,7 +251,7 @@ export default function PlaylistsPage() {
               <EmptyState
                 icon={Search}
                 title="No matches found"
-                description={`We couldn't find any playlists matching "${searchQuery}"`}
+                description={`We couldn't find any playlists matching "${deferredQuery}"`}
               />
             ) : (
               <EmptyState

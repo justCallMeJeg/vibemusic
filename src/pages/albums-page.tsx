@@ -1,4 +1,4 @@
-import { useMemo, useState, memo, useCallback } from "react";
+import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
@@ -61,6 +61,7 @@ export default function AlbumsPage() {
   const albumsSortDirection = useSettingsStore((s) => s.albumsSortDirection);
   const setAlbumsSort = useSettingsStore((s) => s.setAlbumsSort);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
 
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const play = useAudioStore((s) => s.play);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ export function TrackSelectDialog({
 }: TrackSelectDialogProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<number>>(
     new Set(),
@@ -58,15 +59,15 @@ export function TrackSelectDialog({
     // Filter out existing tracks first
     const available = tracks.filter((t) => !existingTrackIds.has(t.id));
 
-    if (!search.trim()) return available;
-    const lower = search.toLowerCase();
+    if (!deferredSearch.trim()) return available;
+    const lower = deferredSearch.toLowerCase();
     return available.filter(
       (t) =>
         t.title.toLowerCase().includes(lower) ||
         (t.artist && t.artist.toLowerCase().includes(lower)) ||
         (t.album && t.album.toLowerCase().includes(lower)),
     );
-  }, [tracks, search, existingTrackIds]);
+  }, [tracks, deferredSearch, existingTrackIds]);
 
   const toggleSelection = (trackId: number) => {
     setSelectedTrackIds((prev) => {

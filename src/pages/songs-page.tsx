@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useCallback } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useDeferredValue } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { ListItem } from "@/components/shared/list-item";
@@ -134,6 +134,7 @@ export default function SongsPage() {
   const tracks = useLibraryStore((s) => s.tracks);
   const isLoading = useLibraryStore((s) => s.isLoading);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
 
   // Use persistent settings - individual selectors for better re-render performance
   const songsSortKey = useSettingsStore((s) => s.songsSortKey);
@@ -163,8 +164,8 @@ export default function SongsPage() {
     let result = [...tracks];
 
     // Filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (deferredQuery) {
+      const query = deferredQuery.toLowerCase();
       result = result.filter(
         (t) =>
           t.title.toLowerCase().includes(query) ||
@@ -205,7 +206,7 @@ export default function SongsPage() {
     });
 
     return result;
-  }, [tracks, searchQuery, songsSortKey, songsSortDirection]);
+  }, [tracks, deferredQuery, songsSortKey, songsSortDirection]);
 
   // Virtualizer for efficient list rendering
   const virtualizer = useVirtualizer({
