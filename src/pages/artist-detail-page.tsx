@@ -91,47 +91,49 @@ export default function ArtistDetailPage() {
   const albumsScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (detailView?.type === "artist" && detailView.id) {
-      let cancelled = false;
+    if (detailView?.type !== "artist" || !detailView.id) return;
 
-      setIsLoading(true);
-      (async () => {
-        try {
-          const [artistResult, albumsResult, tracksResult] =
-            await Promise.allSettled([
-              getArtistById(detailView.id),
-              getArtistAlbums(detailView.id),
-              getArtistTracks(detailView.id),
-            ]);
-          if (!cancelled) {
-            if (artistResult.status === "fulfilled" && artistResult.value) {
-              setArtist(artistResult.value);
-              updateBreadcrumbLabel(
-                "artist",
-                detailView.id,
-                artistResult.value.name,
-              );
-            } else if (artistResult.status === "rejected") {
-              logger.error("Failed to load artist", artistResult.reason);
-            }
-            if (albumsResult.status === "fulfilled")
-              setAlbums(albumsResult.value);
-            else logger.error("Failed to load albums", albumsResult.reason);
-            if (tracksResult.status === "fulfilled")
-              setTracks(tracksResult.value);
-            else logger.error("Failed to load tracks", tracksResult.reason);
+    let cancelled = false;
+    setIsLoading(true);
+
+    const loadData = async () => {
+      try {
+        const [artistResult, albumsResult, tracksResult] =
+          await Promise.allSettled([
+            getArtistById(detailView.id),
+            getArtistAlbums(detailView.id),
+            getArtistTracks(detailView.id),
+          ]);
+        if (!cancelled) {
+          if (artistResult.status === "fulfilled" && artistResult.value) {
+            setArtist(artistResult.value);
+            updateBreadcrumbLabel(
+              "artist",
+              detailView.id,
+              artistResult.value.name,
+            );
+          } else if (artistResult.status === "rejected") {
+            logger.error("Failed to load artist", artistResult.reason);
           }
-        } finally {
-          if (!cancelled) {
-            setIsLoading(false);
-          }
+          if (albumsResult.status === "fulfilled")
+            setAlbums(albumsResult.value);
+          else logger.error("Failed to load albums", albumsResult.reason);
+          if (tracksResult.status === "fulfilled")
+            setTracks(tracksResult.value);
+          else logger.error("Failed to load tracks", tracksResult.reason);
         }
-      })();
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-      return () => {
-        cancelled = true;
-      };
-    }
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [detailView, updateBreadcrumbLabel]);
 
   const renderItem = useCallback(
