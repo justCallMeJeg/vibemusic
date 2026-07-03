@@ -83,7 +83,7 @@ export default function AlbumsPage() {
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing album next");
-    } catch (e) { logger.error("Failed to play album next", e); toast.error("Failed to play next"); }
+    } catch (e) { logger.error("Failed to play album next", e); }
   }, [playNext]);
 
   const handleAddToQueue = useCallback(async (albumId: number) => {

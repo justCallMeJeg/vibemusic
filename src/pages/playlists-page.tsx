@@ -101,7 +101,7 @@ export default function PlaylistsPage() {
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing playlist next");
-    } catch (e) { logger.error("Failed to play playlist next", e); toast.error("Failed to play next"); }
+    } catch (e) { logger.error("Failed to play playlist next", e); }
   }, [playNext]);
 
   const handleAddToQueue = useCallback(async (playlistId: number) => {

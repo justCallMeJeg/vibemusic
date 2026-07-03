@@ -248,7 +248,6 @@ export default function HomePage() {
       toast.success("Playing album next");
     } catch (e) {
       logger.error("Failed to play album next", e);
-      toast.error("Failed to play next");
     }
   }, [playNext]);
 
@@ -287,7 +286,6 @@ export default function HomePage() {
       toast.success("Playing playlist next");
     } catch (e) {
       logger.error("Failed to play playlist next", e);
-      toast.error("Failed to play next");
     }
   }, [playNext]);
 

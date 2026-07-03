@@ -45,7 +45,7 @@ export default function ArtistsPage() {
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing artist next");
-    } catch (e) { logger.error("Failed to play artist next", e); toast.error("Failed to play next"); }
+    } catch (e) { logger.error("Failed to play artist next", e); }
   }, [playNext]);
 
   const handleAddToQueue = useCallback(async (artistId: number) => {
