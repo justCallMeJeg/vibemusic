@@ -60,6 +60,7 @@ export const CompactPageHeader = memo(
           <ArtworkImage
             src={artworkPath}
             alt={title}
+            placeholderType="playlist"
             className="w-8 h-8 rounded-md shadow-sm bg-card"
           />
         )}

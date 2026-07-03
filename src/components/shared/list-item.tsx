@@ -51,7 +51,7 @@ interface ListItemProps
   showArtwork?: boolean;
   isPlaying?: boolean;
   artworkCircular?: boolean;
-  artworkFallback?: string;
+
   placeholderType?: "artist" | "track";
   onClick?: () => void;
   menuActions?: {
@@ -80,7 +80,7 @@ export const ListItem = memo(function ListItem({
   showArtwork = true,
   isPlaying = false,
   artworkCircular,
-  artworkFallback,
+
   placeholderType,
   onClick,
   menuActions,
@@ -169,7 +169,6 @@ export const ListItem = memo(function ListItem({
           <ArtworkImage
             src={artworkSrc}
             alt={typeof title === "string" ? title : "Artwork"}
-            fallback={artworkFallback}
             placeholderType={placeholderType || "track"}
             className={cn(
               "w-10 h-10 object-cover bg-secondary",

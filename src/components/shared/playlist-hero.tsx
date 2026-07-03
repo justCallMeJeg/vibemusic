@@ -46,6 +46,7 @@ export function PlaylistHero({
           <ArtworkImage
             src={coverUrl}
             alt={title}
+            placeholderType="playlist"
             className="w-full h-full object-cover"
             onError={() => setFailedCoverUrl(coverUrl ?? null)}
           />

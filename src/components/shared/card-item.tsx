@@ -82,6 +82,7 @@ export const CardItem = memo(function CardItem({
     <ArtworkImage
       src={artworkSrc}
       alt={title}
+      placeholderType={artworkType}
       className="group-hover:scale-[1.02] transition-transform duration-300"
     />
   ) : artworkType === "playlist" ? (

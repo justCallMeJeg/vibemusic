@@ -2,7 +2,7 @@ import { Music, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DynamicPlaceholderProps {
-  type: "artist" | "track" | "playlist";
+  type: "artist" | "track" | "playlist" | "album";
   title?: string;
   className?: string;
 }
