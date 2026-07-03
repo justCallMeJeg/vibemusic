@@ -14,6 +14,7 @@ import {
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { logger } from "@/lib/logger";
+import { formatDuration } from "@/lib/format";
 import { ArtworkImage } from "./shared/artwork-image";
 import { ScrollingText } from "./shared/scrolling-text";
 import { ArtistLinks } from "./shared/artist-links";
@@ -58,12 +59,6 @@ export default function MusicControler() {
       setSliderValue([position]);
     }
   }, [position]);
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {

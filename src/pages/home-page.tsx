@@ -23,6 +23,7 @@ import { useLibraryStore } from "@/stores/library-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { PageLayout } from "@/components/shared/page-layout";
 import { HomeSkeleton } from "@/components/skeletons";
+import { formatDuration } from "@/lib/format";
 
 export default function HomePage() {
   const albums = useLibraryStore((s) => s.albums);
@@ -120,12 +121,6 @@ export default function HomePage() {
     } catch (e) {
       logger.error("Failed to add playlist to queue", e);
     }
-  };
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);

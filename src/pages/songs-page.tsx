@@ -28,18 +28,13 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 import { SongsSkeleton } from "@/components/skeletons";
+import { formatDuration } from "@/lib/format";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
 
 // Item height for virtualization (matches MusicListItem padding + content)
 const ITEM_HEIGHT = 60;
-
-const formatDuration = (ms: number) => {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
 
 export default function SongsPage() {
   const tracks = useLibraryStore((s) => s.tracks);

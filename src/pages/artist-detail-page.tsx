@@ -25,6 +25,7 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailSkeleton } from "@/components/skeletons";
+import { formatDuration } from "@/lib/format";
 
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
@@ -41,12 +42,6 @@ export default function ArtistDetailPage() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
 
   // Scroll ref for albums row
   const albumsScrollRef = useRef<HTMLDivElement>(null);

@@ -6,18 +6,13 @@ import { GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
+import { formatDuration } from "@/lib/format";
 
 interface SortableTrackItemProps {
   track: Track;
   index: number;
   onRemove: (e: React.MouseEvent) => void;
 }
-
-const formatDuration = (ms: number) => {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
 
 export function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
   const currentTrack = useCurrentTrack();
