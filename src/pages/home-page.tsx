@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import {
   useAudioStore,
@@ -8,7 +8,7 @@ import {
 } from "@/stores/audio-store";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
-import { getAlbumTracks, getPlaylistTracks, Playlist } from "@/lib/api";
+import { getAlbumTracks, getPlaylistTracks, Playlist, Track } from "@/lib/api";
 import { CardItem } from "@/components/shared/card-item";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
@@ -26,6 +26,79 @@ import { HomeSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
 import { useShallow } from "zustand/shallow";
+
+const HomeTrackRow = memo(function HomeTrackRow({
+  track,
+  currentTrackId,
+  status,
+  playlists,
+  play,
+  pause,
+  resume,
+  playNext,
+  addToQueue,
+  addToPlaylist,
+}: {
+  track: Track;
+  currentTrackId?: number;
+  status: string;
+  playlists: Playlist[];
+  play: (track: Track, queue?: Track[]) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+  playNext: (track: Track) => void;
+  addToQueue: (track: Track) => void;
+  addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
+}) {
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={
+        <ArtistLinks
+          names={track.artist_names}
+          ids={track.artist_ids}
+          fallbackName={track.artist}
+          fallbackId={track.artist_id}
+        />
+      }
+      artworkSrc={track.artwork_path || undefined}
+      showArtwork
+      active={currentTrackId === track.id}
+      isPlaying={currentTrackId === track.id && status === "playing"}
+      onClick={() => {
+        if (currentTrackId === track.id) {
+          if (status === "playing") pause();
+          else resume();
+        } else {
+          play(track);
+        }
+      }}
+      trailing={
+        <p className="text-muted-foreground text-xs font-normal tabular-nums">
+          {formatDuration(track.duration_ms)}
+        </p>
+      }
+      menuActions={{
+        onPlay: () => {
+          if (currentTrackId === track.id) {
+            if (status === "playing") pause();
+            else resume();
+          } else {
+            play(track);
+          }
+        },
+        onPlayNext: () => playNext(track),
+        onAddToQueue: () => addToQueue(track),
+        onAddToPlaylist: (playlistId) =>
+          addToPlaylist(playlistId, track.id),
+        playlists: playlists.map((p) => ({
+          id: p.id,
+          name: p.name,
+        })),
+      }}
+    />
+  );
+});
 
 export default function HomePage() {
   const { albums, tracks, playlists, isLoading } = useLibraryStore(
@@ -294,54 +367,18 @@ export default function HomePage() {
 
             <div className="flex flex-col gap-1">
               {recentTracks.map((track) => (
-                <ListItem
+                <HomeTrackRow
                   key={track.id}
-                  title={track.title}
-                  subtitle={
-                    <ArtistLinks
-                      names={track.artist_names}
-                      ids={track.artist_ids}
-                      fallbackName={track.artist}
-                      fallbackId={track.artist_id}
-                    />
-                  }
-                  artworkSrc={track.artwork_path || undefined}
-                  showArtwork
-                  active={currentTrack?.id === track.id}
-                  isPlaying={
-                    currentTrack?.id === track.id && status === "playing"
-                  }
-                  onClick={() => {
-                    if (currentTrack?.id === track.id) {
-                      if (status === "playing") pause();
-                      else resume();
-                    } else {
-                      play(track);
-                    }
-                  }}
-                  trailing={
-                    <p className="text-muted-foreground text-xs font-normal tabular-nums">
-                      {formatDuration(track.duration_ms)}
-                    </p>
-                  }
-                  menuActions={{
-                    onPlay: () => {
-                      if (currentTrack?.id === track.id) {
-                        if (status === "playing") pause();
-                        else resume();
-                      } else {
-                        play(track);
-                      }
-                    },
-                    onPlayNext: () => playNext(track),
-                    onAddToQueue: () => addToQueue(track),
-                    onAddToPlaylist: (playlistId) =>
-                      addToPlaylist(playlistId, track.id),
-                    playlists: playlists.map((p) => ({
-                      id: p.id,
-                      name: p.name,
-                    })),
-                  }}
+                  track={track}
+                  currentTrackId={currentTrack?.id}
+                  status={status}
+                  playlists={playlists}
+                  play={play}
+                  pause={pause}
+                  resume={resume}
+                  playNext={playNext}
+                  addToQueue={addToQueue}
+                  addToPlaylist={addToPlaylist}
                 />
               ))}
             </div>

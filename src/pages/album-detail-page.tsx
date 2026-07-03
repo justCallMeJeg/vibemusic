@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
@@ -17,6 +17,64 @@ import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailHero } from "@/components/shared/detail-hero";
 import { DetailSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
+
+const AlbumTrackRow = memo(function AlbumTrackRow({
+  track,
+  index,
+  currentTrackId,
+  status,
+  tracks,
+  play,
+  pause,
+  resume,
+}: {
+  track: Track;
+  index: number;
+  currentTrackId?: number;
+  status: string;
+  tracks: Track[];
+  play: (track: Track, queue?: Track[]) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+}) {
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={
+        <ArtistLinks
+          names={track.artist_names}
+          ids={
+            track.artist_ids?.length
+              ? track.artist_ids
+              : track.artist_id
+                ? [track.artist_id]
+                : []
+          }
+          fallbackName={track.artist}
+          fallbackId={track.artist_id}
+        />
+      }
+      index={index + 1}
+      showArtwork={false}
+      variant="indexed"
+      active={currentTrackId === track.id}
+      isPlaying={currentTrackId === track.id && status === "playing"}
+      trailing={
+        <span className="tabular-nums text-xs">
+          {formatDuration(track.duration_ms)}
+        </span>
+      }
+      onClick={() => {
+        if (currentTrackId === track.id) {
+          if (status === "playing") pause();
+          else resume();
+        } else {
+          play(track, tracks);
+        }
+      }}
+    />
+  );
+});
 
 export default function AlbumDetailPage() {
   const detailView = useDetailView();
@@ -39,6 +97,8 @@ export default function AlbumDetailPage() {
   useEffect(() => {
     if (!albumId) return;
 
+    let cancelled = false;
+
     const loadAlbumData = async () => {
       setIsLoading(true);
       try {
@@ -46,23 +106,33 @@ export default function AlbumDetailPage() {
           getAlbumById(albumId),
           getAlbumTracks(albumId),
         ]);
-        if (albumData) {
-          setAlbum(albumData);
-          updateBreadcrumbLabel("album", albumId, albumData.title);
+        if (!cancelled) {
+          if (albumData) {
+            setAlbum(albumData);
+            updateBreadcrumbLabel("album", albumId, albumData.title);
+          }
+          // Sort by track number by default
+          const sortedTracks = [...tracksData].sort(
+            (a, b) => (a.track_number || 0) - (b.track_number || 0),
+          );
+          setTracks(sortedTracks);
         }
-        // Sort by track number by default
-        const sortedTracks = [...tracksData].sort(
-          (a, b) => (a.track_number || 0) - (b.track_number || 0),
-        );
-        setTracks(sortedTracks);
       } catch (error) {
-        logger.error("Failed to load album", error);
+        if (!cancelled) {
+          logger.error("Failed to load album", error);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadAlbumData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [albumId, updateBreadcrumbLabel]);
 
   const handlePlay = () => {
@@ -77,6 +147,23 @@ export default function AlbumDetailPage() {
       play(shuffled[0], shuffled);
     }
   };
+
+  const renderItem = useCallback(
+    (track: Track, index: number) => (
+      <AlbumTrackRow
+        key={track.id}
+        track={track}
+        index={index}
+        currentTrackId={currentTrack?.id}
+        status={status}
+        tracks={tracks}
+        play={play}
+        pause={pause}
+        resume={resume}
+      />
+    ),
+    [currentTrack?.id, status, tracks, play, pause, resume],
+  );
 
   if (!album) {
     if (isLoading) return <DetailSkeleton />;
@@ -112,44 +199,7 @@ export default function AlbumDetailPage() {
             onShuffle={handleShuffle}
           />
         }
-        renderItem={(track: Track, index: number) => (
-          <ListItem
-            key={track.id}
-            title={track.title}
-            subtitle={
-              <ArtistLinks
-                names={track.artist_names}
-                ids={
-                  track.artist_ids?.length
-                    ? track.artist_ids
-                    : track.artist_id
-                      ? [track.artist_id]
-                      : []
-                }
-                fallbackName={track.artist}
-                fallbackId={track.artist_id}
-              />
-            }
-            index={index + 1}
-            showArtwork={false}
-            variant="indexed"
-            active={currentTrack?.id === track.id}
-            isPlaying={currentTrack?.id === track.id && status === "playing"}
-            trailing={
-              <span className="tabular-nums text-xs">
-                {formatDuration(track.duration_ms)}
-              </span>
-            }
-            onClick={() => {
-              if (currentTrack?.id === track.id) {
-                if (status === "playing") pause();
-                else resume();
-              } else {
-                play(track, tracks);
-              }
-            }}
-          />
-        )}
+        renderItem={renderItem}
         emptyState={
           !isLoading ? (
             <EmptyState

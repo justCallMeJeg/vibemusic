@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { ListItem } from "@/components/shared/list-item";
+import type { Track } from "@/lib/api";
 import {
   useCurrentTrack,
   usePlayerStatus,
@@ -35,6 +36,80 @@ type SortDirection = "asc" | "desc";
 
 // Item height for virtualization (matches MusicListItem padding + content)
 const ITEM_HEIGHT = 60;
+
+const SongListMenu = memo(function SongListMenu({
+  track,
+  status,
+  currentTrackId,
+  pause,
+  resume,
+  play,
+  playNext,
+  addToQueue,
+  addToPlaylist,
+  playlists,
+}: {
+  track: Track;
+  status: string;
+  currentTrackId?: number;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+  play: (track: Track) => Promise<void>;
+  playNext: (track: Track) => void;
+  addToQueue: (track: Track) => void;
+  addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
+  playlists: { id: number; name: string }[];
+}) {
+  const isCurrent = currentTrackId === track.id;
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={
+        <ArtistLinks
+          names={track.artist_names}
+          ids={track.artist_ids}
+          fallbackName={track.artist}
+          fallbackId={track.artist_id}
+        />
+      }
+      artworkSrc={track.artwork_path || undefined}
+      showArtwork
+      active={isCurrent}
+      isPlaying={isCurrent && status === "playing"}
+      onClick={() => {
+        if (isCurrent) {
+          if (status === "playing") pause();
+          else resume();
+        } else {
+          play(track);
+        }
+      }}
+      trailing={
+        <p className="text-muted-foreground text-xs font-normal tabular-nums">
+          {formatDuration(track.duration_ms)}
+        </p>
+      }
+      menuActions={{
+        onPlay: () => {
+          if (isCurrent) {
+            if (status === "playing") pause();
+            else resume();
+          } else {
+            play(track);
+          }
+        },
+        onPlayNext: () => playNext(track),
+        onAddToQueue: () => addToQueue(track),
+        onAddToPlaylist: (playlistId) =>
+          addToPlaylist(playlistId, track.id),
+        playlists: playlists.map((p) => ({
+          id: p.id,
+          name: p.name,
+        })),
+      }}
+    />
+  );
+});
 
 export default function SongsPage() {
   const tracks = useLibraryStore((s) => s.tracks);
@@ -238,55 +313,17 @@ export default function SongsPage() {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <ListItem
-                    title={track.title}
-                    subtitle={
-                      <ArtistLinks
-                        names={track.artist_names}
-                        ids={track.artist_ids}
-                        fallbackName={track.artist}
-                        fallbackId={track.artist_id}
-                      />
-                    }
-                    artworkSrc={
-                      track.artwork_path ? track.artwork_path : undefined
-                    }
-                    showArtwork
-                    active={currentTrack?.id === track.id}
-                    isPlaying={
-                      currentTrack?.id === track.id && status === "playing"
-                    }
-                    onClick={() => {
-                      if (currentTrack?.id === track.id) {
-                        if (status === "playing") pause();
-                        else resume();
-                      } else {
-                        play(track);
-                      }
-                    }}
-                    trailing={
-                      <p className="text-muted-foreground text-xs font-normal tabular-nums">
-                        {formatDuration(track.duration_ms)}
-                      </p>
-                    }
-                    menuActions={{
-                      onPlay: () => {
-                        if (currentTrack?.id === track.id) {
-                          if (status === "playing") pause();
-                          else resume();
-                        } else {
-                          play(track);
-                        }
-                      },
-                      onPlayNext: () => playNext(track),
-                      onAddToQueue: () => addToQueue(track),
-                      onAddToPlaylist: (playlistId) =>
-                        addToPlaylist(playlistId, track.id),
-                      playlists: playlists.map((p) => ({
-                        id: p.id,
-                        name: p.name,
-                      })),
-                    }}
+                  <SongListMenu
+                    track={track}
+                    status={status}
+                    currentTrackId={currentTrack?.id}
+                    pause={pause}
+                    resume={resume}
+                    play={play}
+                    playNext={playNext}
+                    addToQueue={addToQueue}
+                    addToPlaylist={addToPlaylist}
+                    playlists={playlists}
                   />
                 </div>
               );

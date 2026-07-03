@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, memo, useCallback } from "react";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import {
   getArtistById,
@@ -27,6 +27,50 @@ import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
+const ArtistTrackRow = memo(function ArtistTrackRow({
+  track,
+  index,
+  currentTrackId,
+  status,
+}: {
+  track: Track;
+  index: number;
+  currentTrackId?: number;
+  status: string;
+}) {
+  const isCurrentTrack = currentTrackId === track.id;
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={
+        <ArtistLinks
+          names={track.artist_names}
+          ids={
+            track.artist_ids?.length
+              ? track.artist_ids
+              : track.artist_id
+                ? [track.artist_id]
+                : []
+          }
+          fallbackName={track.artist}
+          fallbackId={track.artist_id}
+        />
+      }
+      artworkSrc={track.artwork_path || undefined}
+      index={index + 1}
+      variant="indexed"
+      showArtwork
+      active={isCurrentTrack}
+      isPlaying={isCurrentTrack && status === "playing"}
+      trailing={
+        <span className="tabular-nums text-xs">
+          {formatDuration(track.duration_ms)}
+        </span>
+      }
+    />
+  );
+});
+
 export default function ArtistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
@@ -48,6 +92,8 @@ export default function ArtistDetailPage() {
 
   useEffect(() => {
     if (detailView?.type === "artist" && detailView.id) {
+      let cancelled = false;
+
       setIsLoading(true);
       (async () => {
         try {
@@ -57,28 +103,49 @@ export default function ArtistDetailPage() {
               getArtistAlbums(detailView.id),
               getArtistTracks(detailView.id),
             ]);
-          if (artistResult.status === "fulfilled" && artistResult.value) {
-            setArtist(artistResult.value);
-            updateBreadcrumbLabel(
-              "artist",
-              detailView.id,
-              artistResult.value.name,
-            );
-          } else if (artistResult.status === "rejected") {
-            logger.error("Failed to load artist", artistResult.reason);
+          if (!cancelled) {
+            if (artistResult.status === "fulfilled" && artistResult.value) {
+              setArtist(artistResult.value);
+              updateBreadcrumbLabel(
+                "artist",
+                detailView.id,
+                artistResult.value.name,
+              );
+            } else if (artistResult.status === "rejected") {
+              logger.error("Failed to load artist", artistResult.reason);
+            }
+            if (albumsResult.status === "fulfilled")
+              setAlbums(albumsResult.value);
+            else logger.error("Failed to load albums", albumsResult.reason);
+            if (tracksResult.status === "fulfilled")
+              setTracks(tracksResult.value);
+            else logger.error("Failed to load tracks", tracksResult.reason);
           }
-          if (albumsResult.status === "fulfilled")
-            setAlbums(albumsResult.value);
-          else logger.error("Failed to load albums", albumsResult.reason);
-          if (tracksResult.status === "fulfilled")
-            setTracks(tracksResult.value);
-          else logger.error("Failed to load tracks", tracksResult.reason);
         } finally {
-          setIsLoading(false);
+          if (!cancelled) {
+            setIsLoading(false);
+          }
         }
       })();
+
+      return () => {
+        cancelled = true;
+      };
     }
   }, [detailView, updateBreadcrumbLabel]);
+
+  const renderItem = useCallback(
+    (track: Track, index: number) => (
+      <ArtistTrackRow
+        key={track.id}
+        track={track}
+        index={index}
+        currentTrackId={currentTrack?.id}
+        status={status}
+      />
+    ),
+    [currentTrack?.id, status],
+  );
 
   if (isLoading || !artist) {
     if (isLoading) return <DetailSkeleton />;
@@ -245,40 +312,7 @@ export default function ArtistDetailPage() {
             )}
           </>
         }
-        renderItem={(track: Track, index: number) => {
-          const isCurrentTrack = currentTrack?.id === track.id;
-          return (
-            <ListItem
-              key={track.id}
-              title={track.title}
-              subtitle={
-                <ArtistLinks
-                  names={track.artist_names}
-                  ids={
-                    track.artist_ids?.length
-                      ? track.artist_ids
-                      : track.artist_id
-                        ? [track.artist_id]
-                        : []
-                  }
-                  fallbackName={track.artist}
-                  fallbackId={track.artist_id}
-                />
-              }
-              artworkSrc={track.artwork_path || undefined}
-              index={index + 1}
-              variant="indexed"
-              showArtwork
-              active={isCurrentTrack}
-              isPlaying={isCurrentTrack && status === "playing"}
-              trailing={
-                <span className="tabular-nums text-xs">
-                  {formatDuration(track.duration_ms)}
-                </span>
-              }
-            />
-          );
-        }}
+        renderItem={renderItem}
       />
     </DetailPageTemplate>
   );
