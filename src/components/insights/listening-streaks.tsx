@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Flame, Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StreaksData, WeekDayStatus } from "@/stores/stats-store";
@@ -26,6 +27,8 @@ function DayCell({ status }: { status: WeekDayStatus }) {
 }
 
 export function ListeningStreaks({ data, isLoading }: Props) {
+  const activeCount = useMemo(() => data.week_days.filter((d) => d.active).length, [data.week_days]);
+
   if (isLoading) {
     return (
       <div className="h-full bg-card/50 border border-border rounded-xl p-4 animate-pulse flex flex-col justify-between">
@@ -45,7 +48,6 @@ export function ListeningStreaks({ data, isLoading }: Props) {
 
   const hasStreak = data.current_streak > 0;
   const isBurning = data.current_streak >= 3;
-  const activeCount = data.week_days.filter((d) => d.active).length;
 
   return (
     <div className="h-full flex flex-col bg-card/50 border border-border rounded-xl p-4 relative overflow-hidden">

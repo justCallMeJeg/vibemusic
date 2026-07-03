@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { SidePanelLayout } from "./shared/side-panel-layout";
 import {
   useSidePanel,
@@ -10,6 +11,68 @@ import { getLyrics, LyricLine, LyricsData } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { Loader2, Music2 } from "lucide-react";
+
+const SyncedLyricLine = memo(function SyncedLyricLine({
+  line,
+  isActive,
+  isPast,
+  isSynced,
+  activeLineRef,
+  onSeek,
+  onAutoScroll,
+}: {
+  line: LyricLine;
+  isActive: boolean;
+  isPast: boolean;
+  isSynced: boolean;
+  activeLineRef: React.RefObject<HTMLButtonElement | null>;
+  onSeek: (ms: number) => void;
+  onAutoScroll: () => void;
+}) {
+  if (!isSynced) {
+    return (
+      <div
+        className="text-base text-muted-foreground/90 py-0.5"
+      >
+        {line.text}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      ref={isActive ? activeLineRef : null}
+      onClick={() => {
+        if (line.timestamp_ms !== null) {
+          onSeek(line.timestamp_ms);
+          onAutoScroll();
+        }
+      }}
+      onKeyDown={(e) => {
+        if (
+          (e.key === "Enter" || e.key === " ") &&
+          line.timestamp_ms !== null
+        ) {
+          onSeek(line.timestamp_ms);
+          onAutoScroll();
+        }
+      }}
+      className={cn(
+        "text-xl transition-all duration-300 py-2 px-4 rounded-xl origin-left w-fit max-w-full text-left",
+        line.timestamp_ms !== null &&
+          "cursor-pointer dark:hover:bg-white/5 hover:bg-black/5",
+        isActive
+          ? "dark:text-white font-black scale-105 bg-black/10 dark:bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] backdrop-blur-sm pl-6"
+          : isPast
+            ? "text-muted-foreground/30 blur-[0.5px] scale-90"
+            : "text-muted-foreground/70 scale-100",
+      )}
+    >
+      {line.text || "♪"}
+    </button>
+  );
+});
 
 export default function LyricsPanel() {
   const sidePanel = useSidePanel();
@@ -169,58 +232,18 @@ export default function LyricsPanel() {
           </div>
 
           <div className="flex flex-col gap-4 min-h-0">
-            {lyrics.map((line, index) => {
-              const isActive = index === activeIndex;
-              const isPast = index < activeIndex;
-
-              if (!isSynced) {
-                // UN-SYNCED STYLE (Compact)
-                return (
-                  <div
-                    key={index}
-                    className="text-base text-muted-foreground/90 py-0.5"
-                  >
-                    {line.text}
-                  </div>
-                );
-              }
-
-              // SYNCED STYLE (Karaoke)
-              return (
-                <button
-                  type="button"
-                  key={index}
-                  ref={isActive ? activeLineRef : null}
-                  onClick={() => {
-                    if (line.timestamp_ms !== null) {
-                      seek(line.timestamp_ms);
-                      setAutoScroll(true);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (
-                      (e.key === "Enter" || e.key === " ") &&
-                      line.timestamp_ms !== null
-                    ) {
-                      seek(line.timestamp_ms);
-                      setAutoScroll(true);
-                    }
-                  }}
-                  className={cn(
-                    "text-xl transition-all duration-300 py-2 px-4 rounded-xl origin-left w-fit max-w-full text-left",
-                    line.timestamp_ms !== null &&
-                      "cursor-pointer dark:hover:bg-white/5 hover:bg-black/5",
-                    isActive
-                      ? "dark:text-white font-black scale-105 bg-black/10 dark:bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] backdrop-blur-sm pl-6"
-                      : isPast
-                        ? "text-muted-foreground/30 blur-[0.5px] scale-90"
-                        : "text-muted-foreground/70 scale-100",
-                  )}
-                >
-                  {line.text || "♪"}
-                </button>
-              );
-            })}
+            {lyrics.map((line, index) => (
+              <SyncedLyricLine
+                key={index}
+                line={line}
+                isActive={index === activeIndex}
+                isPast={index < activeIndex}
+                isSynced={isSynced}
+                activeLineRef={activeLineRef as React.RefObject<HTMLButtonElement | null>}
+                onSeek={(ms) => seek(ms)}
+                onAutoScroll={() => setAutoScroll(true)}
+              />
+            ))}
           </div>
 
           <div className="mt-8 text-center pb-4">
