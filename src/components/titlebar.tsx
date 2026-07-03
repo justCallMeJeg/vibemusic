@@ -27,9 +27,9 @@ export function TitleBar() {
       });
       return unlisten;
     };
-    const promise = init();
+    const cleanup = init();
     return () => {
-      promise.then((f) => f());
+      cleanup.then((fn) => fn?.());
     };
   }, [appWindow]);
 
