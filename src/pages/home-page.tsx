@@ -25,11 +25,17 @@ import { PageLayout } from "@/components/shared/page-layout";
 import { HomeSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
+import { useShallow } from "zustand/shallow";
+
 export default function HomePage() {
-  const albums = useLibraryStore((s) => s.albums);
-  const tracks = useLibraryStore((s) => s.tracks);
-  const playlists = useLibraryStore((s) => s.playlists);
-  const isLoading = useLibraryStore((s) => s.isLoading);
+  const { albums, tracks, playlists, isLoading } = useLibraryStore(
+    useShallow((s) => ({
+      albums: s.albums,
+      tracks: s.tracks,
+      playlists: s.playlists,
+      isLoading: s.isLoading,
+    })),
+  );
   const deletePlaylist = useLibraryStore((s) => s.deletePlaylist);
 
   const setPage = useNavigationStore((s) => s.setPage);
@@ -167,7 +173,12 @@ export default function HomePage() {
     displayPlaylists.length === 0 &&
     recentTracks.length === 0;
 
-  if (isLoading && albums.length === 0 && playlists.length === 0 && tracks.length === 0) {
+  if (
+    isLoading &&
+    albums.length === 0 &&
+    playlists.length === 0 &&
+    tracks.length === 0
+  ) {
     return <HomeSkeleton />;
   }
 
@@ -175,9 +186,7 @@ export default function HomePage() {
     <PageLayout overflowHidden>
       {/* Header */}
       <div className="mt-8 mb-6 px-2">
-        <h1 className="text-4xl font-bold text-primary">
-          Welcome Back
-        </h1>
+        <h1 className="text-4xl font-bold text-primary">Welcome Back</h1>
         <p className="text-muted-foreground mt-1">
           Here's some music for you today.
         </p>
