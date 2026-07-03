@@ -1,5 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
+function dedupeInvoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  const key = `${command}:${JSON.stringify(args ?? {})}`;
+  const existing = inFlightRequests.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const promise = invoke<T>(command, args).finally(() => {
+    inFlightRequests.delete(key);
+  });
+  inFlightRequests.set(key, promise);
+  return promise;
+}
+
 export interface Track {
   id: number;
   title: string;
@@ -48,7 +62,7 @@ export interface Artist {
  * @returns {Promise<Track[]>} List of all tracks.
  */
 export async function getTracks(): Promise<Track[]> {
-  return await invoke("get_all_tracks");
+  return await dedupeInvoke("get_all_tracks");
 }
 
 /**
@@ -56,7 +70,7 @@ export async function getTracks(): Promise<Track[]> {
  * @returns {Promise<Album[]>} List of all albums.
  */
 export async function getAlbums(): Promise<Album[]> {
-  return await invoke("get_all_albums");
+  return await dedupeInvoke("get_all_albums");
 }
 
 /**
@@ -64,7 +78,7 @@ export async function getAlbums(): Promise<Album[]> {
  * @returns {Promise<Artist[]>} List of all artists.
  */
 export async function getArtists(): Promise<Artist[]> {
-  return await invoke("get_all_artists");
+  return await dedupeInvoke("get_all_artists");
 }
 
 /**
@@ -73,7 +87,7 @@ export async function getArtists(): Promise<Artist[]> {
  * @returns {Promise<Artist | null>} The artist object or null if not found.
  */
 export async function getArtistById(id: number): Promise<Artist | null> {
-  return await invoke("get_artist_by_id", { id });
+  return await dedupeInvoke("get_artist_by_id", { id });
 }
 
 /**
@@ -82,7 +96,7 @@ export async function getArtistById(id: number): Promise<Artist | null> {
  * @returns {Promise<Album[]>} List of albums by the artist.
  */
 export async function getArtistAlbums(id: number): Promise<Album[]> {
-  return await invoke("get_artist_albums", { id });
+  return await dedupeInvoke("get_artist_albums", { id });
 }
 
 /**
@@ -91,7 +105,7 @@ export async function getArtistAlbums(id: number): Promise<Album[]> {
  * @returns {Promise<Track[]>} List of tracks by the artist.
  */
 export async function getArtistTracks(id: number): Promise<Track[]> {
-  return await invoke("get_artist_tracks", { id });
+  return await dedupeInvoke("get_artist_tracks", { id });
 }
 
 /**
@@ -100,7 +114,7 @@ export async function getArtistTracks(id: number): Promise<Track[]> {
  * @returns {Promise<Album | null>} The album object or null if not found.
  */
 export async function getAlbumById(id: number): Promise<Album | null> {
-  return await invoke("get_album_by_id", { id });
+  return await dedupeInvoke("get_album_by_id", { id });
 }
 
 /**
@@ -109,7 +123,7 @@ export async function getAlbumById(id: number): Promise<Album | null> {
  * @returns {Promise<Track[]>} List of tracks in the album.
  */
 export async function getAlbumTracks(albumId: number): Promise<Track[]> {
-  return await invoke("get_album_tracks", { albumId });
+  return await dedupeInvoke("get_album_tracks", { albumId });
 }
 
 /**
@@ -157,11 +171,11 @@ export async function deletePlaylist(id: number): Promise<void> {
 }
 
 export async function getPlaylists(): Promise<Playlist[]> {
-  return await invoke("get_playlists");
+  return await dedupeInvoke("get_playlists");
 }
 
 export async function getPlaylistTracks(id: number): Promise<Track[]> {
-  return await invoke("get_playlist_tracks", { id });
+  return await dedupeInvoke("get_playlist_tracks", { id });
 }
 
 export async function addTrackToPlaylist(
@@ -192,7 +206,7 @@ export interface SearchResults {
 }
 
 export async function search(query: string): Promise<SearchResults> {
-  return await invoke("search", { query });
+  return await dedupeInvoke("search", { query });
 }
 
 export interface MediaMetadata {
@@ -208,7 +222,7 @@ export interface MediaMetadata {
 }
 
 export async function probeFile(path: string): Promise<MediaMetadata> {
-  return await invoke("probe_file", { path });
+  return await dedupeInvoke("probe_file", { path });
 }
 // --- Lyrics ---
 export interface LyricLine {
@@ -223,5 +237,5 @@ export interface LyricsData {
 }
 
 export async function getLyrics(path: string): Promise<LyricsData> {
-  return await invoke("get_lyrics", { path });
+  return await dedupeInvoke("get_lyrics", { path });
 }
