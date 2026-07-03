@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { useUpdateStore } from "@/stores/update-store";
 import { Download, X } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { logger } from "@/lib/logger";
-import ReactMarkdown from "react-markdown";
 import { StandardDialog } from "@/components/shared/standard-dialog";
+
+const ReactMarkdown = lazy(() => import("react-markdown"));
 
 export function UpdateDialog({
   open,
@@ -83,7 +85,7 @@ export function UpdateDialog({
           </p>
         ) : (
           <div
-            className="prose prose-invert prose-sm max-w-none break-words
+            className="prose prose-invert prose-sm max-w-none wrap-break-word
               prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
               prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
               prose-p:text-muted-foreground prose-p:leading-relaxed
@@ -96,7 +98,9 @@ export function UpdateDialog({
               prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
           >
             {changelogBody ? (
-              <ReactMarkdown>{changelogBody}</ReactMarkdown>
+              <Suspense fallback={<p className="text-muted-foreground italic">Loading changelog...</p>}>
+                <ReactMarkdown>{changelogBody}</ReactMarkdown>
+              </Suspense>
             ) : (
               <p className="text-muted-foreground italic">
                 No changelog provided.

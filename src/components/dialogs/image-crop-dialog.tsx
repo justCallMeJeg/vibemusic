@@ -1,11 +1,12 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import Cropper from "react-easy-crop";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { StandardDialog } from "@/components/shared/standard-dialog";
+
+const Cropper = lazy(() => import("react-easy-crop"));
 
 interface Area {
   x: number;
@@ -137,15 +138,17 @@ export function ImageCropDialog({
       <div className="flex flex-col items-center gap-6 py-4">
         <div className="relative w-full h-64 bg-background rounded-lg overflow-hidden">
           {imageSrc && (
-            <Cropper
-              image={imageSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={1}
-              onCropChange={setCrop}
-              onCropComplete={onCropChangeComplete}
-              onZoomChange={setZoom}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center w-full h-full"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>}>
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onCropComplete={onCropChangeComplete}
+                onZoomChange={setZoom}
+              />
+            </Suspense>
           )}
         </div>
 
