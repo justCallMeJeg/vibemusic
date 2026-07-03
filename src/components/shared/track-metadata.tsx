@@ -112,7 +112,7 @@ export default function TrackMetadata({ track, metadata }: TrackMetadataProps) {
         )}
 
         {/* Track Number */}
-        {track.track_number && (
+        {track.track_number != null && track.track_number > 0 && (
           <MetadataRow label="Track No.">
             <span className="text-xs font-medium text-right">
               {track.track_number}

@@ -164,7 +164,7 @@ export function SettingsAbout() {
                   <span>Downloading...</span>
                   <span>
                     {formatBytes(downloadProgress.downloaded)}
-                    {downloadProgress.total &&
+                    {downloadProgress.total != null &&
                       ` / ${formatBytes(downloadProgress.total)}`}
                   </span>
                 </div>
