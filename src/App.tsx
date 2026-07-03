@@ -73,10 +73,8 @@ export default function App() {
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const selectProfile = useProfileStore((s) => s.selectProfile);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
-  const activeProfile = useProfileStore((s) => {
-    const id = s.activeProfileId;
-    return id ? s.profiles.find((p) => p.id === id) : undefined;
-  });
+  const profilesMap = useProfileStore((s) => s.profilesMap);
+  const activeProfile = activeProfileId ? profilesMap.get(activeProfileId) : undefined;
 
   useProfileTheme();
 

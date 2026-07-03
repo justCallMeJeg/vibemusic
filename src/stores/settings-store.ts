@@ -376,47 +376,58 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           return await store.get<T>(key);
         };
 
-        const theme = await getVal<"dark" | "light" | "system">("theme");
-        const dynamicGradient = await getVal<boolean>("dynamicGradient");
-        const libraryPaths = await getVal<string[]>("libraryPaths");
-        const selectedDevice = await getVal<string>("selectedDevice");
-        const crossfadeDuration = await getVal<number>("crossfadeDuration");
+        const [
+          theme,
+          dynamicGradient,
+          libraryPaths,
+          selectedDevice,
+          crossfadeDuration,
+          closeToTray,
+          scanOnStartup,
+          autoplay,
+          _sidebarItems,
+          defaultPage,
+          songsSortKey,
+          songsSortDirection,
+          albumsSortKey,
+          albumsSortDirection,
+          artistsSortKey,
+          artistsSortDirection,
+          playlistsSortKey,
+          playlistsSortDirection,
+          miniPlayerStyle,
+          miniPlayerPosition,
+          enableMediaKeys,
+        ] = await Promise.all([
+          getVal<"dark" | "light" | "system">("theme"),
+          getVal<boolean>("dynamicGradient"),
+          getVal<string[]>("libraryPaths"),
+          getVal<string>("selectedDevice"),
+          getVal<number>("crossfadeDuration"),
+          getVal<boolean>("closeToTray"),
+          getVal<boolean>("scanOnStartup"),
+          getVal<boolean>("autoplay"),
+          getVal<{ id: string; hidden: boolean }[]>("sidebarItems"),
+          getVal<string>("defaultPage"),
+          getVal<string>("songsSortKey"),
+          getVal<string>("songsSortDirection"),
+          getVal<string>("albumsSortKey"),
+          getVal<string>("albumsSortDirection"),
+          getVal<string>("artistsSortKey"),
+          getVal<string>("artistsSortDirection"),
+          getVal<string>("playlistsSortKey"),
+          getVal<string>("playlistsSortDirection"),
+          getVal<"square" | "wide" | "bar">("miniPlayerStyle"),
+          getVal<"bottom-right" | "bottom-left" | "top-right" | "top-left">("miniPlayerPosition"),
+          getVal<boolean>("enableMediaKeys"),
+        ]);
 
-        const closeToTray = await getVal<boolean>("closeToTray");
-        const scanOnStartup = await getVal<boolean>("scanOnStartup");
-        const autoplay = await getVal<boolean>("autoplay");
-
-        let sidebarItems = await getVal<{ id: string; hidden: boolean }[]>(
-          "sidebarItems"
-        );
-
+        let sidebarItems = _sidebarItems;
         if (sidebarItems) {
           sidebarItems = sidebarItems.map((item) =>
             item.id === "settings" ? { ...item, hidden: false } : item
           );
         }
-        const defaultPage = await getVal<string>("defaultPage");
-
-        const songsSortKey = await getVal<string>("songsSortKey");
-        const songsSortDirection = await getVal<string>("songsSortDirection");
-
-        const albumsSortKey = await getVal<string>("albumsSortKey");
-        const albumsSortDirection = await getVal<string>("albumsSortDirection");
-        const artistsSortKey = await getVal<string>("artistsSortKey");
-        const artistsSortDirection = await getVal<string>(
-          "artistsSortDirection"
-        );
-        const playlistsSortKey = await getVal<string>("playlistsSortKey");
-        const playlistsSortDirection = await getVal<string>(
-          "playlistsSortDirection"
-        );
-        const miniPlayerStyle = await getVal<"square" | "wide" | "bar">(
-          "miniPlayerStyle"
-        );
-        const miniPlayerPosition = await getVal<
-          "bottom-right" | "bottom-left" | "top-right" | "top-left"
-        >("miniPlayerPosition");
-        const enableMediaKeys = await getVal<boolean>("enableMediaKeys");
 
         const themeValue = theme ?? "system";
         const resolvedTheme = applyThemeClass(themeValue);
@@ -456,15 +467,13 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           isLoading: false,
         });
 
-        if (selectedDevice) {
-          await invoke("audio_set_device", { deviceName: selectedDevice });
-        }
-        if (typeof crossfadeDuration === "number") {
-          useAudioStore.getState().setCrossfadeDuration(crossfadeDuration);
-          await invoke("audio_set_crossfade", {
-            durationMs: crossfadeDuration,
-          });
-        }
+        await Promise.all([
+          selectedDevice ? invoke("audio_set_device", { deviceName: selectedDevice }) : Promise.resolve(),
+          typeof crossfadeDuration === "number" ? (() => {
+            useAudioStore.getState().setCrossfadeDuration(crossfadeDuration);
+            return invoke("audio_set_crossfade", { durationMs: crossfadeDuration });
+          })() : Promise.resolve(),
+        ]);
 
         invoke("watch_paths", { folders: libraryPaths ?? [] }).catch((e) =>
           logger.error("Failed to watch paths on settings load", e)

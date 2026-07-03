@@ -50,6 +50,7 @@ interface AudioState {
   _lastSeekTime: number; // To ignore legacy progress events after seeking
   _isTransitioning: boolean;
   _crossfadeDuration: number;
+  _queueIndexMap: Map<number, number>;
 }
 
 // --- Store Actions Interface ---
@@ -205,6 +206,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _lastSeekTime: 0,
     _isTransitioning: false,
     _crossfadeDuration: 0,
+    _queueIndexMap: new Map(),
 
     // Player Actions
     play: async (track, newQueue?) => {
@@ -233,6 +235,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         queue,
         currentIndex: index,
         position: 0,
+        _queueIndexMap: new Map(queue.map((t, i) => [t.id, i])),
       });
 
       await playInternal(track);
@@ -320,7 +323,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
 
     addToQueue: (track) =>
       set((s) => {
-        const existingIndex = s.queue.findIndex((t) => t.id === track.id);
+        const existingIndex = s._queueIndexMap.get(track.id) ?? -1;
         if (existingIndex !== -1) {
           // Track exists - move it to the end
           const newQueue = [...s.queue];
@@ -331,14 +334,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           if (existingIndex < s.currentIndex) {
             newIndex--;
           }
-          return { queue: newQueue, currentIndex: newIndex };
+          return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
         }
-        return { queue: [...s.queue, track] };
+        const newQueue = [...s.queue, track];
+        return { queue: newQueue, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     playNext: (track) =>
       set((s) => {
-        const existingIndex = s.queue.findIndex((t) => t.id === track.id);
+        const existingIndex = s._queueIndexMap.get(track.id) ?? -1;
         const targetIndex = s.currentIndex + 1;
 
         if (existingIndex !== -1) {
@@ -362,24 +366,24 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           ) {
             newIndex++;
           }
-          return { queue: newQueue, currentIndex: newIndex };
+          return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
         }
 
         // Track doesn't exist - insert at play next position
         const newQueue = [...s.queue];
         newQueue.splice(targetIndex, 0, track);
-        return { queue: newQueue };
+        return { queue: newQueue, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     removeFromQueue: (trackId) =>
       set((s) => {
         const newQueue = s.queue.filter((t) => t.id !== trackId);
         let newIndex = s.currentIndex;
-        const removedIndex = s.queue.findIndex((t) => t.id === trackId);
+        const removedIndex = s._queueIndexMap.get(trackId) ?? -1;
         if (removedIndex !== -1 && removedIndex < s.currentIndex) {
           newIndex--;
         }
-        return { queue: newQueue, currentIndex: newIndex };
+        return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     reorderQueue: (newQueue) =>
@@ -389,15 +393,18 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         return {
           queue: newQueue,
           currentIndex: newIndex !== -1 ? newIndex : s.currentIndex,
+          _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])),
         };
       }),
 
     clearQueue: () =>
       set((s) => {
-        if (!s.currentTrack) return { queue: [], currentIndex: -1 };
+        if (!s.currentTrack) return { queue: [], currentIndex: -1, _queueIndexMap: new Map() };
+        const newQueue = [s.currentTrack];
         return {
-          queue: [s.currentTrack],
+          queue: newQueue,
           currentIndex: 0,
+          _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])),
         };
       }),
 

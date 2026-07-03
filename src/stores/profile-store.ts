@@ -29,6 +29,7 @@ export interface Profile {
 
 interface ProfileState {
   profiles: Profile[];
+  profilesMap: Map<string, Profile>;
   activeProfileId: string | null;
   isLoading: boolean;
 
@@ -63,6 +64,7 @@ const getStore = async () => {
  */
 export const useProfileStore = create<ProfileState>((set, get) => ({
   profiles: [],
+  profilesMap: new Map(),
   activeProfileId: null,
   isLoading: true,
 
@@ -93,6 +95,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         await invoke("set_active_profile", { profileId: defaultProfile.id });
         set({
           profiles: newProfiles,
+          profilesMap: new Map(newProfiles.map((p) => [p.id, p])),
           activeProfileId: defaultProfile.id,
           isLoading: false,
         });
@@ -101,7 +104,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         if (activeProfileId) {
           await invoke("set_active_profile", { profileId: activeProfileId });
         }
-        set({ profiles, activeProfileId, isLoading: false });
+        set({ profiles, profilesMap: new Map(profiles.map((p) => [p.id, p])), activeProfileId, isLoading: false });
 
         // Fetch library for the active profile on app startup
         if (activeProfileId) {
@@ -150,7 +153,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     const { profiles } = get();
     const newProfiles = [...profiles, newProfile];
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     const store = await getStore();
     await store.set("profiles", newProfiles);
@@ -193,21 +196,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       p.id === id ? { ...p, ...finalUpdates } : p
     );
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     const store = await getStore();
     await store.set("profiles", newProfiles);
     await store.save();
   },
-
   deleteProfile: async (id) => {
     const { profiles, activeProfileId } = get();
     const newProfiles = profiles.filter((p) => p.id !== id);
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     if (activeProfileId === id) {
-      set({ activeProfileId: null });
+      set({ activeProfileId: null, profilesMap: new Map(profiles.filter((p) => p.id !== id).map((p) => [p.id, p])) });
     }
 
     const store = await getStore();

@@ -13,15 +13,14 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 
 export default function ProfileSelectionPage() {
-  const {
-    profiles,
-    loadProfiles,
-    createProfile,
-    updateProfile,
-    selectProfile,
-    deleteProfile,
-    isLoading,
-  } = useProfileStore();
+  const profiles = useProfileStore((s) => s.profiles);
+  const profilesMap = useProfileStore((s) => s.profilesMap);
+  const loadProfiles = useProfileStore((s) => s.loadProfiles);
+  const createProfile = useProfileStore((s) => s.createProfile);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const selectProfile = useProfileStore((s) => s.selectProfile);
+  const deleteProfile = useProfileStore((s) => s.deleteProfile);
+  const isLoading = useProfileStore((s) => s.isLoading);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   const [isManageMode, setIsManageMode] = useState(false); // Renamed from isEditing for clarity
@@ -265,7 +264,7 @@ export default function ProfileSelectionPage() {
         onOpenChange={setDialogOpen}
         profile={
           editingProfileId
-            ? profiles.find((p) => p.id === editingProfileId)
+            ? (profilesMap.get(editingProfileId) ?? null)
             : null
         }
         onSave={async (name, color, avatarPath, avatarBytes) => {
