@@ -4,6 +4,7 @@ import {
   ArtistsSkeleton,
   DetailSkeleton,
   HomeSkeleton,
+  InsightsSkeleton,
   SongsSkeleton,
   SettingsSkeleton,
 } from "./skeletons";
@@ -31,6 +32,8 @@ export function PageSkeleton() {
     case "playlists":
       // Playlists page is often a grid of playlists
       return <AlbumsSkeleton />;
+    case "insights":
+      return <InsightsSkeleton />;
     case "settings":
     case "about":
       return <SettingsSkeleton />;
