@@ -66,11 +66,12 @@ export default function App() {
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
 
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
-  const profiles = useProfileStore((s) => s.profiles);
   const selectProfile = useProfileStore((s) => s.selectProfile);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
-
-  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+  const activeProfile = useProfileStore((s) => {
+    const id = s.activeProfileId;
+    return id ? s.profiles.find((p) => p.id === id) : undefined;
+  });
 
   useProfileTheme();
 
