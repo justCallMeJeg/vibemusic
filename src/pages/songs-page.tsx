@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { ListItem } from "@/components/shared/list-item";
@@ -61,52 +61,71 @@ const SongListMenu = memo(function SongListMenu({
   playlists: { id: number; name: string }[];
 }) {
   const isCurrent = currentTrackId === track.id;
-  return (
-    <ListItem
-      title={track.title}
-      subtitle={
-        <ArtistLinks
-          names={track.artist_names}
-          ids={track.artist_ids}
-          fallbackName={track.artist}
-          fallbackId={track.artist_id}
-        />
-      }
-      artworkSrc={track.artwork_path || undefined}
-      showArtwork
-      active={isCurrent}
-      isPlaying={isCurrent && status === "playing"}
-      onClick={() => {
+  const isCurrentlyPlaying = isCurrent && status === "playing";
+
+  const handleClick = useCallback(() => {
+    if (isCurrent) {
+      if (status === "playing") pause();
+      else resume();
+    } else {
+      play(track);
+    }
+  }, [isCurrent, status, pause, resume, play, track]);
+
+  const trailing = useMemo(
+    () => (
+      <p className="text-muted-foreground text-xs font-normal tabular-nums">
+        {formatDuration(track.duration_ms)}
+      </p>
+    ),
+    [track.duration_ms],
+  );
+
+  const subtitle = useMemo(
+    () => (
+      <ArtistLinks
+        names={track.artist_names}
+        ids={track.artist_ids}
+        fallbackName={track.artist}
+        fallbackId={track.artist_id}
+      />
+    ),
+    [track.artist_names, track.artist_ids, track.artist, track.artist_id],
+  );
+
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => {
         if (isCurrent) {
           if (status === "playing") pause();
           else resume();
         } else {
           play(track);
         }
-      }}
-      trailing={
-        <p className="text-muted-foreground text-xs font-normal tabular-nums">
-          {formatDuration(track.duration_ms)}
-        </p>
-      }
-      menuActions={{
-        onPlay: () => {
-          if (isCurrent) {
-            if (status === "playing") pause();
-            else resume();
-          } else {
-            play(track);
-          }
-        },
-        onPlayNext: () => playNext(track),
-        onAddToQueue: () => addToQueue(track),
-        onAddToPlaylist: (playlistId) =>
-          addToPlaylist(playlistId, track.id),
-        playlists: playlists.map((p) => ({
-          id: p.id,
-          name: p.name,
-        })),
-      }}
+      },
+      onPlayNext: () => playNext(track),
+      onAddToQueue: () => addToQueue(track),
+      onAddToPlaylist: (playlistId: number) =>
+        addToPlaylist(playlistId, track.id),
+      playlists: playlists.map((p) => ({
+        id: p.id,
+        name: p.name,
+      })),
+    }),
+    [isCurrent, status, pause, resume, play, track, playNext, addToQueue, addToPlaylist, playlists],
+  );
+
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={subtitle}
+      artworkSrc={track.artwork_path || undefined}
+      showArtwork
+      active={isCurrent}
+      isPlaying={isCurrentlyPlaying}
+      onClick={handleClick}
+      trailing={trailing}
+      menuActions={menuActions}
     />
   );
 });

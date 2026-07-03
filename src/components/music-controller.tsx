@@ -13,7 +13,6 @@ import {
 
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { logger } from "@/lib/logger";
 import { formatDuration } from "@/lib/format";
 import { ArtworkImage } from "./shared/artwork-image";
 import { ScrollingText } from "./shared/scrolling-text";
@@ -144,9 +143,9 @@ export default function MusicControler() {
           shuffle={shuffle}
           repeat={repeat}
           onToggleShuffle={toggleShuffle}
-          onPrevious={() => previous()}
+          onPrevious={previous}
           onPlayPause={handlePlayPause}
-          onNext={() => next()}
+          onNext={next}
           onToggleRepeat={toggleRepeat}
         />
         {/* Seeker */}
@@ -177,10 +176,7 @@ export default function MusicControler() {
           sidePanel={sidePanel}
           onToggleQueue={toggleQueue}
           onSetSidePanel={setSidePanel}
-          onToggleMiniPlayer={() => {
-            logger.debug("Toggle Mini Player Clicked");
-            toggleMiniPlayer();
-          }}
+          onToggleMiniPlayer={toggleMiniPlayer}
         />
       </div>
     </div>

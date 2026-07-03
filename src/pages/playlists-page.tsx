@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
 import { Plus, ListMusic, Search } from "lucide-react";
@@ -85,32 +85,75 @@ export default function PlaylistsPage() {
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
 
-  const handlePlayPlaylist = async (playlistId: number, shuffle = false) => {
+  const handlePlayPlaylist = useCallback(async (playlistId: number, shuffle = false) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) { toast.error("Playlist is empty"); return; }
       const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
       play(queue[0], queue);
     } catch (e) { logger.error("Failed to play playlist", e); }
-  };
+  }, [play]);
 
-  const handlePlayNext = async (playlistId: number) => {
+  const handlePlayNext = useCallback(async (playlistId: number) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing playlist next");
     } catch (e) { logger.error("Failed to play playlist next", e); toast.error("Failed to play next"); }
-  };
+  }, [playNext]);
 
-  const handleAddToQueue = async (playlistId: number) => {
+  const handleAddToQueue = useCallback(async (playlistId: number) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) return;
       tracks.forEach((track) => addToQueue(track));
       toast.success("Added playlist to queue");
     } catch (e) { logger.error("Failed to add playlist to queue", e); }
-  };
+  }, [addToQueue]);
+
+  const PlaylistGridCard = memo(function PlaylistGridCard({
+    playlist,
+    onOpenDetail,
+    onPlay,
+    onPlayNext,
+    onAddToQueue,
+    onEdit,
+    onDelete,
+  }: {
+    playlist: Playlist;
+    onOpenDetail: (id: number) => void;
+    onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+    onPlayNext: (id: number) => Promise<void>;
+    onAddToQueue: (id: number) => Promise<void>;
+    onEdit: (p: Playlist) => void;
+    onDelete: (p: Playlist) => void;
+  }) {
+    const menuActions = useMemo(
+      () => ({
+        onPlay: () => onPlay(playlist.id),
+        onShuffle: () => onPlay(playlist.id, true),
+        onPlayNext: () => onPlayNext(playlist.id),
+        onAddToQueue: () => onAddToQueue(playlist.id),
+        onEdit: () => onEdit(playlist),
+        onDelete: () => onDelete(playlist),
+      }),
+      [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete],
+    );
+
+    return (
+      <CardItem
+        title={playlist.name}
+        subtitle={`${playlist.track_count} tracks`}
+        artworkSrc={playlist.artwork_path || undefined}
+        artworkType="playlist"
+        variant="portrait"
+        onClick={() => onOpenDetail(playlist.id)}
+        onPlay={() => onPlay(playlist.id)}
+        menuActions={menuActions}
+      />
+    );
+  });
 
 
   const confirmDelete = async () => {
@@ -190,23 +233,15 @@ export default function PlaylistsPage() {
         <VirtualizedGrid
           items={filteredAndSortedPlaylists}
           renderItem={(playlist) => (
-            <CardItem
+            <PlaylistGridCard
               key={playlist.id}
-              title={playlist.name}
-              subtitle={`${playlist.track_count} tracks`}
-              artworkSrc={playlist.artwork_path || undefined}
-              artworkType="playlist"
-              variant="portrait"
-              onClick={() => openPlaylistDetail(playlist.id)}
-              onPlay={() => handlePlayPlaylist(playlist.id)}
-              menuActions={{
-                onPlay: () => handlePlayPlaylist(playlist.id),
-                onShuffle: () => handlePlayPlaylist(playlist.id, true),
-                onPlayNext: () => handlePlayNext(playlist.id),
-                onAddToQueue: () => handleAddToQueue(playlist.id),
-                onEdit: () => setEditingPlaylist(playlist),
-                onDelete: () => handleDeleteRequest(playlist),
-              }}
+              playlist={playlist}
+              onOpenDetail={openPlaylistDetail}
+              onPlay={handlePlayPlaylist}
+              onPlayNext={handlePlayNext}
+              onAddToQueue={handleAddToQueue}
+              onEdit={setEditingPlaylist}
+              onDelete={handleDeleteRequest}
             />
           )}
           itemHeight={220}

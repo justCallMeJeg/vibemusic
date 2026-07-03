@@ -33,6 +33,9 @@ export function TitleBar() {
     };
   }, [appWindow]);
 
+  const handleMinimize = () => appWindow.minimize();
+  const handleClose = () => appWindow.close();
+
   const handleMaximize = async () => {
     if (isMaximized) {
       await appWindow.unmaximize();
@@ -65,7 +68,7 @@ export function TitleBar() {
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={() => appWindow.minimize()}
+              onClick={handleMinimize}
               className="p-2 hover:bg-accent rounded-md transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
             >
               <Minus size={14} />
@@ -93,7 +96,7 @@ export function TitleBar() {
           <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={() => appWindow.close()}
+              onClick={handleClose}
               className="p-2 hover:bg-destructive/20 hover:text-destructive rounded-md transition-colors text-muted-foreground cursor-pointer"
             >
               <X size={14} />

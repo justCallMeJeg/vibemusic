@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, memo, useCallback } from "react";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { getArtistTracks } from "@/lib/api";
+import { getArtistTracks, Artist } from "@/lib/api";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Music2, Search } from "lucide-react";
@@ -29,32 +29,69 @@ export default function ArtistsPage() {
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
 
-  const handlePlayArtist = async (artistId: number, shuffle = false) => {
+  const handlePlayArtist = useCallback(async (artistId: number, shuffle = false) => {
     try {
       const tracks = await getArtistTracks(artistId);
       if (tracks.length === 0) { toast.error("No tracks found for this artist"); return; }
       const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
       play(queue[0], queue);
     } catch (e) { logger.error("Failed to play artist", e); }
-  };
+  }, [play]);
 
-  const handlePlayNext = async (artistId: number) => {
+  const handlePlayNext = useCallback(async (artistId: number) => {
     try {
       const tracks = await getArtistTracks(artistId);
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing artist next");
     } catch (e) { logger.error("Failed to play artist next", e); toast.error("Failed to play next"); }
-  };
+  }, [playNext]);
 
-  const handleAddToQueue = async (artistId: number) => {
+  const handleAddToQueue = useCallback(async (artistId: number) => {
     try {
       const tracks = await getArtistTracks(artistId);
       if (tracks.length === 0) return;
       tracks.forEach((track) => addToQueue(track));
       toast.success("Added artist to queue");
     } catch (e) { logger.error("Failed to add artist to queue", e); }
-  };
+  }, [addToQueue]);
+
+  const ArtistGridCard = memo(function ArtistGridCard({
+    artist,
+    onOpenDetail,
+    onPlay,
+    onPlayNext,
+    onAddToQueue,
+  }: {
+    artist: Artist;
+    onOpenDetail: (id: number) => void;
+    onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+    onPlayNext: (id: number) => Promise<void>;
+    onAddToQueue: (id: number) => Promise<void>;
+  }) {
+    const menuActions = useMemo(
+      () => ({
+        onPlay: () => onPlay(artist.id),
+        onShuffle: () => onPlay(artist.id, true),
+        onPlayNext: () => onPlayNext(artist.id),
+        onAddToQueue: () => onAddToQueue(artist.id),
+      }),
+      [artist.id, onPlay, onPlayNext, onAddToQueue],
+    );
+
+    return (
+      <CardItem
+        title={artist.name}
+        subtitle={`${artist.album_count} ${artist.album_count === 1 ? "Album" : "Albums"} • ${artist.track_count} ${artist.track_count === 1 ? "Song" : "Songs"}`}
+        artworkSrc={artist.artwork_path || undefined}
+        artworkType="artist"
+        variant="circle"
+        onClick={() => onOpenDetail(artist.id)}
+        onPlay={() => onPlay(artist.id, true)}
+        menuActions={menuActions}
+      />
+    );
+  });
 
   const filteredAndSortedArtists = useMemo(() => {
     let result = [...artists];
@@ -125,23 +162,15 @@ export default function ArtistsPage() {
       <VirtualizedGrid
         items={filteredAndSortedArtists}
         renderItem={(artist) => (
-  <CardItem
-    key={artist.id}
-    title={artist.name}
-    subtitle={`${artist.album_count} ${artist.album_count === 1 ? "Album" : "Albums"} • ${artist.track_count} ${artist.track_count === 1 ? "Song" : "Songs"}`}
-    artworkSrc={artist.artwork_path || undefined}
-    artworkType="artist"
-    variant="circle"
-    onClick={() => openArtistDetail(artist.id)}
-    onPlay={() => handlePlayArtist(artist.id, true)}
-    menuActions={{
-      onPlay: () => handlePlayArtist(artist.id),
-      onShuffle: () => handlePlayArtist(artist.id, true),
-      onPlayNext: () => handlePlayNext(artist.id),
-      onAddToQueue: () => handleAddToQueue(artist.id),
-    }}
-  />
-)}
+          <ArtistGridCard
+            key={artist.id}
+            artist={artist}
+            onOpenDetail={openArtistDetail}
+            onPlay={handlePlayArtist}
+            onPlayNext={handlePlayNext}
+            onAddToQueue={handleAddToQueue}
+          />
+        )}
         itemHeight={220}
         emptyState={
           !isLoading ? (

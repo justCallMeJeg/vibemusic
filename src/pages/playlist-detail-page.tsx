@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   getPlaylistTracks,
   deletePlaylist,
@@ -100,7 +100,7 @@ export default function PlaylistDetailPage() {
     }
   };
 
-  const handleRemoveTrack = async (trackId: number, e: React.MouseEvent) => {
+  const handleRemoveTrack = useCallback(async (trackId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!playlistId) return;
 
@@ -113,7 +113,38 @@ export default function PlaylistDetailPage() {
       logger.error("Failed to remove track", e);
       toast.error("Failed to remove track");
     }
-  };
+  }, [playlistId, tracks]);
+
+  const totalDurationMs = useMemo(() => tracks.reduce((acc, t) => acc + t.duration_ms, 0), [tracks]);
+  const existingTrackIds = useMemo(() => new Set(tracks.map((t) => t.id)), [tracks]);
+
+  const handleReorder = useCallback(async (activeId: string | number, overId: string | number) => {
+    let oldIdx = -1, newIdx = -1;
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].id === activeId) oldIdx = i;
+      if (tracks[i].id === overId) newIdx = i;
+    }
+    if (oldIdx === -1 || newIdx === -1) return;
+    const newOrder = arrayMove(tracks, oldIdx, newIdx);
+    setTracks(newOrder);
+    const trackIds = newOrder.map((t) => t.id);
+    if (playlistId) {
+      try {
+        await reorderPlaylist(playlistId, trackIds);
+      } catch {
+        loadData();
+      }
+    }
+  }, [tracks, playlistId, reorderPlaylist, loadData]);
+
+  const handleRenderItem = useCallback((track: Track, index: number) => (
+    <SortableTrackItem
+      key={track.id}
+      track={track}
+      index={index}
+      onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
+    />
+  ), [handleRemoveTrack]);
 
   if (!playlist) {
     if (isLoading) return <DetailSkeleton />;
@@ -123,8 +154,6 @@ export default function PlaylistDetailPage() {
       </div>
     );
   }
-
-  const totalDurationMs = tracks.reduce((acc, t) => acc + t.duration_ms, 0);
 
   return (
     <DetailPageTemplate
@@ -138,30 +167,8 @@ export default function PlaylistDetailPage() {
         tracks={tracks}
         sortable
         getItemId={(item: Track) => item.id}
-        onReorder={async (activeId: string | number, overId: string | number) => {
-          const oldIndex = tracks.findIndex((t) => t.id === activeId);
-          const newIndex = tracks.findIndex((t) => t.id === overId);
-          const newOrder = arrayMove(tracks, oldIndex, newIndex);
-
-          setTracks(newOrder);
-
-          const trackIds = newOrder.map((t) => t.id);
-          if (playlistId) {
-            try {
-              await reorderPlaylist(playlistId, trackIds);
-            } catch {
-              loadData();
-            }
-          }
-        }}
-        renderItem={(track: Track, index: number) => (
-          <SortableTrackItem
-            key={track.id}
-            track={track}
-            index={index}
-            onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
-          />
-        )}
+        onReorder={handleReorder}
+        renderItem={handleRenderItem}
         trackListHeaderProps={{
           showDuration: true,
           indexWidth: "w-8",
@@ -222,7 +229,7 @@ export default function PlaylistDetailPage() {
                   if (!open) loadData();
                 }}
                 playlistId={playlistId}
-                existingTrackIds={new Set(tracks.map((t) => t.id))}
+                existingTrackIds={existingTrackIds}
               />
             )}
           </>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, memo, useCallback } from "react";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
@@ -6,7 +6,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { getAlbumTracks } from "@/lib/api";
+import { getAlbumTracks, Album } from "@/lib/api";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { CardItem } from "@/components/shared/card-item";
@@ -15,6 +15,44 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { PageLayout } from "@/components/shared/page-layout";
 import { AlbumsSkeleton } from "@/components/skeletons";
+
+const AlbumGridCard = memo(function AlbumGridCard({
+  album,
+  onOpenDetail,
+  onPlay,
+  onPlayNext,
+  onAddToQueue,
+}: {
+  album: Album;
+  onOpenDetail: (id: number) => void;
+  onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+  onPlayNext: (id: number) => Promise<void>;
+  onAddToQueue: (id: number) => Promise<void>;
+}) {
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => onPlay(album.id),
+      onShuffle: () => onPlay(album.id, true),
+      onPlayNext: () => onPlayNext(album.id),
+      onAddToQueue: () => onAddToQueue(album.id),
+    }),
+    [album.id, onPlay, onPlayNext, onAddToQueue],
+  );
+
+  return (
+    <CardItem
+      title={album.title}
+      subtitle={album.artist_name || "Unknown Artist"}
+      tertiaryText={`${album.track_count} tracks`}
+      artworkSrc={album.artwork_path || undefined}
+      artworkType="album"
+      variant="portrait"
+      onClick={() => onOpenDetail(album.id)}
+      onPlay={() => onPlay(album.id)}
+      menuActions={menuActions}
+    />
+  );
+});
 
 export default function AlbumsPage() {
   const albums = useLibraryStore((s) => s.albums);
@@ -29,38 +67,38 @@ export default function AlbumsPage() {
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
 
-  const handlePlayAlbum = async (albumId: number, shuffle = false) => {
+  const handlePlayAlbum = useCallback(async (albumId: number, shuffle = false) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) { toast.error("Album is empty"); return; }
       const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
       play(queue[0], queue);
     } catch (e) { logger.error("Failed to play album", e); }
-  };
+  }, [play]);
 
-  const handlePlayNext = async (albumId: number) => {
+  const handlePlayNext = useCallback(async (albumId: number) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) return;
       [...tracks].reverse().forEach((track) => playNext(track));
       toast.success("Playing album next");
     } catch (e) { logger.error("Failed to play album next", e); toast.error("Failed to play next"); }
-  };
+  }, [playNext]);
 
-  const handleAddToQueue = async (albumId: number) => {
+  const handleAddToQueue = useCallback(async (albumId: number) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) return;
       tracks.forEach((track) => addToQueue(track));
       toast.success("Added album to queue");
     } catch (e) { logger.error("Failed to add album to queue", e); }
-  };
+  }, [addToQueue]);
 
   const filteredAndSortedAlbums = useMemo(() => {
     let result = [...albums];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (deferredQuery) {
+      const query = deferredQuery.toLowerCase();
       result = result.filter(
         (a) =>
           a.title.toLowerCase().includes(query) ||
@@ -93,7 +131,7 @@ export default function AlbumsPage() {
       if (valA > valB) return albumsSortDirection === "asc" ? 1 : -1;
       return 0;
     });
-  }, [albums, albumsSortKey, albumsSortDirection, searchQuery]);
+  }, [albums, albumsSortKey, albumsSortDirection, deferredQuery]);
 
   if (isLoading && albums.length === 0) {
     return <AlbumsSkeleton />;
@@ -127,24 +165,15 @@ export default function AlbumsPage() {
       <VirtualizedGrid
         items={filteredAndSortedAlbums}
         renderItem={(album) => (
-  <CardItem
-    key={album.id}
-    title={album.title}
-    subtitle={album.artist_name || "Unknown Artist"}
-    tertiaryText={`${album.track_count} tracks`}
-    artworkSrc={album.artwork_path || undefined}
-    artworkType="album"
-    variant="portrait"
-    onClick={() => openAlbumDetail(album.id)}
-    onPlay={() => handlePlayAlbum(album.id)}
-    menuActions={{
-      onPlay: () => handlePlayAlbum(album.id),
-      onShuffle: () => handlePlayAlbum(album.id, true),
-      onPlayNext: () => handlePlayNext(album.id),
-      onAddToQueue: () => handleAddToQueue(album.id),
-    }}
-  />
-)}
+          <AlbumGridCard
+            key={album.id}
+            album={album}
+            onOpenDetail={openAlbumDetail}
+            onPlay={handlePlayAlbum}
+            onPlayNext={handlePlayNext}
+            onAddToQueue={handleAddToQueue}
+          />
+        )}
         itemHeight={220}
         emptyState={
           !isLoading ? (

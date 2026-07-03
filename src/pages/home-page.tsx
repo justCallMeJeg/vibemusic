@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useMemo, useCallback } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import {
   useAudioStore,
@@ -8,7 +8,7 @@ import {
 } from "@/stores/audio-store";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
-import { getAlbumTracks, getPlaylistTracks, Playlist, Track } from "@/lib/api";
+import { getAlbumTracks, getPlaylistTracks, Album, Playlist, Track } from "@/lib/api";
 import { CardItem } from "@/components/shared/card-item";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
@@ -50,52 +50,152 @@ const HomeTrackRow = memo(function HomeTrackRow({
   addToQueue: (track: Track) => void;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
 }) {
-  return (
-    <ListItem
-      title={track.title}
-      subtitle={
-        <ArtistLinks
-          names={track.artist_names}
-          ids={track.artist_ids}
-          fallbackName={track.artist}
-          fallbackId={track.artist_id}
-        />
-      }
-      artworkSrc={track.artwork_path || undefined}
-      showArtwork
-      active={currentTrackId === track.id}
-      isPlaying={currentTrackId === track.id && status === "playing"}
-      onClick={() => {
-        if (currentTrackId === track.id) {
+  const isActive = currentTrackId === track.id;
+  const isCurrentlyPlaying = isActive && status === "playing";
+
+  const handleClick = useCallback(() => {
+    if (isActive) {
+      if (status === "playing") pause();
+      else resume();
+    } else {
+      play(track);
+    }
+  }, [isActive, status, pause, resume, play, track]);
+
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => {
+        if (isActive) {
           if (status === "playing") pause();
           else resume();
         } else {
           play(track);
         }
-      }}
-      trailing={
-        <p className="text-muted-foreground text-xs font-normal tabular-nums">
-          {formatDuration(track.duration_ms)}
-        </p>
-      }
-      menuActions={{
-        onPlay: () => {
-          if (currentTrackId === track.id) {
-            if (status === "playing") pause();
-            else resume();
-          } else {
-            play(track);
-          }
-        },
-        onPlayNext: () => playNext(track),
-        onAddToQueue: () => addToQueue(track),
-        onAddToPlaylist: (playlistId) =>
-          addToPlaylist(playlistId, track.id),
-        playlists: playlists.map((p) => ({
-          id: p.id,
-          name: p.name,
-        })),
-      }}
+      },
+      onPlayNext: () => playNext(track),
+      onAddToQueue: () => addToQueue(track),
+      onAddToPlaylist: (playlistId: number) =>
+        addToPlaylist(playlistId, track.id),
+      playlists: playlists.map((p) => ({
+        id: p.id,
+        name: p.name,
+      })),
+    }),
+    [isActive, status, pause, resume, play, track, playNext, addToQueue, addToPlaylist, playlists],
+  );
+
+  const trailing = useMemo(
+    () => (
+      <p className="text-muted-foreground text-xs font-normal tabular-nums">
+        {formatDuration(track.duration_ms)}
+      </p>
+    ),
+    [track.duration_ms],
+  );
+
+  const subtitle = useMemo(
+    () => (
+      <ArtistLinks
+        names={track.artist_names}
+        ids={track.artist_ids}
+        fallbackName={track.artist}
+        fallbackId={track.artist_id}
+      />
+    ),
+    [track.artist_names, track.artist_ids, track.artist, track.artist_id],
+  );
+
+  return (
+    <ListItem
+      title={track.title}
+      subtitle={subtitle}
+      artworkSrc={track.artwork_path || undefined}
+      showArtwork
+      active={isActive}
+      isPlaying={isCurrentlyPlaying}
+      onClick={handleClick}
+      trailing={trailing}
+      menuActions={menuActions}
+    />
+  );
+});
+
+const AlbumCardItem = memo(function AlbumCardItem({
+  album,
+  onPlay,
+  onPlayNext,
+  onAddToQueue,
+  onOpenDetail,
+}: {
+  album: Album;
+  onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+  onPlayNext: (id: number) => Promise<void>;
+  onAddToQueue: (id: number) => Promise<void>;
+  onOpenDetail: (id: number) => void;
+}) {
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => onPlay(album.id),
+      onShuffle: () => onPlay(album.id, true),
+      onPlayNext: () => onPlayNext(album.id),
+      onAddToQueue: () => onAddToQueue(album.id),
+    }),
+    [album.id, onPlay, onPlayNext, onAddToQueue],
+  );
+
+  return (
+    <CardItem
+      title={album.title}
+      subtitle={album.artist_name || "Unknown Artist"}
+      artworkSrc={album.artwork_path || undefined}
+      artworkType="album"
+      variant="compact"
+      onClick={() => onOpenDetail(album.id)}
+      onPlay={() => onPlay(album.id)}
+      menuActions={menuActions}
+    />
+  );
+});
+
+const PlaylistCardItem = memo(function PlaylistCardItem({
+  playlist,
+  onPlay,
+  onPlayNext,
+  onAddToQueue,
+  onOpenDetail,
+  onEdit,
+  onDelete,
+}: {
+  playlist: Playlist;
+  onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+  onPlayNext: (id: number) => Promise<void>;
+  onAddToQueue: (id: number) => Promise<void>;
+  onOpenDetail: (id: number) => void;
+  onEdit: (p: Playlist) => void;
+  onDelete: (p: Playlist) => void;
+}) {
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => onPlay(playlist.id),
+      onShuffle: () => onPlay(playlist.id, true),
+      onPlayNext: () => onPlayNext(playlist.id),
+      onAddToQueue: () => onAddToQueue(playlist.id),
+      onEdit: () => onEdit(playlist),
+      onDelete: () => onDelete(playlist),
+    }),
+    [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete],
+  );
+
+  return (
+    <CardItem
+      title={playlist.name}
+      subtitle={`${playlist.track_count} tracks`}
+      artworkSrc={playlist.artwork_path || undefined}
+      artworkType="playlist"
+      variant="compact"
+      onClick={() => onOpenDetail(playlist.id)}
+      onPlay={() => onPlay(playlist.id)}
+      menuActions={menuActions}
     />
   );
 });
@@ -124,7 +224,7 @@ export default function HomePage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
   const addToPlaylist = useLibraryStore((s) => s.addToPlaylist);
 
-  const handlePlayAlbum = async (albumId: number, shuffle = false) => {
+  const handlePlayAlbum = useCallback(async (albumId: number, shuffle = false) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) {
@@ -138,9 +238,9 @@ export default function HomePage() {
     } catch (e) {
       logger.error("Failed to play album", e);
     }
-  };
+  }, [play]);
 
-  const handlePlayNextAlbum = async (albumId: number) => {
+  const handlePlayNextAlbum = useCallback(async (albumId: number) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) return;
@@ -150,9 +250,9 @@ export default function HomePage() {
       logger.error("Failed to play album next", e);
       toast.error("Failed to play next");
     }
-  };
+  }, [playNext]);
 
-  const handleAddAlbumToQueue = async (albumId: number) => {
+  const handleAddAlbumToQueue = useCallback(async (albumId: number) => {
     try {
       const tracks = await getAlbumTracks(albumId);
       if (tracks.length === 0) return;
@@ -161,9 +261,9 @@ export default function HomePage() {
     } catch (e) {
       logger.error("Failed to add album to queue", e);
     }
-  };
+  }, [addToQueue]);
 
-  const handlePlayPlaylist = async (playlistId: number, shuffle = false) => {
+  const handlePlayPlaylist = useCallback(async (playlistId: number, shuffle = false) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) {
@@ -177,9 +277,9 @@ export default function HomePage() {
     } catch (e) {
       logger.error("Failed to play playlist", e);
     }
-  };
+  }, [play]);
 
-  const handlePlayNextPlaylist = async (playlistId: number) => {
+  const handlePlayNextPlaylist = useCallback(async (playlistId: number) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) return;
@@ -189,9 +289,9 @@ export default function HomePage() {
       logger.error("Failed to play playlist next", e);
       toast.error("Failed to play next");
     }
-  };
+  }, [playNext]);
 
-  const handleAddPlaylistToQueue = async (playlistId: number) => {
+  const handleAddPlaylistToQueue = useCallback(async (playlistId: number) => {
     try {
       const tracks = await getPlaylistTracks(playlistId);
       if (tracks.length === 0) return;
@@ -200,7 +300,7 @@ export default function HomePage() {
     } catch (e) {
       logger.error("Failed to add playlist to queue", e);
     }
-  };
+  }, [addToQueue]);
 
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
 
@@ -236,9 +336,9 @@ export default function HomePage() {
   const isPlayerVisible = useIsPlayerVisible();
 
   // Derived state for display - memoized to prevent new array creation on each render
-  const recentTracks = tracks.slice(0, 20);
-  const displayAlbums = albums.slice(0, 10);
-  const displayPlaylists = playlists.slice(0, 10);
+  const recentTracks = useMemo(() => tracks.slice(0, 20), [tracks]);
+  const displayAlbums = useMemo(() => albums.slice(0, 10), [albums]);
+  const displayPlaylists = useMemo(() => playlists.slice(0, 10), [playlists]);
 
   const isEmpty =
     !isLoading &&
@@ -289,21 +389,13 @@ export default function HomePage() {
 
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
               {displayAlbums.map((album) => (
-                <CardItem
+                <AlbumCardItem
                   key={album.id}
-                  title={album.title}
-                  subtitle={album.artist_name || "Unknown Artist"}
-                  artworkSrc={album.artwork_path || undefined}
-                  artworkType="album"
-                  variant="compact"
-                  onClick={() => openAlbumDetail(album.id)}
-                  onPlay={() => handlePlayAlbum(album.id)}
-                  menuActions={{
-                    onPlay: () => handlePlayAlbum(album.id),
-                    onShuffle: () => handlePlayAlbum(album.id, true),
-                    onPlayNext: () => handlePlayNextAlbum(album.id),
-                    onAddToQueue: () => handleAddAlbumToQueue(album.id),
-                  }}
+                  album={album}
+                  onPlay={handlePlayAlbum}
+                  onPlayNext={handlePlayNextAlbum}
+                  onAddToQueue={handleAddAlbumToQueue}
+                  onOpenDetail={openAlbumDetail}
                 />
               ))}
             </div>
@@ -326,23 +418,15 @@ export default function HomePage() {
 
             <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
               {displayPlaylists.map((p) => (
-                <CardItem
+                <PlaylistCardItem
                   key={p.id}
-                  title={p.name}
-                  subtitle={`${p.track_count} tracks`}
-                  artworkSrc={p.artwork_path || undefined}
-                  artworkType="playlist"
-                  variant="compact"
-                  onClick={() => openPlaylistDetail(p.id)}
-                  onPlay={() => handlePlayPlaylist(p.id)}
-                  menuActions={{
-                    onPlay: () => handlePlayPlaylist(p.id),
-                    onShuffle: () => handlePlayPlaylist(p.id, true),
-                    onPlayNext: () => handlePlayNextPlaylist(p.id),
-                    onAddToQueue: () => handleAddPlaylistToQueue(p.id),
-                    onEdit: () => setEditingPlaylist(p),
-                    onDelete: () => handleDeleteRequest(p),
-                  }}
+                  playlist={p}
+                  onPlay={handlePlayPlaylist}
+                  onPlayNext={handlePlayNextPlaylist}
+                  onAddToQueue={handleAddPlaylistToQueue}
+                  onOpenDetail={openPlaylistDetail}
+                  onEdit={setEditingPlaylist}
+                  onDelete={handleDeleteRequest}
                 />
               ))}
             </div>
