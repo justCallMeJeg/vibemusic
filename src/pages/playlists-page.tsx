@@ -9,6 +9,7 @@ import { Playlist, getPlaylistTracks } from "@/lib/api";
 import { toast } from "sonner";
 import { CardItem } from "@/components/shared/card-item";
 import { PlaylistCreateDialog } from "@/components/dialogs/playlist-create-dialog";
+import { SkeletonCard } from "@/components/shared/skeleton-primitives";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import { PageHeader } from "@/components/shared/page-header";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
@@ -183,15 +184,7 @@ export default function PlaylistsPage() {
       {isLoading ? (
         <GridSkeleton
           className="pb-8"
-          renderItem={(i) => (
-            <div key={i} className="flex flex-col rounded-lg p-3 gap-3">
-              <div className="aspect-square w-full rounded-md bg-foreground/5" />
-              <div className="space-y-2">
-                <div className="h-4 w-3/4 rounded bg-foreground/10" />
-                <div className="h-3 w-1/2 rounded bg-foreground/5" />
-              </div>
-            </div>
-          )}
+          renderItem={(i) => <SkeletonCard key={i} variant="album" />}
         />
       ) : (
         <VirtualizedGrid
