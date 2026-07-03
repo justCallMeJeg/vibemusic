@@ -25,6 +25,7 @@ export function GridSkeleton({
         px && "px-2",
         className
       )}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "200px" }}
     >
       {Array.from({ length: count }).map((_, i) => renderItem(i))}
     </div>

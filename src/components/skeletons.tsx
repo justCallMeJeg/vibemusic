@@ -11,7 +11,7 @@ export function SongsSkeleton() {
           <Skeleton className="h-9 w-20 bg-foreground/5" />
         </div>
       </div>
-      <div className="flex flex-col gap-1 px-2">
+      <div className="flex flex-col gap-1 px-2" style={{ contentVisibility: "auto", containIntrinsicSize: "300px" }}>
         {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-2 rounded-md">
             <Skeleton className="w-10 h-10 rounded-md bg-foreground/5 shrink-0" />
@@ -79,7 +79,7 @@ export function HomeSkeleton() {
         <Skeleton className="h-4 w-48 mt-2 bg-foreground/5" />
       </div>
 
-      <div className="pt-4 flex-1 overflow-y-auto px-2 space-y-8">
+      <div className="pt-4 flex-1 overflow-y-auto px-2 space-y-8" style={{ contentVisibility: "auto", containIntrinsicSize: "500px" }}>
         {/* Albums Skeleton */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -139,7 +139,7 @@ export function DetailSkeleton() {
           </div>
         </div>
       </div>
-      <div className="flex-1 px-2 space-y-1">
+      <div className="flex-1 px-2 space-y-1" style={{ contentVisibility: "auto", containIntrinsicSize: "300px" }}>
         {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-2">
             <Skeleton className="w-8 h-8 rounded bg-foreground/5" />
@@ -170,7 +170,7 @@ export function SettingsSkeleton() {
       </div>
 
       {/* Main Content Skeleton */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" style={{ contentVisibility: "auto", containIntrinsicSize: "400px" }}>
         <div className="max-w-3xl mx-auto px-8 pt-8 pb-42 space-y-8">
           {/* Header */}
           <div className="space-y-2">
