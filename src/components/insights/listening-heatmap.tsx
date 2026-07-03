@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeatmapPoint } from "@/stores/stats-store";
@@ -11,9 +11,9 @@ interface ListeningHeatmapProps {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function ListeningHeatmap({ data, isLoading }: ListeningHeatmapProps) {
-  const maxIntensity = useMemo(
-    () => Math.max(1, ...data.map((p) => p.normalized)),
-    [data],
+  const maxIntensity = data.reduce(
+    (max, p) => Math.max(max, p.normalized),
+    1,
   );
 
   const getIntensity = (day: number, hour: number) => {

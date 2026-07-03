@@ -1,4 +1,4 @@
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
@@ -89,7 +89,7 @@ export function VirtualizedSortableList<T>({
   // But for performance with 1000+ items, we might need a strategy.
   // However, dnd-kit SortableContext primarily needs IDs for the current view.
   // Actually, for virtualization to work with DnD, we typically need to render the *virtual* items wrapped in SortableContext.
-  const itemIds = useMemo(() => items.map(getItemId), [items, getItemId]);
+  const itemIds = items.map(getItemId);
 
   return (
     <div

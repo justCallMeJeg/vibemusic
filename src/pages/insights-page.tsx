@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useStatsStore, type TimeRange } from "@/stores/stats-store";
 import { useNavigationStore, useCurrentPage } from "@/stores/navigation-store";
@@ -99,10 +99,9 @@ export default function InsightsPage() {
     }
   }, [currentPage, fetchStats]);
 
-  const totalPlays = useMemo(() => {
-    if (!data?.top_tracks.length) return 0;
-    return data.top_tracks.reduce((sum, t) => sum + t.play_count, 0);
-  }, [data?.top_tracks]);
+  const totalPlays = data?.top_tracks.length
+    ? data.top_tracks.reduce((sum, t) => sum + t.play_count, 0)
+    : 0;
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / (1000 * 60 * 60));

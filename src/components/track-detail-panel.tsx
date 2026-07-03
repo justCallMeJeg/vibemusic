@@ -1,6 +1,6 @@
 import { useCurrentTrack, useAudioStore } from "@/stores/audio-store";
 import { useSidePanel } from "@/stores/audio-store";
-import { useMemo, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { probeFile, MediaMetadata } from "@/lib/api";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { SidePanelLayout } from "@/components/shared/side-panel-layout";
@@ -18,7 +18,7 @@ export default function TrackDetailPanel() {
 
   // Simple in-memory cache to avoid re-probing the same file
   // Using a ref to persist across re-renders without causing re-renders itself
-  const metadataCache = useMemo(() => new Map<string, MediaMetadata>(), []);
+  const metadataCache = useRef(new Map<string, MediaMetadata>());
 
   useEffect(() => {
     let isMounted = true;
@@ -28,8 +28,8 @@ export default function TrackDetailPanel() {
       const path = currentTrack.file_path;
 
       // Check cache first
-      if (metadataCache.has(path)) {
-        setMetadata(metadataCache.get(path)!);
+      if (metadataCache.current.has(path)) {
+        setMetadata(metadataCache.current.get(path)!);
         return;
       }
 
@@ -40,7 +40,7 @@ export default function TrackDetailPanel() {
         probeFile(path)
           .then((data) => {
             if (isMounted) {
-              metadataCache.set(path, data);
+              metadataCache.current.set(path, data);
               setMetadata(data);
             }
           })
@@ -57,7 +57,7 @@ export default function TrackDetailPanel() {
       isMounted = false;
       clearTimeout(debounceTimer);
     };
-  }, [currentTrack, isOpen, metadataCache]);
+  }, [currentTrack, isOpen]);
 
   if (!isOpen) return null;
 

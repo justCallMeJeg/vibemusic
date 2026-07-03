@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from "react";
+import { useState, memo } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import {
   useAudioStore,
@@ -236,9 +236,9 @@ export default function HomePage() {
   const isPlayerVisible = useIsPlayerVisible();
 
   // Derived state for display - memoized to prevent new array creation on each render
-  const recentTracks = useMemo(() => tracks.slice(0, 20), [tracks]);
-  const displayAlbums = useMemo(() => albums.slice(0, 10), [albums]);
-  const displayPlaylists = useMemo(() => playlists.slice(0, 10), [playlists]);
+  const recentTracks = tracks.slice(0, 20);
+  const displayAlbums = albums.slice(0, 10);
+  const displayPlaylists = playlists.slice(0, 10);
 
   const isEmpty =
     !isLoading &&
