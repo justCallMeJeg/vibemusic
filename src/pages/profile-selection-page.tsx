@@ -145,7 +145,7 @@ export default function ProfileSelectionPage() {
 
       <div
         ref={scrollRef}
-        className="h-min w-full max-w-5xl overflow-y-auto px-6 scroll-mask-y custom-scrollbar"
+        className="h-min w-full max-w-5xl overflow-y-auto px-6 scroll-mask-y "
       >
         <div className="min-h-full flex flex-wrap content-center justify-center gap-y-6 gap-x-4 pb-4 pt-2">
           {profiles.map((profile) => (

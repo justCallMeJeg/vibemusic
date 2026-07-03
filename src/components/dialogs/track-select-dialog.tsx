@@ -118,7 +118,7 @@ export function TrackSelectDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto min-h-0 p-4 pt-0 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 pt-0 ">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />

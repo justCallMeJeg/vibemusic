@@ -69,7 +69,7 @@ export function VirtualizedList<T>({
       ref={parentRef}
       onScroll={onScroll}
       role="list"
-      className={`flex-1 overflow-y-auto ${className} scroll-mask-y custom-scrollbar`}
+      className={`flex-1 overflow-y-auto ${className} scroll-mask-y `}
     >
       <div
         style={{

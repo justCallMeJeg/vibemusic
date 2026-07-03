@@ -152,7 +152,7 @@ export default function LyricsPanel() {
       ) : (
         <div
           ref={containerRef}
-          className="flex-1 overflow-y-auto pt-4 pb-[50%] px-6 custom-scrollbar scroll-smooth"
+          className="flex-1 overflow-y-auto pt-4 pb-[50%] px-6  scroll-smooth"
           onWheel={() => setAutoScroll(false)}
           onTouchStart={() => setAutoScroll(false)}
         >

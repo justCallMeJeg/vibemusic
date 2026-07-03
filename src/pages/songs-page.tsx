@@ -201,7 +201,7 @@ export default function SongsPage() {
 
       <div
         ref={parentRef}
-        className={`flex-1 overflow-y-auto px-2 custom-scrollbar scroll-mask-y ${
+        className={`flex-1 overflow-y-auto px-2  scroll-mask-y ${
           displayedTracks.length === 0 ? "flex flex-col gap-1" : ""
         }`}
       >

@@ -76,7 +76,7 @@ export default function TrackDetailPanel() {
 
   return (
     <SidePanelLayout title="Track Details" onClose={() => setSidePanel("none")}>
-      <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-4 ">
         {/* Artwork - Compact */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-32 h-32 rounded-lg overflow-hidden shadow-xl mb-4 bg-card border border-border/50 relative group">

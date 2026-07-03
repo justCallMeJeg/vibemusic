@@ -194,7 +194,7 @@ export default function HomePage() {
       <div
         ref={scrollRef}
         className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8 custom-scrollbar scroll-mask-y",
+          "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8  scroll-mask-y",
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
             (isPlayerVisible ? "pb-player-bar" : "pb-8"),
           isEmpty && "flex flex-col",

@@ -92,7 +92,7 @@ export function VirtualizedGrid<T>({
     <div
       ref={parentRef}
       role="list"
-      className={`flex-1 overflow-y-auto px-2 scroll-mask-y custom-scrollbar ${className} ${
+      className={`flex-1 overflow-y-auto px-2 scroll-mask-y  ${className} ${
         items.length === 0 ? "flex flex-col" : ""
       }`}
     >
