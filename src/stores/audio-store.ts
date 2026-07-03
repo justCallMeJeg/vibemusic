@@ -623,24 +623,28 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       );
 
       return () => {
-        unlistenState.then((f) => f());
-        unlistenProgress.then((f) => f());
-        unlistenFinished.then((f) => f());
-        unlistenError.then((f) => f());
-
-        unlistenMediaPlay.then((f) => f());
-        unlistenMediaPause.then((f) => f());
-        unlistenMediaToggle.then((f) => f());
-        unlistenMediaNext.then((f) => f());
-        unlistenMediaPrev.then((f) => f());
-        unlistenMediaStop.then((f) => f());
-        unlistenMediaSeek.then((f) => f());
-        unlistenMediaSeekBy.then((f) => f());
-        unlistenMediaSetPos.then((f) => f());
-        unlistenMediaSetVol.then((f) => f());
-        unlistenMediaRaise.then((f) => f());
-        unlistenMediaQuit.then((f) => f());
-
+        Promise.allSettled([
+          unlistenState,
+          unlistenProgress,
+          unlistenFinished,
+          unlistenError,
+          unlistenMediaPlay,
+          unlistenMediaPause,
+          unlistenMediaToggle,
+          unlistenMediaNext,
+          unlistenMediaPrev,
+          unlistenMediaStop,
+          unlistenMediaSeek,
+          unlistenMediaSeekBy,
+          unlistenMediaSetPos,
+          unlistenMediaSetVol,
+          unlistenMediaRaise,
+          unlistenMediaQuit,
+        ]).then((results) => {
+          for (const r of results) {
+            if (r.status === "fulfilled") r.value();
+          }
+        });
         set({ _listenersInitialized: false });
       };
     },
