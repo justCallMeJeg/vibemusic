@@ -96,7 +96,7 @@ export default function NavigationMenu({
       </div>
       <div
         className={`items-center h-min w-full flex flex-col rounded-lg outline outline-border py-3 ${
-          isScanning ? "animate-pulse border border-blue-400" : ""
+          isScanning ? "animate-pulse ring-2 ring-ring/50" : ""
         }`}
       >
         <Tooltip delayDuration={500}>

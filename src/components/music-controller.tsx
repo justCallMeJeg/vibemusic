@@ -156,7 +156,7 @@ export default function MusicControler() {
         />
         {/* Seeker */}
         <div className=" flex items-center gap-4 w-full">
-          <p className="text-white text-xs font-normal w-10 text-right">
+          <p className="text-foreground text-xs font-normal w-10 text-right">
             {formatDuration(sliderValue[0])}
           </p>
           <Slider
@@ -167,7 +167,7 @@ export default function MusicControler() {
             onValueChange={handleSeekChange}
             onValueCommit={handleSeekCommit}
           />
-          <p className="text-white text-xs font-normal w-10">
+          <p className="text-foreground text-xs font-normal w-10">
             {formatDuration(duration)}
           </p>
         </div>
