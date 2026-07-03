@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
 
 const cardVariants = cva(
-  "flex flex-col cursor-pointer transition-colors group relative debug-card-item",
+  "flex flex-col cursor-pointer transition-colors group relative",
   {
     variants: {
       variant: {
