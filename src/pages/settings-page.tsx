@@ -4,7 +4,7 @@ import { SettingsSidebar } from "./settings/settings-sidebar";
 import { useCurrentPage } from "@/stores/navigation-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SettingsContentSkeleton } from "@/components/skeletons";
 
 const SettingsGeneral = lazy(() =>
   import("./settings/settings-general").then((m) => ({ default: m.SettingsGeneral })),
@@ -39,7 +39,7 @@ export default function SettingsPage() {
 
       <main className="flex-1 overflow-y-auto">
         <div className={cn("max-w-3xl mx-auto px-8 pt-8", isPlayerVisible ? "pb-player-bar" : "pb-8")}>
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <Suspense fallback={<SettingsContentSkeleton />}>
             {activeTab === "general" && <SettingsGeneral />}
             {activeTab === "appearance" && <SettingsAppearance />}
             {activeTab === "library" && <SettingsLibrary />}

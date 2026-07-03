@@ -15,6 +15,7 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailHero } from "@/components/shared/detail-hero";
+import { useLibraryStore } from "@/stores/library-store";
 import { DetailSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
@@ -88,11 +89,15 @@ export default function AlbumDetailPage() {
   const status = usePlayerStatus();
   const currentTrack = useCurrentTrack();
 
-  const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const albumId = detailView?.type === "album" ? detailView.id : null;
+
+  const [album, setAlbum] = useState<Album | null>(() => {
+    if (!albumId) return null;
+    return useLibraryStore.getState().albums.find((a) => a.id === albumId) ?? null;
+  });
 
   useEffect(() => {
     if (!albumId) return;

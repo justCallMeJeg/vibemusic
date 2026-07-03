@@ -1,4 +1,5 @@
 import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
+import { cn } from "@/lib/utils";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
@@ -14,7 +15,7 @@ import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { PageLayout } from "@/components/shared/page-layout";
-import { AlbumsSkeleton } from "@/components/skeletons";
+import { AlbumsContentSkeleton } from "@/components/skeletons";
 
 const AlbumGridCard = memo(function AlbumGridCard({
   album,
@@ -134,14 +135,10 @@ export default function AlbumsPage() {
     });
   }, [albums, albumsSortKey, albumsSortDirection, deferredQuery]);
 
-  if (isLoading && albums.length === 0) {
-    return <AlbumsSkeleton />;
-  }
-
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Albums">
-        <div className="relative w-64 mr-2">
+        <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Filter albums..."
@@ -149,35 +146,40 @@ export default function AlbumsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoComplete="off"
+            disabled={isLoading}
           />
         </div>
-        <SortDropdown
-          sortKey={albumsSortKey}
-          sortDirection={albumsSortDirection}
-          onSortChange={(k, d) => setAlbumsSort(k, d)}
-          options={[
-            { label: "Title", value: "title" },
-            { label: "Artist", value: "artist" },
-            { label: "Year", value: "year" },
-          ]}
-        />
+        <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
+          <SortDropdown
+            sortKey={albumsSortKey}
+            sortDirection={albumsSortDirection}
+            onSortChange={(k, d) => setAlbumsSort(k, d)}
+            options={[
+              { label: "Title", value: "title" },
+              { label: "Artist", value: "artist" },
+              { label: "Year", value: "year" },
+            ]}
+          />
+        </div>
       </PageHeader>
 
-      <VirtualizedGrid
-        items={filteredAndSortedAlbums}
-        renderItem={(album) => (
-          <AlbumGridCard
-            key={album.id}
-            album={album}
-            onOpenDetail={openAlbumDetail}
-            onPlay={handlePlayAlbum}
-            onPlayNext={handlePlayNext}
-            onAddToQueue={handleAddToQueue}
-          />
-        )}
-        itemHeight={220}
-        emptyState={
-          !isLoading ? (
+      {isLoading ? (
+        <AlbumsContentSkeleton />
+      ) : (
+        <VirtualizedGrid
+          items={filteredAndSortedAlbums}
+          renderItem={(album) => (
+            <AlbumGridCard
+              key={album.id}
+              album={album}
+              onOpenDetail={openAlbumDetail}
+              onPlay={handlePlayAlbum}
+              onPlayNext={handlePlayNext}
+              onAddToQueue={handleAddToQueue}
+            />
+          )}
+          itemHeight={220}
+          emptyState={
             searchQuery ? (
               <EmptyState
                 icon={Search}
@@ -191,9 +193,9 @@ export default function AlbumsPage() {
                 description="Import music to see your albums here."
               />
             )
-          ) : null
-        }
-      />
+          }
+        />
+      )}
     </PageLayout>
   );
 }

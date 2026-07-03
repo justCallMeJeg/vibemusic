@@ -1,4 +1,5 @@
 import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
+import { cn } from "@/lib/utils";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
@@ -14,7 +15,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/shared/page-layout";
-import { ArtistsSkeleton } from "@/components/skeletons";
+import { ArtistsContentSkeleton } from "@/components/skeletons";
 
 export default function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
@@ -131,14 +132,10 @@ export default function ArtistsPage() {
     });
   }, [artists, artistsSortKey, artistsSortDirection, deferredQuery]);
 
-  if (isLoading && artists.length === 0) {
-    return <ArtistsSkeleton />;
-  }
-
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Artists">
-        <div className="relative w-64 mr-2">
+        <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Filter artists..."
@@ -146,35 +143,40 @@ export default function ArtistsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             autoComplete="off"
+            disabled={isLoading}
           />
         </div>
-        <SortDropdown
-          sortKey={artistsSortKey}
-          sortDirection={artistsSortDirection}
-          onSortChange={(k, d) => setArtistsSort(k, d)}
-          options={[
-            { label: "Name", value: "name" },
-            { label: "Album Count", value: "album_count" },
-            { label: "Track Count", value: "track_count" },
-          ]}
-        />
+        <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
+          <SortDropdown
+            sortKey={artistsSortKey}
+            sortDirection={artistsSortDirection}
+            onSortChange={(k, d) => setArtistsSort(k, d)}
+            options={[
+              { label: "Name", value: "name" },
+              { label: "Album Count", value: "album_count" },
+              { label: "Track Count", value: "track_count" },
+            ]}
+          />
+        </div>
       </PageHeader>
 
-      <VirtualizedGrid
-        items={filteredAndSortedArtists}
-        renderItem={(artist) => (
-          <ArtistGridCard
-            key={artist.id}
-            artist={artist}
-            onOpenDetail={openArtistDetail}
-            onPlay={handlePlayArtist}
-            onPlayNext={handlePlayNext}
-            onAddToQueue={handleAddToQueue}
-          />
-        )}
-        itemHeight={220}
-        emptyState={
-          !isLoading ? (
+      {isLoading ? (
+        <ArtistsContentSkeleton />
+      ) : (
+        <VirtualizedGrid
+          items={filteredAndSortedArtists}
+          renderItem={(artist) => (
+            <ArtistGridCard
+              key={artist.id}
+              artist={artist}
+              onOpenDetail={openArtistDetail}
+              onPlay={handlePlayArtist}
+              onPlayNext={handlePlayNext}
+              onAddToQueue={handleAddToQueue}
+            />
+          )}
+          itemHeight={220}
+          emptyState={
             searchQuery ? (
               <EmptyState
                 icon={Search}
@@ -188,9 +190,9 @@ export default function ArtistsPage() {
                 description="Import music to see your artists here."
               />
             )
-          ) : null
-        }
-      />
+          }
+        />
+      )}
     </PageLayout>
   );
 }

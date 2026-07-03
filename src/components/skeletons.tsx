@@ -1,6 +1,8 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import { SkeletonCard, SkeletonRow } from "@/components/shared/skeleton-primitives";
+import { PageLayout } from "@/components/shared/page-layout";
 
 export function SongsSkeleton() {
   return (
@@ -162,3 +164,101 @@ export function SettingsSkeleton() {
     </div>
   );
 }
+
+export const SongsContentSkeleton = memo(function SongsContentSkeleton() {
+  return (
+    <div className="flex flex-col gap-1 px-2" style={{ contentVisibility: "auto", containIntrinsicSize: "300px" }}>
+      {Array.from({ length: 15 }).map((_, i) => (
+        <SkeletonRow key={i} leading="square" />
+      ))}
+    </div>
+  );
+});
+
+export const AlbumsContentSkeleton = memo(function AlbumsContentSkeleton() {
+  return (
+    <GridSkeleton
+      renderItem={(i) => <SkeletonCard key={i} variant="album" />}
+    />
+  );
+});
+
+export const ArtistsContentSkeleton = memo(function ArtistsContentSkeleton() {
+  return (
+    <GridSkeleton
+      renderItem={(i) => <SkeletonCard key={i} variant="artist" />}
+    />
+  );
+});
+
+export const SettingsContentSkeleton = memo(function SettingsContentSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Skeleton className="h-5 w-5 rounded-md bg-foreground/10" />
+        <Skeleton className="h-7 w-32 bg-foreground/10" />
+      </div>
+      <div className="grid gap-6">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded bg-foreground/10" />
+              <Skeleton className="h-5 w-28 bg-foreground/10" />
+            </div>
+            <Skeleton className="h-3 w-72 bg-foreground/5 ml-6" />
+          </div>
+          <Skeleton className="h-6 w-10 rounded-full bg-foreground/5 shrink-0" />
+        </div>
+        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded bg-foreground/10" />
+              <Skeleton className="h-5 w-32 bg-foreground/10" />
+            </div>
+            <Skeleton className="h-3 w-64 bg-foreground/5 ml-6" />
+          </div>
+          <Skeleton className="h-6 w-10 rounded-full bg-foreground/5 shrink-0" />
+        </div>
+        <div className="space-y-4 border rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-36 bg-foreground/10" />
+              <Skeleton className="h-3 w-56 bg-foreground/5" />
+            </div>
+            <Skeleton className="h-8 w-24 rounded-md bg-foreground/5" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+export const InsightsSkeleton = memo(function InsightsSkeleton() {
+  return (
+    <PageLayout overflowHidden className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-9 w-32 bg-foreground/10" />
+        <div className="flex gap-1.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-7 w-16 rounded-md bg-foreground/5" />
+          ))}
+        </div>
+      </div>
+      <Skeleton className="h-36 w-full rounded-xl bg-foreground/5" />
+      <div className="grid grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-xl bg-foreground/5" />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-48 rounded-xl bg-foreground/5" />
+        <Skeleton className="h-48 rounded-xl bg-foreground/5" />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-72 rounded-xl bg-foreground/5" />
+        ))}
+      </div>
+    </PageLayout>
+  );
+});

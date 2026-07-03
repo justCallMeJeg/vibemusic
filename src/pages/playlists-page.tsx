@@ -1,5 +1,6 @@
 import { useState, useMemo, memo, useCallback, useDeferredValue } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { Plus, ListMusic, Search } from "lucide-react";
 import { useLibraryStore } from "@/stores/library-store";
@@ -181,7 +182,7 @@ export default function PlaylistsPage() {
       <PageHeader title="Playlists">
         <div className="flex items-center justify-center gap-4">
           <div className="flex items-center">
-            <div className="relative w-64 mr-2">
+            <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Filter playlists..."
@@ -189,9 +190,11 @@ export default function PlaylistsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoComplete="off"
+                disabled={isLoading}
               />
             </div>
-            <SortDropdown
+            <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
+              <SortDropdown
               sortKey={playlistsSortKey}
               sortDirection={playlistsSortDirection}
               onSortChange={(k, d) => setPlaylistsSort(k, d)}
@@ -201,6 +204,7 @@ export default function PlaylistsPage() {
                 { label: "Date Created", value: "created_at" },
               ]}
             />
+          </div>
           </div>
           <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
             <Plus size={16} />
