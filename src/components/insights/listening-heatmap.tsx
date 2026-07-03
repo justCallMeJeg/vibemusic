@@ -11,14 +11,15 @@ interface ListeningHeatmapProps {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function ListeningHeatmap({ data, isLoading }: ListeningHeatmapProps) {
+  const pointMap = new Map(data.map((p) => [`${p.day}-${p.hour}`, p]));
+
   const maxIntensity = data.reduce(
     (max, p) => Math.max(max, p.normalized),
     1,
   );
 
   const getIntensity = (day: number, hour: number) => {
-    const point = data.find((p) => p.day === day && p.hour === hour);
-    return point ? point.intensity : 0;
+    return pointMap.get(`${day}-${hour}`)?.intensity ?? 0;
   };
 
   const getCellColor = (value: number) => {
@@ -77,8 +78,7 @@ export function ListeningHeatmap({ data, isLoading }: ListeningHeatmapProps) {
             {Array.from({ length: 24 }).map((_, hour) => {
               const raw = getIntensity(dayIndex, hour);
               const normalized =
-                data.find((p) => p.day === dayIndex && p.hour === hour)
-                  ?.normalized ?? 0;
+                pointMap.get(`${dayIndex}-${hour}`)?.normalized ?? 0;
               return (
                 <div
                   key={hour}
