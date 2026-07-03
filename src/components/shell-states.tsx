@@ -5,34 +5,18 @@ import ProfileSelectionPage from "@/pages/profile-selection-page";
 interface ShellStatesProps {
   isProfilesLoading: boolean;
   activeProfileId: string | null;
-  isQuitDialogOpen: boolean;
-  setIsQuitDialogOpen: (open: boolean) => void;
-  showProfileSwitchWarning: boolean;
-  setShowProfileSwitchWarning: (open: boolean) => void;
   confirmProfileSwitch: () => Promise<void>;
-  isRefreshWarningOpen: boolean;
-  setIsRefreshWarningOpen: (open: boolean) => void;
   handleConfirmRefresh: () => Promise<void>;
   onConfirmQuit: () => void;
-  isCloseToTrayDialogOpen: boolean;
-  setIsCloseToTrayDialogOpen: (open: boolean) => void;
   onConfirmCloseToTrayHide: () => void;
 }
 
 export function ShellStates({
   isProfilesLoading,
   activeProfileId,
-  isQuitDialogOpen,
-  setIsQuitDialogOpen,
-  showProfileSwitchWarning,
-  setShowProfileSwitchWarning,
   confirmProfileSwitch,
-  isRefreshWarningOpen,
-  setIsRefreshWarningOpen,
   handleConfirmRefresh,
   onConfirmQuit,
-  isCloseToTrayDialogOpen,
-  setIsCloseToTrayDialogOpen,
   onConfirmCloseToTrayHide,
 }: ShellStatesProps) {
   if (isProfilesLoading) {
@@ -57,17 +41,9 @@ export function ShellStates({
           <ProfileSelectionPage />
         </div>
         <AppDialogs
-          isQuitDialogOpen={isQuitDialogOpen}
-          setIsQuitDialogOpen={setIsQuitDialogOpen}
           onConfirmQuit={onConfirmQuit}
-          isCloseToTrayDialogOpen={isCloseToTrayDialogOpen}
-          setIsCloseToTrayDialogOpen={setIsCloseToTrayDialogOpen}
           onConfirmCloseToTrayHide={onConfirmCloseToTrayHide}
-          showProfileSwitchWarning={showProfileSwitchWarning}
-          setShowProfileSwitchWarning={setShowProfileSwitchWarning}
           confirmProfileSwitch={confirmProfileSwitch}
-          isRefreshWarningOpen={isRefreshWarningOpen}
-          setIsRefreshWarningOpen={setIsRefreshWarningOpen}
           handleConfirmRefresh={handleConfirmRefresh}
         />
       </div>

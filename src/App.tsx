@@ -29,6 +29,7 @@ import { TitleBar } from "./components/titlebar";
 import { useProfileStore } from "@/stores/profile-store";
 import { AppDialogs } from "./components/app-dialogs";
 import { ShellStates } from "@/components/shell-states";
+import { useDialogStore } from "@/stores/dialog-store";
 
 import { useLibraryStore } from "@/stores/library-store";
 import { logger } from "@/lib/logger";
@@ -44,16 +45,12 @@ export default function App() {
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const status = useAudioStore((s) => s.status);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
-  const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
-  const [isCloseToTrayDialogOpen, setIsCloseToTrayDialogOpen] = useState(false);
-  const [showProfileSwitchWarning, setShowProfileSwitchWarning] = useState(false);
 
   const hasCheckedForUpdate = useRef(false);
   const hasDoneInitialScan = useRef(false); // Prevent scan on profile switch
   const stop = useAudioStore((s) => s.stop);
 
   // Refresh Warning State
-  const [isRefreshWarningOpen, setIsRefreshWarningOpen] = useState(false);
   const isPlaying = status === "playing";
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
@@ -64,11 +61,11 @@ export default function App() {
   );
 
 
-  useRefreshInterceptor(isPlaying, () => setIsRefreshWarningOpen(true));
+  useRefreshInterceptor(isPlaying, () => useDialogStore.getState().setIsRefreshWarningOpen(true));
 
   const handleConfirmRefresh = async () => {
     await stop();
-    setIsRefreshWarningOpen(false);
+    useDialogStore.getState().setIsRefreshWarningOpen(false);
     window.location.reload();
   };
 
@@ -89,7 +86,7 @@ export default function App() {
   const handleProfileClick = () => {
     // Check if playback is active
     if (currentTrack && (status === "playing" || status === "paused")) {
-      setShowProfileSwitchWarning(true);
+      useDialogStore.getState().setShowProfileSwitchWarning(true);
     } else {
       selectProfile(null);
     }
@@ -97,7 +94,7 @@ export default function App() {
 
   const confirmProfileSwitch = async () => {
     await stop();
-    setShowProfileSwitchWarning(false);
+    useDialogStore.getState().setShowProfileSwitchWarning(false);
     selectProfile(null);
   };
 
@@ -166,23 +163,23 @@ export default function App() {
   }, [isSettingsLoading, activeProfileId, fetchLibrary]);
 
   const handleQuitApp = async () => {
-    setIsQuitDialogOpen(false);
-    setIsCloseToTrayDialogOpen(false);
+    useDialogStore.getState().closeQuitDialog();
+    useDialogStore.getState().closeCloseToTrayDialog();
     await invoke("quit_app");
   };
 
   const handleCloseToTrayHide = async () => {
-    setIsCloseToTrayDialogOpen(false);
+    useDialogStore.getState().closeCloseToTrayDialog();
     await getCurrentWindow().hide();
   };
 
   useWindowCloseHandler((action: CloseAction) => {
     switch (action) {
       case "show-quit-dialog":
-        setIsQuitDialogOpen(true);
+        useDialogStore.getState().openQuitDialog();
         break;
       case "show-close-to-tray-dialog":
-        setIsCloseToTrayDialogOpen(true);
+        useDialogStore.getState().openCloseToTrayDialog();
         break;
       case "quit-directly":
         handleQuitApp();
@@ -244,17 +241,9 @@ export default function App() {
       <ShellStates
         isProfilesLoading={isProfilesLoading}
         activeProfileId={activeProfileId}
-        isQuitDialogOpen={isQuitDialogOpen}
-        setIsQuitDialogOpen={setIsQuitDialogOpen}
         onConfirmQuit={handleQuitApp}
-        isCloseToTrayDialogOpen={isCloseToTrayDialogOpen}
-        setIsCloseToTrayDialogOpen={setIsCloseToTrayDialogOpen}
         onConfirmCloseToTrayHide={handleCloseToTrayHide}
-        showProfileSwitchWarning={showProfileSwitchWarning}
-        setShowProfileSwitchWarning={setShowProfileSwitchWarning}
         confirmProfileSwitch={confirmProfileSwitch}
-        isRefreshWarningOpen={isRefreshWarningOpen}
-        setIsRefreshWarningOpen={setIsRefreshWarningOpen}
         handleConfirmRefresh={handleConfirmRefresh}
       />
     );
@@ -309,17 +298,9 @@ export default function App() {
       <GlobalSearch />
 
       <AppDialogs
-        isQuitDialogOpen={isQuitDialogOpen}
-        setIsQuitDialogOpen={setIsQuitDialogOpen}
         onConfirmQuit={handleQuitApp}
-        isCloseToTrayDialogOpen={isCloseToTrayDialogOpen}
-        setIsCloseToTrayDialogOpen={setIsCloseToTrayDialogOpen}
         onConfirmCloseToTrayHide={handleCloseToTrayHide}
-        showProfileSwitchWarning={showProfileSwitchWarning}
-        setShowProfileSwitchWarning={setShowProfileSwitchWarning}
         confirmProfileSwitch={confirmProfileSwitch}
-        isRefreshWarningOpen={isRefreshWarningOpen}
-        setIsRefreshWarningOpen={setIsRefreshWarningOpen}
         handleConfirmRefresh={handleConfirmRefresh}
       />
     </main>

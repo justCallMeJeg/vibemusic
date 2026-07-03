@@ -2,6 +2,7 @@ import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { ManualUpdateDialog } from "@/components/dialogs/manual-update-dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { useUpdateStore } from "@/stores/update-store";
+import { useDialogStore } from "@/stores/dialog-store";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,36 +15,28 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface AppDialogsProps {
-  isQuitDialogOpen: boolean;
-  setIsQuitDialogOpen: (open: boolean) => void;
   onConfirmQuit: () => void;
-  isCloseToTrayDialogOpen: boolean;
-  setIsCloseToTrayDialogOpen: (open: boolean) => void;
   onConfirmCloseToTrayHide: () => void;
-  showProfileSwitchWarning: boolean;
-  setShowProfileSwitchWarning: (open: boolean) => void;
   confirmProfileSwitch: () => void;
-  isRefreshWarningOpen: boolean;
-  setIsRefreshWarningOpen: (open: boolean) => void;
   handleConfirmRefresh: () => void;
 }
 
 export function AppDialogs({
-  isQuitDialogOpen,
-  setIsQuitDialogOpen,
   onConfirmQuit,
-  isCloseToTrayDialogOpen,
-  setIsCloseToTrayDialogOpen,
   onConfirmCloseToTrayHide,
-  showProfileSwitchWarning,
-  setShowProfileSwitchWarning,
   confirmProfileSwitch,
-  isRefreshWarningOpen,
-  setIsRefreshWarningOpen,
   handleConfirmRefresh,
 }: AppDialogsProps) {
   const isManualUpdateDialogOpen = useUpdateStore((s) => s.isManualUpdateDialogOpen);
   const setManualUpdateDialogOpen = useUpdateStore((s) => s.setManualUpdateDialogOpen);
+  const isQuitDialogOpen = useDialogStore((s) => s.isQuitDialogOpen);
+  const closeQuitDialog = useDialogStore((s) => s.closeQuitDialog);
+  const isCloseToTrayDialogOpen = useDialogStore((s) => s.isCloseToTrayDialogOpen);
+  const closeCloseToTrayDialog = useDialogStore((s) => s.closeCloseToTrayDialog);
+  const showProfileSwitchWarning = useDialogStore((s) => s.showProfileSwitchWarning);
+  const setShowProfileSwitchWarning = useDialogStore((s) => s.setShowProfileSwitchWarning);
+  const isRefreshWarningOpen = useDialogStore((s) => s.isRefreshWarningOpen);
+  const setIsRefreshWarningOpen = useDialogStore((s) => s.setIsRefreshWarningOpen);
 
   return (
     <>
@@ -53,7 +46,7 @@ export function AppDialogs({
       />
       <ConfirmDialog
         open={isQuitDialogOpen}
-        onOpenChange={setIsQuitDialogOpen}
+        onOpenChange={closeQuitDialog}
         title="Are you sure you want to quit?"
         description='Playback will stop. You can enable "Close to Tray" in settings to keep music playing in the background.'
         confirmText="Quit"
@@ -62,7 +55,7 @@ export function AppDialogs({
       />
       <ConfirmDialog
         open={isCloseToTrayDialogOpen}
-        onOpenChange={setIsCloseToTrayDialogOpen}
+        onOpenChange={closeCloseToTrayDialog}
         title="Keep Playing in Background?"
         description="Music is currently playing. Minimize to tray to keep playback active in the background, or stop playback and quit the app."
         confirmText="Minimize to Tray"
