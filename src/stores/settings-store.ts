@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 // Lazy store initialization
 import { invoke } from "@tauri-apps/api/core";
 import { useLibraryStore } from "./library-store";
+import { useAudioStore } from "./audio-store";
 
 const getStore = async () => {
   const state = useSettingsStore.getState();
@@ -254,6 +255,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
     setCrossfadeDuration: async (durationMs) => {
       set({ crossfadeDuration: durationMs });
+      useAudioStore.getState().setCrossfadeDuration(durationMs);
       // Send milliseconds directly to backend
       await invoke("audio_set_crossfade", { durationMs });
       const store = await getStore();
@@ -458,6 +460,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           await invoke("audio_set_device", { deviceName: selectedDevice });
         }
         if (typeof crossfadeDuration === "number") {
+          useAudioStore.getState().setCrossfadeDuration(crossfadeDuration);
           await invoke("audio_set_crossfade", {
             durationMs: crossfadeDuration,
           });

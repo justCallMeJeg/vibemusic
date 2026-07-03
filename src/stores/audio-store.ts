@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useSettingsStore } from "./settings-store";
 import { useLibraryStore } from "./library-store";
 import { toast } from "sonner";
 import { Track } from "@/lib/api";
@@ -50,6 +49,7 @@ interface AudioState {
   _lastProgressUpdate: number; // For throttling
   _lastSeekTime: number; // To ignore legacy progress events after seeking
   _isTransitioning: boolean;
+  _crossfadeDuration: number;
 }
 
 // --- Store Actions Interface ---
@@ -79,6 +79,9 @@ interface AudioActions {
   // Progress Actions
   setPosition: (position: number) => void;
   setDraggingSlider: (isDragging: boolean) => void;
+
+  // Crossfade
+  setCrossfadeDuration: (durationMs: number) => void;
 
   // Initialization
   initListeners: () => () => void;
@@ -201,6 +204,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _lastProgressUpdate: 0,
     _lastSeekTime: 0,
     _isTransitioning: false,
+    _crossfadeDuration: 0,
 
     // Player Actions
     play: async (track, newQueue?) => {
@@ -400,6 +404,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     // Progress Actions
     setPosition: (position) => set({ position }),
     setDraggingSlider: (isDragging) => set({ _isDraggingSlider: isDragging }),
+    setCrossfadeDuration: (durationMs) => set({ _crossfadeDuration: durationMs }),
 
     // Initialization
     initListeners: () => {
@@ -458,8 +463,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           });
 
           // Automatic Crossfade Logic
-          const crossfadeMs =
-            useSettingsStore.getState().crossfadeDuration || 0;
+          const crossfadeMs = state._crossfadeDuration || 0;
           if (crossfadeMs > 0 && s.duration_ms > 0) {
             // Small buffer to compensate for IPC latency between frontend trigger
             // and backend receiving the play command
