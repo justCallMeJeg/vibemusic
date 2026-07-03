@@ -30,7 +30,7 @@ export const CompactPageHeader = memo(
       <div
         ref={ref}
         className={cn(
-          "absolute top-0 left-0 right-0 h-24 backdrop-blur-md border-b flex items-center px-4 gap-4 z-50 transition-opacity duration-200 opacity-0 pointer-events-none data-[visible=true]:pointer-events-auto will-change-[opacity]",
+          "absolute top-0 left-0 right-0 h-24 backdrop-blur-md border-b flex items-center px-4 gap-4 z-50 transition-opacity duration-200 opacity-0 pointer-events-none data-[visible=true]:opacity-100 data-[visible=true]:pointer-events-auto will-change-[opacity]",
           className,
         )}
         style={style}

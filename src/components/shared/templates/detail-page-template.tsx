@@ -40,17 +40,7 @@ export function DetailPageTemplate({
     const header = headerRef.current;
 
     if (header) {
-      if (scrollTop > threshold) {
-        if (header.dataset.visible !== "true") {
-          header.style.opacity = "1";
-          header.dataset.visible = "true";
-        }
-      } else {
-        if (header.dataset.visible !== "false") {
-          header.style.opacity = "0";
-          header.dataset.visible = "false";
-        }
-      }
+      header.dataset.visible = scrollTop > threshold ? "true" : "false";
     }
   };
 
