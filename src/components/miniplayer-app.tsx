@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen, emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { Loader2 } from "lucide-react";
 import { useAudioStore } from "@/stores/audio-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import type { Track } from "@/lib/api";
@@ -153,7 +154,7 @@ export default function MiniPlayerApp() {
   if (!ready) {
     return (
       <div className="w-dvw h-dvh bg-background flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading...</p>
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

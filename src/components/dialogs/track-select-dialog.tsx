@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Check } from "lucide-react";
+import { Search, Check, Loader2 } from "lucide-react";
 import { Track, getTracks } from "@/lib/api";
 import { useLibraryStore } from "@/stores/library-store";
 import { logger } from "@/lib/logger";
@@ -120,8 +120,8 @@ export function TrackSelectDialog({
 
         <div className="flex-1 overflow-y-auto min-h-0 p-4 pt-0 custom-scrollbar">
           {isLoading ? (
-            <div className="text-muted-foreground text-center py-8">
-              Loading tracks...
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : filteredTracks.length === 0 ? (
             <div className="text-muted-foreground text-center py-8">
