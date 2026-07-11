@@ -32,7 +32,7 @@
     "version:bump": "node scripts/bump-version.mjs",
     "verify:versions": "node scripts/verify-versions.mjs",
     "changelog:preview": "npx --yes git-cliff --unreleased --strip header",
-    "changelog:full": "npx --yes git-cliff --output CHANGELOG.md",
+    "changelog:full": "npx --yes git-cliff --offline --output CHANGELOG.md",
     "cleanup": "powershell -ExecutionPolicy Bypass -File ./scripts/cleanup.ps1",
     "wizard": "powershell -ExecutionPolicy Bypass -File ./scripts/git-wizard.ps1",
     "test": "vitest",

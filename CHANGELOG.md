@@ -2,34 +2,163 @@
 
 All notable changes to Vibe Music will be documented in this file.
 
-## 1.0.0 (2026-06-24)
-
-
-### Features
-
-* on-save and pre-commit linting ([320a452](https://github.com/justCallMeJeg/vibemusic/commit/320a452bd7c27ae5abf0f7b15a9d2a17434037b0))
-* shadcn setup ([1ffc70f](https://github.com/justCallMeJeg/vibemusic/commit/1ffc70fce6ccd8b5cf017102b22780175af4b564))
-
-
-### Bug Fixes
-
-* nightly build trigger branch to 'dev' ([cfe4178](https://github.com/justCallMeJeg/vibemusic/commit/cfe41781e708054c98dd272e75aa747d007ad656))
-* project version to 0.0.1 ([ab0d7ae](https://github.com/justCallMeJeg/vibemusic/commit/ab0d7ae8e568691620fcd7a724f301db0ee77559))
-
 ## [Unreleased]
 
-### ♻️ Refactoring
+### ✨ Features
 
-- Audio encoder migration to symphonia
-- Normalize heat map on insights page
+- **dx**: Add git wizard cli
+
+- **dx**: Impeccable init
+
+- **ui**: Add dynamic placeholder
+
+- **nav**: Change to location-based breadcrumb
+
+- **ui**: Improve navigation using breadcrumb and architecture for ui consistency
+
+- **ui**: Improve progressive loading for various pages
+
+- **ui**: Update skeleton ui for insights page
+
 
 ### 🐛 Bug Fixes
 
-- Fix sample rate issue
+- **ci**: Escape powershell newlines in release body generation [skip ci]
+
+- Use single-quoted backticks for code fences in release body
+
+- Fix promise cleanup pattern
+
+- **perf**: Move find func inside zustand selector to prevent rescan on every root render
+
+- Handle risky conditional rendering
+
+- **perf**: Improve render by using map lookups
+
+
+### ⚡ Performance
+
+- Add audio listener cleanup
+
+- Add homepage array subscriptions with useshallow
+
+- Improve app init on startup
+
+- Cache crossfade duration locally in audio-store
+
+- Add passive true value to resize listener
+
+- Refactor inline callbacks to stable references
+
+- Add lazy load to side panel components
+
+- Add usedeferred for search query
+
+- Memoization of various pages
+
+- Add lazy load to deep dependencies
+
+- **api**: Add request dedup layer
+
+- Add lazy loading and temp skeleton
+
+- Add once true listeners
+
+- Refactor to map indexes for improved lookups
+
+- Use memo for improved performance
+
+
+### ♻️ Refactoring
+
+- **ci**: 3 column table layout for assets
+
+- Replace local formatduration defs with format.ts import
+
+- **skeleton**: Replace old skeletons with skeleton primitives
+
+- Add album for dynamic placeholder and removed unused assets
+
+- Remove prop drilling for dialogs
+
+- Iife flattening
+
+- Usememo cleanup
+
+- Change to css driven opacity
+
+- Remove lazy importing and update various page ui skeleton
+
+
+### 🎨 Styling
+
+- **landing**: Improve accessibility and add manual controls for screenshot carousel
+
+- **ui**: Fix hardcoded color values
+
+- **skeleton**: Add motion safe and content visiblity
+
+- **loader**: Replace raw text with loaders
+
+- Add margin in x axis for visiblity
+
 
 ### 🔧 Miscellaneous
 
-- Add license
-- Ui polish and accessibility
----
-*Generated with [git-cliff](https://git-cliff.org)*
+- Update changelog and artifact name format
+
+- **ui**: Design critique post v1
+
+- **ui**: Update various ui for consistency
+
+- **ui**: Remove debug class in prod
+
+- **style**: Remove dead custom scrollbar class
+
+- Remove redundant error toast calls
+
+- Version bump
+
+## [1.0.0] - 2026-06-30
+
+### ✨ Features
+
+- On-save and pre-commit linting
+
+- Shadcn setup
+
+
+### 🐛 Bug Fixes
+
+- Project version to 0.0.1
+
+- Nightly build trigger branch to 'dev'
+
+
+### 🔧 Miscellaneous
+
+- Add recommended extensions for DX
+
+- Init readme
+
+- V1.0.0 release — merge dev to master (#4)
+
+- Fix release-please config and landing deploy [skip ci]
+
+- Force fresh landing deploy [skip ci]
+
+- **master**: Release 1.0.0 (#5)
+
+- Fix release-please manifest to match master version
+
+- Force fresh landing deploy [skip ci]
+
+- Trigger landing deploy
+
+- Add google search console verification meta tag
+
+- Add kofi for donations [skip ci]
+
+- Tauri version bump to match actual stable version [skip ci]
+
+
