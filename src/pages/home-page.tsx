@@ -22,7 +22,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { PageLayout } from "@/components/shared/page-layout";
-import { HomeSkeleton } from "@/components/skeletons";
+
+
 import { formatDuration } from "@/lib/format";
 
 import { useShallow } from "zustand/shallow";
@@ -344,13 +345,8 @@ export default function HomePage() {
     displayPlaylists.length === 0 &&
     recentTracks.length === 0;
 
-  if (
-    isLoading &&
-    albums.length === 0 &&
-    playlists.length === 0 &&
-    tracks.length === 0
-  ) {
-    return <HomeSkeleton />;
+  if (isLoading && albums.length === 0 && playlists.length === 0 && tracks.length === 0) {
+    return null;
   }
 
   return (

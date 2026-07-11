@@ -22,7 +22,8 @@ import { TrackSelectDialog } from "@/components/dialogs/track-select-dialog";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { PlaylistHero } from "@/components/shared/playlist-hero";
-import { DetailSkeleton } from "@/components/skeletons";
+
+
 import { SortableTrackItem } from "@/components/shared/sortable-track-item";
 
 export default function PlaylistDetailPage() {
@@ -34,7 +35,11 @@ export default function PlaylistDetailPage() {
   const play = useAudioStore((s) => s.play);
   const reorderPlaylist = useLibraryStore((s) => s.reorderPlaylist);
   const refreshPlaylists = useLibraryStore((s) => s.refreshPlaylists);
-  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [playlist, setPlaylist] = useState<Playlist | null>(() => {
+    const id = detailView?.type === "playlist" ? detailView.id : null;
+    if (!id) return null;
+    return useLibraryStore.getState().playlists.find((p) => p.id === id) ?? null;
+  });
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -146,8 +151,7 @@ export default function PlaylistDetailPage() {
     />
   ), [handleRemoveTrack]);
 
-  if (!playlist) {
-    if (isLoading) return <DetailSkeleton />;
+  if (!playlist && !isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-muted-foreground">Playlist not found</div>
@@ -157,11 +161,11 @@ export default function PlaylistDetailPage() {
 
   return (
     <DetailPageTemplate
-      title={playlist.name}
-      subtitle={`${tracks.length} songs`}
-      artworkPath={playlist.artwork_path || undefined}
+      title={playlist?.name ?? ""}
+      subtitle={playlist ? `${tracks.length} songs` : undefined}
+      artworkPath={playlist?.artwork_path ?? undefined}
       onBack={goBack}
-      onPlay={handlePlay}
+      onPlay={tracks.length > 0 ? handlePlay : undefined}
     >
       <TrackList
         tracks={tracks}
@@ -176,12 +180,12 @@ export default function PlaylistDetailPage() {
         }}
         headerContent={
           <PlaylistHero
-            coverUrl={playlist.artwork_path || undefined}
-            title={playlist.name}
-            description={playlist.description || undefined}
+            coverUrl={playlist?.artwork_path ?? undefined}
+            title={playlist?.name ?? ""}
+            description={playlist?.description ?? undefined}
             trackCount={tracks.length}
             totalDurationMs={totalDurationMs}
-            lastModified={playlist.created_at}
+            lastModified={playlist?.created_at ?? ""}
             onEdit={() => setIsEditOpen(true)}
             onDelete={() => setIsDeleteDialogOpen(true)}
             onPlayAll={handlePlay}
@@ -204,7 +208,7 @@ export default function PlaylistDetailPage() {
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
               title="Delete Playlist?"
-              description={`This action cannot be undone. This will permanently delete the playlist "${playlist.name}".`}
+              description={`This action cannot be undone. This will permanently delete the playlist "${playlist?.name ?? ""}".`}
               confirmText="Delete"
               variant="destructive"
               onConfirm={handleDelete}
@@ -212,6 +216,7 @@ export default function PlaylistDetailPage() {
               loadingText="Deleting..."
             />
 
+            {playlist && (
             <PlaylistEditDialog
               playlist={playlist}
               open={isEditOpen}
@@ -220,6 +225,7 @@ export default function PlaylistDetailPage() {
                 if (!open) loadData();
               }}
             />
+            )}
 
             {playlistId && (
               <TrackSelectDialog

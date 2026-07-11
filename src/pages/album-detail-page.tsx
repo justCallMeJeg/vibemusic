@@ -16,7 +16,6 @@ import { DetailPageTemplate } from "@/components/shared/templates/detail-page-te
 import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailHero } from "@/components/shared/detail-hero";
 import { useLibraryStore } from "@/stores/library-store";
-import { DetailSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
 const AlbumTrackRow = memo(function AlbumTrackRow({
@@ -170,8 +169,7 @@ export default function AlbumDetailPage() {
     [currentTrack?.id, status, tracks, play, pause, resume],
   );
 
-  if (!album) {
-    if (isLoading) return <DetailSkeleton />;
+  if (!album && !isLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="text-muted-foreground">Album not found</div>
@@ -184,21 +182,21 @@ export default function AlbumDetailPage() {
 
   return (
     <DetailPageTemplate
-      title={album.title}
-      subtitle={album.artist_name || undefined}
-      artworkPath={album.artwork_path}
+      title={album?.title ?? ""}
+      subtitle={album?.artist_name ?? undefined}
+      artworkPath={album?.artwork_path}
       onBack={goBack}
-      onPlay={handlePlay}
+      onPlay={tracks.length > 0 ? handlePlay : undefined}
     >
       <TrackList
         tracks={tracks}
         headerHeight={320}
         headerContent={
           <DetailHero
-            title={album.title}
-            subtitle={album.artist_name || "Unknown Artist"}
-            tertiaryText={formatDuration(album.total_duration_ms)}
-            artworkPath={album.artwork_path}
+            title={album?.title ?? ""}
+            subtitle={album?.artist_name ?? "Unknown Artist"}
+            tertiaryText={album ? formatDuration(album.total_duration_ms) : ""}
+            artworkPath={album?.artwork_path}
             placeholderType="track"
             onPlay={handlePlay}
             onShuffle={handleShuffle}

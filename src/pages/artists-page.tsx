@@ -15,7 +15,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/shared/page-layout";
-import { ArtistsContentSkeleton } from "@/components/skeletons";
+
+
 
 export default function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
@@ -160,9 +161,7 @@ export default function ArtistsPage() {
         </div>
       </PageHeader>
 
-      {isLoading ? (
-        <ArtistsContentSkeleton />
-      ) : (
+      {isLoading ? null : (
         <VirtualizedGrid
           items={filteredAndSortedArtists}
           renderItem={(artist) => (

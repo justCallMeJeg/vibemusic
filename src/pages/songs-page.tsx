@@ -29,7 +29,8 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
-import { SongsContentSkeleton } from "@/components/skeletons";
+
+
 import { formatDuration } from "@/lib/format";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
@@ -303,9 +304,7 @@ export default function SongsPage() {
           !isLoading && displayedTracks.length === 0 && "flex flex-col gap-1",
         )}
       >
-        {isLoading ? (
-          <SongsContentSkeleton />
-        ) : displayedTracks.length === 0 ? (
+        {isLoading ? null : displayedTracks.length === 0 ? (
           searchQuery ? (
             <EmptyState
               icon={Search}

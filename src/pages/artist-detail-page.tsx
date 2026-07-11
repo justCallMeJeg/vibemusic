@@ -25,7 +25,6 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { useLibraryStore } from "@/stores/library-store";
-import { DetailSkeleton } from "@/components/skeletons";
 import { formatDuration } from "@/lib/format";
 
 const ArtistTrackRow = memo(function ArtistTrackRow({
@@ -153,8 +152,7 @@ export default function ArtistDetailPage() {
     [currentTrack?.id, status],
   );
 
-  if (isLoading || !artist) {
-    if (isLoading) return <DetailSkeleton />;
+  if (!artist && !isLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 text-muted-foreground">
         <span>Artist not found</span>
@@ -202,15 +200,16 @@ export default function ArtistDetailPage() {
 
   return (
     <DetailPageTemplate
-      title={artist.name}
-      subtitle={`${artist.album_count} Albums • ${artist.track_count} Songs`}
-      artworkPath={artist.artwork_path}
+      title={artist?.name ?? ""}
+      subtitle={artist ? `${artist.album_count} Albums • ${artist.track_count} Songs` : undefined}
+      artworkPath={artist?.artwork_path}
       onBack={goBack}
-      onPlay={() => handleShuffleArtist()}
+      onPlay={tracks.length > 0 ? () => handleShuffleArtist() : undefined}
     >
       <TrackList
         tracks={tracks}
         headerContent={
+          artist ? (
           <div className="flex gap-6 mb-8">
             <div className="w-40 h-40 rounded-full overflow-hidden bg-card shrink-0 shadow-lg">
               <ArtworkImage
@@ -250,6 +249,7 @@ export default function ArtistDetailPage() {
               </div>
             </div>
           </div>
+          ) : null
         }
         headerExtras={
           <>

@@ -15,7 +15,8 @@ import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { PageLayout } from "@/components/shared/page-layout";
-import { AlbumsContentSkeleton } from "@/components/skeletons";
+
+
 
 const AlbumGridCard = memo(function AlbumGridCard({
   album,
@@ -163,9 +164,7 @@ export default function AlbumsPage() {
         </div>
       </PageHeader>
 
-      {isLoading ? (
-        <AlbumsContentSkeleton />
-      ) : (
+      {isLoading ? null : (
         <VirtualizedGrid
           items={filteredAndSortedAlbums}
           renderItem={(album) => (
