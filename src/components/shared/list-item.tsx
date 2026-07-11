@@ -17,7 +17,7 @@ import {
 import { ListPlus, Shuffle, Pencil, Trash2 } from "lucide-react";
 
 const rowVariants = cva(
-  "group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
+  "mx-0.5 group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
   {
     variants: {
       variant: {
