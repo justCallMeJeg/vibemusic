@@ -27,7 +27,7 @@ const Progress = ({
       {...props}
     >
       <div
-        className="h-full bg-indigo-500 transition-all duration-300 ease-out"
+        className="h-full bg-primary transition-all duration-300 ease-out"
         style={{ width: `${percentage}%` }}
       />
       {showLabel && (

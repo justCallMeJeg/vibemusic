@@ -14,11 +14,12 @@ export function UpdateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { updateManifest, latestRelease, download, error } = useUpdateStore();
+  const { updateManifest, latestRelease, currentVersionChangelog, currentVersionChangelogVersion, download, error } = useUpdateStore();
   const isDownloading = useUpdateStore((s) => s.isDownloading);
 
   const hasUpdate = !!updateManifest;
-  const hasContent = !!(updateManifest ?? latestRelease);
+  const isShowingCurrentChangelog = !!currentVersionChangelog;
+  const hasContent = !!(updateManifest ?? latestRelease ?? currentVersionChangelog);
 
   const handleDownload = async () => {
     onOpenChange(false);
@@ -30,9 +31,32 @@ export function UpdateDialog({
   };
 
   const release = updateManifest ?? latestRelease;
-  const changelogBody = release?.body;
+  const changelogBody = isShowingCurrentChangelog ? currentVersionChangelog : release?.body;
 
-  const footer = hasUpdate ? (
+  const title = isShowingCurrentChangelog
+    ? `What's New in v${currentVersionChangelogVersion}`
+    : hasUpdate
+      ? "New Version Available"
+      : "What's New";
+
+  const description = isShowingCurrentChangelog
+    ? `Release notes for version ${currentVersionChangelogVersion}`
+    : hasUpdate
+      ? `Version ${release?.version} is ready to download.`
+      : `Latest version: ${release?.version}`;
+
+  const footer = isShowingCurrentChangelog ? (
+    <div className="flex gap-2 justify-end w-full">
+      <Button
+        variant="ghost"
+        onClick={() => onOpenChange(false)}
+        className="text-muted-foreground hover:text-foreground hover:bg-accent"
+      >
+        <X className="mr-2 h-4 w-4" />
+        Close
+      </Button>
+    </div>
+  ) : hasUpdate ? (
     <div className="flex gap-2 justify-end w-full">
       <Button
         variant="ghost"
@@ -45,7 +69,8 @@ export function UpdateDialog({
       <Button
         onClick={handleDownload}
         disabled={isDownloading}
-        className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px]"
+        variant="default"
+        className="min-w-[140px]"
       >
         <Download className="mr-2 h-4 w-4" />
         Download Update
@@ -68,12 +93,8 @@ export function UpdateDialog({
     <StandardDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={hasUpdate ? "New Version Available" : "What's New"}
-      description={
-        hasUpdate
-          ? `Version ${release?.version} is ready to download.`
-          : `Latest version: ${release?.version}`
-      }
+      title={title}
+      description={description}
       footer={footer}
       contentClassName="max-w-2xl max-h-[80vh] flex flex-col"
       className="flex flex-col flex-1 min-h-0"
@@ -83,29 +104,27 @@ export function UpdateDialog({
           <p className="text-muted-foreground italic">
             No release information available.
           </p>
+        ) : !changelogBody ? (
+          <p className="text-muted-foreground italic">
+            No changelog provided.
+          </p>
         ) : (
           <div
             className="prose prose-invert prose-sm max-w-none wrap-break-word
-              prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
+              prose-headings:text-primary prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
               prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
               prose-p:text-muted-foreground prose-p:leading-relaxed
-              prose-a:text-indigo-400 prose-a:no-underline
+              prose-a:text-primary prose-a:no-underline
               prose-strong:text-foreground prose-strong:font-semibold
-              prose-code:text-indigo-300 prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+              prose-code:text-primary prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
               prose-pre:bg-background/50 prose-pre:border prose-pre:border-border
               prose-ul:text-muted-foreground prose-ol:text-muted-foreground
-              prose-li:marker:text-indigo-400
-              prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
+              prose-li:marker:text-primary
+              prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
           >
-            {changelogBody ? (
-              <Suspense fallback={<p className="text-muted-foreground italic">Loading changelog...</p>}>
-                <ReactMarkdown>{changelogBody}</ReactMarkdown>
-              </Suspense>
-            ) : (
-              <p className="text-muted-foreground italic">
-                No changelog provided.
-              </p>
-            )}
+            <Suspense fallback={<p className="text-muted-foreground italic">Loading changelog...</p>}>
+              <ReactMarkdown>{changelogBody}</ReactMarkdown>
+            </Suspense>
           </div>
         )}
       </div>

@@ -23,6 +23,10 @@ interface UpdateStore {
   isUpdateAvailable: boolean;
   updateManifest: Update | null;
   latestRelease: Update | null;
+  latestReleaseChannel: "stable" | "dev" | null;
+  currentVersionChangelog: string | null;
+  currentVersionChangelogVersion: string | null;
+  currentVersionChangelogChannel: "stable" | "dev" | null;
   error: string | null;
   lastChecked: Date | null;
   channel: "stable" | "dev";
@@ -34,6 +38,7 @@ interface UpdateStore {
   setChannel: (channel: "stable" | "dev") => void;
   check: (silent?: boolean) => Promise<boolean>;
   fetchLatestRelease: () => Promise<void>;
+  fetchCurrentVersionChangelog: (version: string) => Promise<void>;
   download: () => Promise<void>;
   install: () => Promise<void>;
   openDownloadPage: () => void;
@@ -53,13 +58,32 @@ export const useUpdateStore = create<UpdateStore>()(
       isUpdateAvailable: false,
       updateManifest: null,
       latestRelease: null,
+      latestReleaseChannel: null,
+      currentVersionChangelog: null,
+      currentVersionChangelogVersion: null,
+      currentVersionChangelogChannel: null,
       error: null,
       lastChecked: null,
       installFormat: "unknown" as InstallFormat,
       requiresManualDownload: false,
       isManualUpdateDialogOpen: false,
 
-      setChannel: (channel) => set({ channel }),
+      setChannel: (channel) => {
+        set((state) => {
+          if (state.channel === channel) return {};
+          return {
+            channel,
+            isUpdateAvailable: false,
+            updateManifest: null,
+            requiresManualDownload: false,
+            isManualUpdateDialogOpen: false,
+            latestRelease: null,
+            latestReleaseChannel: null,
+          };
+        });
+        // Silently check for updates on the new channel
+        get().check(true);
+      },
 
       check: async (silent = false) => {
         set({ isChecking: true, error: null });
@@ -121,7 +145,11 @@ export const useUpdateStore = create<UpdateStore>()(
       },
 
       fetchLatestRelease: async () => {
-        const { channel } = get();
+        const { channel, latestRelease, latestReleaseChannel } = get();
+
+        // Session cache: skip if we already have release data for this channel
+        if (latestRelease && latestReleaseChannel === channel) return;
+
         try {
           const release = await invoke<{
             version: string;
@@ -136,11 +164,50 @@ export const useUpdateStore = create<UpdateStore>()(
                 ...release,
                 downloadAndInstall: async () => {},
               } as Update,
+              latestReleaseChannel: channel,
             });
           }
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           logger.error("Failed to fetch latest release:", message);
+        }
+      },
+
+      fetchCurrentVersionChangelog: async (version: string) => {
+        const { channel, currentVersionChangelogVersion, currentVersionChangelogChannel } = get();
+
+        // Session cache: skip if we already have changelog for this version and channel
+        if (currentVersionChangelogVersion === version && currentVersionChangelogChannel === channel) return;
+
+        try {
+          const release = await invoke<{
+            version: string;
+            currentVersion: string;
+            body?: string;
+            date?: string;
+          } | null>("get_current_release", { version });
+
+          if (release?.body) {
+            set({
+              currentVersionChangelog: release.body,
+              currentVersionChangelogVersion: version,
+              currentVersionChangelogChannel: channel,
+            });
+          } else {
+            set({
+              currentVersionChangelog: null,
+              currentVersionChangelogVersion: version,
+              currentVersionChangelogChannel: channel,
+            });
+          }
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          logger.error("Failed to fetch current release changelog:", message);
+          set({
+            currentVersionChangelog: null,
+            currentVersionChangelogVersion: version,
+            currentVersionChangelogChannel: channel,
+          });
         }
       },
 

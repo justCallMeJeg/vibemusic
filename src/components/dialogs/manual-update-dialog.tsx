@@ -44,7 +44,8 @@ export function ManualUpdateDialog({
               onOpenChange(false);
               openDownloadPage();
             }}
-            className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px]"
+            variant="default"
+            className="min-w-[140px]"
           >
             <ExternalLink className="mr-2 h-4 w-4" />
             Download from GitHub
