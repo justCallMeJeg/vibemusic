@@ -14,12 +14,11 @@ export function UpdateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { updateManifest, latestRelease, currentVersionChangelog, currentVersionChangelogVersion, download, error } = useUpdateStore();
+  const { updateManifest, latestRelease, download, error } = useUpdateStore();
   const isDownloading = useUpdateStore((s) => s.isDownloading);
 
   const hasUpdate = !!updateManifest;
-  const isShowingCurrentChangelog = !!currentVersionChangelog;
-  const hasContent = !!(updateManifest ?? latestRelease ?? currentVersionChangelog);
+  const hasContent = !!(updateManifest ?? latestRelease);
 
   const handleDownload = async () => {
     onOpenChange(false);
@@ -31,32 +30,16 @@ export function UpdateDialog({
   };
 
   const release = updateManifest ?? latestRelease;
-  const changelogBody = isShowingCurrentChangelog ? currentVersionChangelog : release?.body;
 
-  const title = isShowingCurrentChangelog
-    ? `What's New in v${currentVersionChangelogVersion}`
-    : hasUpdate
-      ? "New Version Available"
-      : "What's New";
+  const title = hasUpdate
+    ? "New Version Available"
+    : "What's New";
 
-  const description = isShowingCurrentChangelog
-    ? `Release notes for version ${currentVersionChangelogVersion}`
-    : hasUpdate
-      ? `Version ${release?.version} is ready to download.`
-      : `Latest version: ${release?.version}`;
+  const description = hasUpdate
+    ? `Version ${release?.version} is ready to download.`
+    : `Latest version: ${release?.version}`;
 
-  const footer = isShowingCurrentChangelog ? (
-    <div className="flex gap-2 justify-end w-full">
-      <Button
-        variant="ghost"
-        onClick={() => onOpenChange(false)}
-        className="text-muted-foreground hover:text-foreground hover:bg-accent"
-      >
-        <X className="mr-2 h-4 w-4" />
-        Close
-      </Button>
-    </div>
-  ) : hasUpdate ? (
+  const footer = hasUpdate ? (
     <div className="flex gap-2 justify-end w-full">
       <Button
         variant="ghost"
@@ -104,7 +87,7 @@ export function UpdateDialog({
           <p className="text-muted-foreground italic">
             No release information available.
           </p>
-        ) : !changelogBody ? (
+        ) : !release?.body ? (
           <p className="text-muted-foreground italic">
             No changelog provided.
           </p>
@@ -123,7 +106,7 @@ export function UpdateDialog({
               prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
           >
             <Suspense fallback={<p className="text-muted-foreground italic">Loading changelog...</p>}>
-              <ReactMarkdown>{changelogBody}</ReactMarkdown>
+              <ReactMarkdown>{release.body}</ReactMarkdown>
             </Suspense>
           </div>
         )}

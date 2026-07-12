@@ -182,7 +182,6 @@ pub fn run() {
             profile::save_profile_avatar_bytes,
             // Updater
             updater::check_update,
-            updater::get_current_release,
             updater::get_latest_release,
             updater::download_update,
             updater::install_update,

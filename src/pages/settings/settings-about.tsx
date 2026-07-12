@@ -33,7 +33,7 @@ function formatBytes(bytes: number): string {
 
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
-  const { check, isUpdateAvailable, install, updateManifest, latestRelease, requiresManualDownload, fetchLatestRelease, fetchCurrentVersionChangelog } =
+  const { check, isUpdateAvailable, install, updateManifest, latestRelease, requiresManualDownload, fetchLatestRelease } =
     useUpdateStore();
   const isChecking = useUpdateStore((s) => s.isChecking);
   const isDownloading = useUpdateStore((s) => s.isDownloading);
@@ -73,14 +73,6 @@ export function SettingsAbout() {
     }
   };
 
-  const handleViewChangelog = async () => {
-    if (appVersion === "0.0.0") {
-      await getVersion().then(setAppVersion);
-    }
-    await fetchCurrentVersionChangelog(appVersion);
-    setDialogOpen(true);
-  };
-
   const handleInstall = async () => {
     try {
       const audioStore = useAudioStore.getState();
@@ -114,14 +106,6 @@ export function SettingsAbout() {
               Version {appVersion}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            onClick={handleViewChangelog}
-            size="sm"
-          >
-            <FileText className="h-3.5 w-3.5 mr-1" />
-            Changelog
-          </Button>
         </div>
 
         {/* Update Channel */}

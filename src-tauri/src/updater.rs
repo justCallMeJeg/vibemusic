@@ -115,48 +115,6 @@ pub async fn check_update<R: Runtime>(
     }
 }
 
-/// Fetch the release changelog for a specific version (the currently installed app version).
-#[tauri::command]
-pub async fn get_current_release<R: Runtime>(
-    _app: AppHandle<R>,
-    version: String,
-) -> Result<Option<UpdateMetadata>, String> {
-    let url = format!(
-        "https://api.github.com/repos/justCallMeJeg/vibemusic/releases/tags/v{}",
-        version
-    );
-
-    let client = reqwest::Client::builder()
-        .user_agent(format!("vibemusic/{}", env!("CARGO_PKG_VERSION")))
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let res = client.get(&url).send().await.map_err(|e| e.to_string())?;
-
-    if !res.status().is_success() {
-        return Ok(None);
-    }
-
-    #[derive(Deserialize)]
-    struct GitHubRelease {
-        tag_name: String,
-        body: Option<String>,
-        published_at: Option<String>,
-    }
-
-    let body = res.text().await.map_err(|e| e.to_string())?;
-    let release: GitHubRelease = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-
-    Ok(Some(UpdateMetadata {
-        version: release.tag_name,
-        current_version: version,
-        body: release.body,
-        date: release.published_at,
-        requires_manual_download: false,
-    }))
-}
-
 /// Fetch the latest release changelog without triggering an update check.
 #[tauri::command]
 pub async fn get_latest_release<R: Runtime>(
