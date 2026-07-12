@@ -33,7 +33,7 @@ function formatBytes(bytes: number): string {
 
 export function SettingsAbout() {
   const [appVersion, setAppVersion] = useState("0.0.0");
-  const { check, isUpdateAvailable, install, updateManifest, latestRelease, fetchLatestRelease, fetchCurrentVersionChangelog } =
+  const { check, isUpdateAvailable, install, updateManifest, latestRelease, requiresManualDownload, fetchLatestRelease, fetchCurrentVersionChangelog } =
     useUpdateStore();
   const isChecking = useUpdateStore((s) => s.isChecking);
   const isDownloading = useUpdateStore((s) => s.isDownloading);
@@ -41,6 +41,7 @@ export function SettingsAbout() {
   const downloadProgress = useUpdateStore((s) => s.downloadProgress);
   const lastChecked = useUpdateStore((s) => s.lastChecked);
   const channel = useUpdateStore((s) => s.channel);
+  const setManualUpdateDialogOpen = useUpdateStore((s) => s.setManualUpdateDialogOpen);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
 
@@ -50,12 +51,20 @@ export function SettingsAbout() {
 
   const handleCheck = async () => {
     if (isUpdateAvailable) {
-      setDialogOpen(true);
+      if (requiresManualDownload) {
+        setManualUpdateDialogOpen(true);
+      } else {
+        setDialogOpen(true);
+      }
       return;
     }
     const hasUpdate = await check();
     if (hasUpdate) {
-      setDialogOpen(true);
+      // check() auto-opens ManualUpdateDialog if requiresManualDownload
+      const state = useUpdateStore.getState();
+      if (!state.requiresManualDownload) {
+        setDialogOpen(true);
+      }
     } else {
       if (!latestRelease) {
         await fetchLatestRelease();
