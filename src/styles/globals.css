@@ -73,7 +73,7 @@
   --border: oklch(26.9% 0 0deg);
   --input: oklch(26.9% 0 0deg);
   --ring: oklch(43.9% 0 0deg);
-  --warning: oklch(55% 0.15 75deg);
+  --warning: oklch(42% 0.15 75deg);
   --warning-foreground: oklch(100% 0 0deg);
   --success: oklch(60% 0.12 150deg);
   --success-foreground: oklch(100% 0 0deg);
@@ -163,7 +163,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   border: 2px solid var(--background);
 }
 

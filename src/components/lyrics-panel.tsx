@@ -63,7 +63,7 @@ const SyncedLyricLine = memo(function SyncedLyricLine({
         line.timestamp_ms !== null &&
           "cursor-pointer hover:bg-accent/50",
         isActive
-          ? "text-foreground font-black scale-105 bg-accent/50 backdrop-blur-sm pl-6"
+          ? "text-foreground font-black scale-105 bg-accent/50 shadow-[0_0_12px_var(--ring)/20] backdrop-blur-sm pl-6"
           : isPast
             ? "text-muted-foreground/30 blur-[0.5px] scale-90"
             : "text-muted-foreground/70 scale-100",
