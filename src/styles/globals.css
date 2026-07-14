@@ -33,6 +33,10 @@
   --border: oklch(89.8% 0 0deg);
   --input: oklch(89.8% 0 0deg);
   --ring: oklch(70.8% 0 0deg);
+  --warning: oklch(68% 0.15 75deg);
+  --warning-foreground: oklch(20% 0 0deg);
+  --success: oklch(55% 0.12 150deg);
+  --success-foreground: oklch(100% 0 0deg);
   --chart-1: oklch(64.6% 0.222 41.116deg);
   --chart-2: oklch(60% 0.118 184.704deg);
   --chart-3: oklch(39.8% 0.07 227.392deg);
@@ -69,6 +73,10 @@
   --border: oklch(26.9% 0 0deg);
   --input: oklch(26.9% 0 0deg);
   --ring: oklch(43.9% 0 0deg);
+  --warning: oklch(55% 0.15 75deg);
+  --warning-foreground: oklch(100% 0 0deg);
+  --success: oklch(60% 0.12 150deg);
+  --success-foreground: oklch(100% 0 0deg);
   --chart-1: oklch(48.8% 0.243 264.376deg);
   --chart-2: oklch(69.6% 0.17 162.48deg);
   --chart-3: oklch(76.9% 0.188 70.08deg);
@@ -104,6 +112,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
