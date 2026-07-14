@@ -3,22 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Camera } from "lucide-react";
 import { StandardDialog } from "@/components/shared/standard-dialog";
-import { Profile } from "@/stores/profile-store";
+import { Profile, AVATAR_COLORS } from "@/stores/profile-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { logger } from "@/lib/logger";
 import { ImageCropDialog } from "@/components/dialogs/image-crop-dialog";
-
-const AVATAR_COLORS = [
-  "#ef4444",
-  "#3b82f6",
-  "#22c55e",
-  "#eab308",
-  "#a855f7",
-  "#ec4899",
-  "#6366f1",
-  "#06b6d4",
-];
 
 interface ProfileManageDialogProps {
   open: boolean;

@@ -16,6 +16,17 @@ const TAILWIND_CLASS_TO_HEX: Record<string, string> = {
   "bg-cyan-500": "#06b6d4",
 };
 
+export const AVATAR_COLORS = [
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ec4899",
+  "#6366f1",
+  "#06b6d4",
+] as const;
+
 function migrateColor(color: string): string {
   return TAILWIND_CLASS_TO_HEX[color] || color;
 }
