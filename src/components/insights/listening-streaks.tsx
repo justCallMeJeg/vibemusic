@@ -17,7 +17,7 @@ function DayCell({ status }: { status: WeekDayStatus }) {
       {status.active ? (
         <Flame
           size={16}
-          className="text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.6)]"
+          className="text-warning drop-shadow-[0_0_6px_var(--warning)]"
         />
       ) : (
         <div className="w-2 h-2 rounded-full bg-muted-foreground/10" />
@@ -53,14 +53,14 @@ export function ListeningStreaks({ data, isLoading }: Props) {
     <div className="h-full flex flex-col bg-card/50 border border-border rounded-xl p-4 relative overflow-hidden">
       <div className="flex items-center justify-between gap-6 shrink-0">
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Flame size={18} className={isBurning ? "text-amber-500" : ""} />
+          <Flame size={18} className={isBurning ? "text-warning" : ""} />
           <span className="text-xs font-semibold uppercase tracking-wide">
             Streak
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`text-2xl font-bold ${isBurning ? "text-amber-500" : "text-foreground"}`}
+            className={`text-2xl font-bold ${isBurning ? "text-warning" : "text-foreground"}`}
           >
             {hasStreak ? `${data.current_streak}d` : "—"}
           </span>
@@ -84,7 +84,7 @@ export function ListeningStreaks({ data, isLoading }: Props) {
       </div>
 
       {isBurning && (
-        <div className="absolute inset-0 bg-linear-to-t from-amber-500/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-t from-warning/5 to-transparent pointer-events-none" />
       )}
     </div>
   );

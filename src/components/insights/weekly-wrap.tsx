@@ -90,7 +90,7 @@ export function WeeklyWrap({ data, timeRange, isLoading }: WeeklyWrapProps) {
   return (
     <div className="bg-linear-to-br from-card/50 via-card/30 to-card/10 border border-border rounded-xl p-5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-48 h-48 bg-primary/2 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/3 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-warning/3 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
       <div className="relative z-10">
         <div className="flex items-center gap-2 text-muted-foreground mb-4">

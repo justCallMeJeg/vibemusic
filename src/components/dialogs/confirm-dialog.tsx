@@ -66,7 +66,7 @@ export function ConfirmDialog({
             className={cn(
               "border-none",
               variant === "destructive"
-                ? "bg-red-500 hover:bg-red-600 text-white"
+                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
             onClick={onConfirm}

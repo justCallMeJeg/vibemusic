@@ -54,10 +54,10 @@ export function TitleBar() {
 
       {/* Content Layer */}
       <div className="flex items-center gap-2 pointer-events-none relative z-10">
-        <div className="w-3 h-3 rounded-full bg-indigo-500" />
+        <div className="w-3 h-3 rounded-full bg-sidebar-primary" />
         <span className="text-xs font-medium text-muted-foreground">Vibe</span>
         {channel === "dev" && (
-          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded ml-1">
+          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 rounded ml-1">
             DEV
           </span>
         )}
@@ -104,7 +104,7 @@ export function TitleBar() {
           </TooltipTrigger>
           <TooltipContent
             side="bottom"
-            className="bg-red-900 border-red-800 text-white [&_svg]:fill-red-900 [&_svg]:bg-red-900"
+            className="bg-destructive/20 border-destructive/30 text-destructive [&_svg]:fill-destructive"
           >
             Close
           </TooltipContent>

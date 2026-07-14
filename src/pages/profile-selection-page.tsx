@@ -250,8 +250,8 @@ export default function ProfileSelectionPage() {
             px-8 py-6 text-base font-semibold tracking-wide transition-all duration-300
             ${
               isManageMode
-                ? "bg-white text-black hover:bg-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-                : "border-white/10 hover:bg-white/5 hover:text-white"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_var(--primary)/30]"
+                : "border-border hover:bg-accent hover:text-accent-foreground"
             }
           `}
         onClick={() => setIsManageMode(!isManageMode)}
