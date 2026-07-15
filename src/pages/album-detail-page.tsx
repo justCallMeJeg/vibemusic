@@ -76,7 +76,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   );
 });
 
-export default function AlbumDetailPage() {
+export default memo(function AlbumDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const updateBreadcrumbLabel = useNavigationStore(
@@ -140,16 +140,14 @@ export default function AlbumDetailPage() {
   }, [albumId, updateBreadcrumbLabel]);
 
   const handlePlay = () => {
-    if (tracks.length > 0) {
-      play(tracks[0], tracks);
-    }
+    if (tracks.length === 0) return;
+    play(tracks[0], tracks);
   };
 
   const handleShuffle = () => {
-    if (tracks.length > 0) {
-      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-      play(shuffled[0], shuffled);
-    }
+    if (tracks.length === 0) return;
+    const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+    play(shuffled[0], shuffled);
   };
 
   const renderItem = useCallback(
@@ -215,4 +213,4 @@ export default function AlbumDetailPage() {
       />
     </DetailPageTemplate>
   );
-}
+});

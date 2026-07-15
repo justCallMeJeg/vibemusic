@@ -22,6 +22,28 @@ import {
 } from "@/stores/navigation-store";
 import { useSettingsStore } from "@/stores/settings-store";
 
+const iconMap: Record<string, React.ReactNode> = {
+  home: <Home />,
+  search: <Search />,
+  songs: <Music2 />,
+  albums: <Disc />,
+  playlists: <ListMusic />,
+  artists: <Users />,
+  insights: <BarChart2 />,
+  settings: <Settings />,
+};
+
+const labelMap: Record<string, string> = {
+  home: "Home",
+  search: "Search",
+  songs: "Songs",
+  albums: "Albums",
+  playlists: "Playlists",
+  artists: "Artists",
+  insights: "Insights",
+  settings: "Settings",
+};
+
 interface NavigationMenuProps {
   onImport?: () => void;
   isScanning?: boolean;
@@ -36,28 +58,6 @@ export default function NavigationMenu({
   const toggleSearch = useNavigationStore((s) => s.toggleSearch);
   const isSearchOpen = useNavigationStore((s) => s.isSearchOpen);
   const sidebarItems = useSettingsStore((s) => s.sidebarItems);
-
-  const iconMap: Record<string, React.ReactNode> = {
-    home: <Home />,
-    search: <Search />,
-    songs: <Music2 />,
-    albums: <Disc />,
-    playlists: <ListMusic />,
-    artists: <Users />,
-    insights: <BarChart2 />,
-    settings: <Settings />,
-  };
-
-  const labelMap: Record<string, string> = {
-    home: "Home",
-    search: "Search",
-    songs: "Songs",
-    albums: "Albums",
-    playlists: "Playlists",
-    artists: "Artists",
-    insights: "Insights",
-    settings: "Settings",
-  };
 
   return (
     <aside id="navigation-menu" className="w-full flex flex-col gap-4">

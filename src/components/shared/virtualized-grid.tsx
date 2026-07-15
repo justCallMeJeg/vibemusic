@@ -130,7 +130,7 @@ export function VirtualizedGrid<T>({
                 }}
                 className="grid gap-4"
               >
-                {rowItems.map((item) => renderItem(item))}
+                {rowItems.map(renderItem)}
               </div>
             );
           })}

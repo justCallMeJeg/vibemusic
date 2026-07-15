@@ -115,7 +115,7 @@ const InsightsContentSkeleton = memo(function InsightsContentSkeleton({ isPlayer
   );
 });
 
-export default function InsightsPage() {
+export default memo(function InsightsPage() {
   const { data, fetchStats, timeRange, setTimeRange } =
     useStatsStore();
   const { openAlbumDetail, openArtistDetail } = useNavigationStore();
@@ -314,4 +314,4 @@ export default function InsightsPage() {
       </div>
     </PageLayout>
   );
-}
+});

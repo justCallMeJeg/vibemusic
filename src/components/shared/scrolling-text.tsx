@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ScrollingTextProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -6,7 +6,7 @@ interface ScrollingTextProps extends React.HTMLAttributes<HTMLDivElement> {
   trigger?: "hover" | "always";
 }
 
-export function ScrollingText({
+export const ScrollingText = memo(function ScrollingText({
   children,
   className,
   trigger: triggerProp = "hover",
@@ -68,4 +68,4 @@ export function ScrollingText({
       </div>
     </div>
   );
-}
+});

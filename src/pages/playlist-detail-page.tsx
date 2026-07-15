@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import {
   getPlaylistTracks,
   deletePlaylist,
@@ -26,7 +26,7 @@ import { PlaylistHero } from "@/components/shared/playlist-hero";
 
 import { SortableTrackItem } from "@/components/shared/sortable-track-item";
 
-export default function PlaylistDetailPage() {
+export default memo(function PlaylistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const updateBreadcrumbLabel = useNavigationStore(
@@ -261,4 +261,4 @@ export default function PlaylistDetailPage() {
       />
     </DetailPageTemplate>
   );
-}
+});

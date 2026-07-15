@@ -33,21 +33,6 @@ export default function MusicControler() {
   const position = usePosition();
   const duration = useDuration();
 
-  // Get actions directly (stable references)
-  const pause = useAudioStore((s) => s.pause);
-  const resume = useAudioStore((s) => s.resume);
-  const next = useAudioStore((s) => s.next);
-  const previous = useAudioStore((s) => s.previous);
-  const seek = useAudioStore((s) => s.seek);
-  const setVolume = useAudioStore((s) => s.setVolume);
-  const toggleMute = useAudioStore((s) => s.toggleMute);
-  const toggleShuffle = useAudioStore((s) => s.toggleShuffle);
-  const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
-  const toggleQueue = useAudioStore((s) => s.toggleQueue);
-  const setSidePanel = useAudioStore((s) => s.setSidePanel);
-  const setDraggingSlider = useAudioStore((s) => s.setDraggingSlider);
-  const toggleMiniPlayer = useNavigationStore((s) => s.toggleMiniPlayer);
-
   const isPlaying = status === "playing";
   const [sliderValue, setSliderValue] = useState([0]);
   const isDraggingRef = useRef(false);
@@ -60,39 +45,48 @@ export default function MusicControler() {
   }, [position]);
 
   const handlePlayPause = useCallback(() => {
-    if (isPlaying) {
-      pause();
+    const s = useAudioStore.getState();
+    if (s.status === "playing") {
+      s.pause();
     } else {
-      if (currentTrack) {
-        resume();
-      }
+      if (s.currentTrack) s.resume();
     }
-  }, [isPlaying, pause, currentTrack, resume]);
+  }, []);
 
   const handleSeekChange = useCallback(
     (value: number[]) => {
       isDraggingRef.current = true;
-      setDraggingSlider(true);
+      useAudioStore.getState().setDraggingSlider(true);
       setSliderValue(value);
     },
-    [setDraggingSlider],
+    [],
   );
 
   const handleSeekCommit = useCallback(
     (value: number[]) => {
-      seek(value[0]);
+      const s = useAudioStore.getState();
+      s.seek(value[0]);
       isDraggingRef.current = false;
-      setDraggingSlider(false);
+      s.setDraggingSlider(false);
     },
-    [seek, setDraggingSlider],
+    [],
   );
 
   const handleVolume = useCallback(
     (value: number[]) => {
-      setVolume(value[0]);
+      useAudioStore.getState().setVolume(value[0]);
     },
-    [setVolume],
+    [],
   );
+
+  const onToggleShuffle = useCallback(() => useAudioStore.getState().toggleShuffle(), []);
+  const onPrevious = useCallback(() => useAudioStore.getState().previous(), []);
+  const onNext = useCallback(() => useAudioStore.getState().next(), []);
+  const onToggleRepeat = useCallback(() => useAudioStore.getState().toggleRepeat(), []);
+  const onToggleMute = useCallback(() => useAudioStore.getState().toggleMute(), []);
+  const onToggleQueue = useCallback(() => useAudioStore.getState().toggleQueue(), []);
+  const onSetSidePanel = useCallback((view: "none" | "queue" | "track-details" | "lyrics") => useAudioStore.getState().setSidePanel(view), []);
+  const onToggleMiniPlayer = useCallback(() => useNavigationStore.getState().toggleMiniPlayer(), []);
 
   return (
     <div className="bg-popover/75 backdrop-blur-md rounded-lg outline outline-border w-full ml-auto h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4 transition-all duration-500 pointer-events-auto">
@@ -142,11 +136,11 @@ export default function MusicControler() {
           isPlaying={isPlaying}
           shuffle={shuffle}
           repeat={repeat}
-          onToggleShuffle={toggleShuffle}
-          onPrevious={previous}
+          onToggleShuffle={onToggleShuffle}
+          onPrevious={onPrevious}
           onPlayPause={handlePlayPause}
-          onNext={next}
-          onToggleRepeat={toggleRepeat}
+          onNext={onNext}
+          onToggleRepeat={onToggleRepeat}
         />
         {/* Seeker */}
         <div className=" flex items-center gap-4 w-full">
@@ -170,13 +164,13 @@ export default function MusicControler() {
         <VolumeControl
           volume={volume}
           onVolumeChange={handleVolume}
-          onToggleMute={toggleMute}
+          onToggleMute={onToggleMute}
         />
         <SidePanelActions
           sidePanel={sidePanel}
-          onToggleQueue={toggleQueue}
-          onSetSidePanel={setSidePanel}
-          onToggleMiniPlayer={toggleMiniPlayer}
+          onToggleQueue={onToggleQueue}
+          onSetSidePanel={onSetSidePanel}
+          onToggleMiniPlayer={onToggleMiniPlayer}
         />
       </div>
     </div>

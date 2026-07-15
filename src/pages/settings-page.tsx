@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { SettingsSidebar } from "./settings/settings-sidebar";
 
 import { useCurrentPage } from "@/stores/navigation-store";
@@ -22,7 +22,7 @@ const SettingsAbout = lazy(() =>
   import("./settings/settings-about").then((m) => ({ default: m.SettingsAbout })),
 );
 
-export default function SettingsPage() {
+export default memo(function SettingsPage() {
   const currentPage = useCurrentPage();
   const isPlayerVisible = useIsPlayerVisible();
   const [activeTab, setActiveTab] = useState("general");
@@ -50,4 +50,4 @@ export default function SettingsPage() {
       </main>
     </div>
   );
-}
+});

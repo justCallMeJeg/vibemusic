@@ -176,32 +176,32 @@ export const useUpdateStore = create<UpdateStore>()(
         try {
           set({ isDownloading: true, downloadProgress: null, error: null });
 
-          // Listen for download progress events
-          unlistenProgress = await listen<DownloadProgress>(
-            "update-download-progress",
-            (event) => {
-              set({ downloadProgress: event.payload });
-            }
-          );
-
-          // Listen for download complete event
-          unlistenComplete = await listen("update-download-complete", () => {
-            set({
-              isDownloading: false,
-              isReadyToInstall: true,
-              downloadProgress: null,
-            });
-            toast.success("Update ready to install", {
-              description: `Version ${updateManifest.version} has been downloaded.`,
-              action: {
-                label: "Install Now",
-                onClick: () => {
-                  useUpdateStore.getState().install();
+          // Listen for download events in parallel
+          [unlistenProgress, unlistenComplete] = await Promise.all([
+            listen<DownloadProgress>(
+              "update-download-progress",
+              (event) => {
+                set({ downloadProgress: event.payload });
+              }
+            ),
+            listen("update-download-complete", () => {
+              set({
+                isDownloading: false,
+                isReadyToInstall: true,
+                downloadProgress: null,
+              });
+              toast.success("Update ready to install", {
+                description: `Version ${updateManifest.version} has been downloaded.`,
+                action: {
+                  label: "Install Now",
+                  onClick: () => {
+                    useUpdateStore.getState().install();
+                  },
                 },
-              },
-              duration: 10000,
-            });
-          });
+                duration: 10000,
+              });
+            }),
+          ]);
 
           // Start the download (does not install)
           await invoke("download_update");

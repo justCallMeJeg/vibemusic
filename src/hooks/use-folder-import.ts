@@ -8,9 +8,8 @@ import { useSettingsStore } from "@/stores/settings-store";
 
 export function useFolderImport() {
   const [isScanning, setIsScanning] = useState(false);
-  const addLibraryPath = useSettingsStore((s) => s.addLibraryPath);
-  const libraryPaths = useSettingsStore((s) => s.libraryPaths);
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
+  const addLibraryPath = useSettingsStore((s) => s.addLibraryPath);
 
   const handleFolderImport = useCallback(async () => {
     try {
@@ -26,6 +25,7 @@ export function useFolderImport() {
 
         let stats;
 
+        const libraryPaths = useSettingsStore.getState().libraryPaths;
         if (!libraryPaths.includes(selected)) {
           stats = await addLibraryPath(selected);
           logger.info("Added folder to settings:", selected);
@@ -63,7 +63,7 @@ export function useFolderImport() {
     } finally {
       setIsScanning(false);
     }
-  }, [addLibraryPath, fetchLibrary, libraryPaths]);
+  }, [addLibraryPath, fetchLibrary]);
 
   return { handleFolderImport, isScanning, setIsScanning };
 }

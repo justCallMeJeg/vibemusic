@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
@@ -10,7 +10,7 @@ interface ArtworkImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElemen
   alt?: string;
 }
 
-export function ArtworkImage({
+export const ArtworkImage = memo(function ArtworkImage({
   src,
   placeholderType,
   className,
@@ -41,4 +41,4 @@ export function ArtworkImage({
       {...props}
     />
   );
-}
+});

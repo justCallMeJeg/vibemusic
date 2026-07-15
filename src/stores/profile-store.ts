@@ -220,7 +220,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     if (activeProfileId === id) {
-      set({ activeProfileId: null, profilesMap: new Map(profiles.filter((p) => p.id !== id).map((p) => [p.id, p])) });
+      set({ activeProfileId: null, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
     }
 
     const store = await getStore();

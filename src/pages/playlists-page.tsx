@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
 
-export default function PlaylistsPage() {
+export default memo(function PlaylistsPage() {
   // Use global store
   const playlists = useLibraryStore((s) => s.playlists);
   const isLoading = useLibraryStore((s) => s.isLoading);
@@ -277,4 +277,4 @@ export default function PlaylistsPage() {
       )}
     </PageLayout>
   );
-}
+});

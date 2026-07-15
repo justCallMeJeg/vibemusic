@@ -201,7 +201,7 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
   );
 });
 
-export default function HomePage() {
+export default memo(function HomePage() {
   const { albums, tracks, playlists, isLoading } = useLibraryStore(
     useShallow((s) => ({
       albums: s.albums,
@@ -496,4 +496,4 @@ export default function HomePage() {
       />
     </PageLayout>
   );
-}
+});

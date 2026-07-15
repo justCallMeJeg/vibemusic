@@ -49,29 +49,21 @@ export default function App() {
   const status = useAudioStore((s) => s.status);
   const [gradientColor, setGradientColor] = useState<string>("transparent");
 
-  const stop = useAudioStore((s) => s.stop);
-
   // Refresh Warning State
   const isPlaying = status === "playing";
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
-  const initSystemThemeListener = useSettingsStore(
-    (s) => s.initSystemThemeListener,
-  );
 
 
   useRefreshInterceptor(isPlaying, () => useDialogStore.getState().setIsRefreshWarningOpen(true));
 
   const handleConfirmRefresh = async () => {
-    await stop();
+    await useAudioStore.getState().stop();
     useDialogStore.getState().setIsRefreshWarningOpen(false);
     window.location.reload();
   };
 
-  const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
-
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
-  const selectProfile = useProfileStore((s) => s.selectProfile);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
   const profilesMap = useProfileStore((s) => s.profilesMap);
   const activeProfile = activeProfileId ? profilesMap.get(activeProfileId) : undefined;
@@ -85,14 +77,14 @@ export default function App() {
     if (currentTrack && (status === "playing" || status === "paused")) {
       useDialogStore.getState().setShowProfileSwitchWarning(true);
     } else {
-      selectProfile(null);
+      useProfileStore.getState().selectProfile(null);
     }
   };
 
   const confirmProfileSwitch = async () => {
-    await stop();
+    await useAudioStore.getState().stop();
     useDialogStore.getState().setShowProfileSwitchWarning(false);
-    selectProfile(null);
+    useProfileStore.getState().selectProfile(null);
   };
 
   useAppInit();
@@ -111,13 +103,13 @@ export default function App() {
         hasDoneInitialScan.current = true;
         setIsScanning(true);
         invoke("scan_music_library", { folders: settings.libraryPaths })
-          .then(() => fetchLibrary())
+          .then(() => useLibraryStore.getState().fetchLibrary())
           .catch((err) => logger.error("Startup scan failed:", err))
           .finally(() => setIsScanning(false));
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfileId, fetchLibrary]);
+  }, [activeProfileId]);
 
   const handleQuitApp = async () => {
     useDialogStore.getState().closeQuitDialog();
@@ -145,7 +137,7 @@ export default function App() {
   });
 
   // Listen for global scan progress to refresh library - extracted to custom hook
-  useScanProgressListener(fetchLibrary);
+  useScanProgressListener(() => useLibraryStore.getState().fetchLibrary());
 
   const isPlaybackActive = status === "playing" || status === "paused";
 
@@ -177,21 +169,20 @@ export default function App() {
 
   // Initialize system theme listener
   useEffect(() => {
-    const cleanup = initSystemThemeListener();
+    const cleanup = useSettingsStore.getState().initSystemThemeListener();
     return cleanup;
-  }, [initSystemThemeListener]);
+  }, []);
 
   const { handleFolderImport, isScanning, setIsScanning } = useFolderImport();
 
   // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
-  const setSidePanel = useAudioStore((s) => s.setSidePanel);
 
   useEffect(() => {
     if (sidePanel === "queue" && queue.length === 0) {
-      setSidePanel("none");
+      useAudioStore.getState().setSidePanel("none");
     }
-  }, [sidePanel, queue.length, setSidePanel]);
+  }, [sidePanel, queue.length]);
 
   if (isProfilesLoading || !activeProfileId) {
     return (

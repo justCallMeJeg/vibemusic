@@ -71,7 +71,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
   );
 });
 
-export default function ArtistDetailPage() {
+export default memo(function ArtistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
@@ -322,4 +322,4 @@ export default function ArtistDetailPage() {
       />
     </DetailPageTemplate>
   );
-}
+});

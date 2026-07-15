@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, memo } from "react";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useSettingsStore } from "@/stores/settings-store";
@@ -12,7 +12,7 @@ import { useProfileStore, Profile } from "@/stores/profile-store";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 
-export default function ProfileSelectionPage() {
+export default memo(function ProfileSelectionPage() {
   const profiles = useProfileStore((s) => s.profiles);
   const profilesMap = useProfileStore((s) => s.profilesMap);
   const loadProfiles = useProfileStore((s) => s.loadProfiles);
@@ -300,4 +300,4 @@ export default function ProfileSelectionPage() {
       />
     </div>
   );
-}
+});

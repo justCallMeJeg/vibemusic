@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +11,7 @@ interface ArtistLinksProps {
   fallbackId?: number | null;
 }
 
-export function ArtistLinks({
+export const ArtistLinks = memo(function ArtistLinks({
   names,
   ids,
   className,
@@ -77,4 +78,4 @@ export function ArtistLinks({
       Unknown Artist
     </span>
   );
-}
+});

@@ -1,6 +1,14 @@
 import { cn } from "@/lib/utils";
 import { Settings, Palette, Speaker, Info, FolderOpen } from "lucide-react";
 
+const TABS = [
+  { id: "general", label: "General", icon: Settings },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "library", label: "Library", icon: FolderOpen },
+  { id: "audio", label: "Audio", icon: Speaker },
+  { id: "about", label: "About", icon: Info },
+] as const;
+
 interface SettingsSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -10,18 +18,10 @@ export function SettingsSidebar({
   activeTab,
   onTabChange,
 }: SettingsSidebarProps) {
-  const tabs = [
-    { id: "general", label: "General", icon: Settings },
-    { id: "appearance", label: "Appearance", icon: Palette },
-    { id: "library", label: "Library", icon: FolderOpen },
-    { id: "audio", label: "Audio", icon: Speaker },
-    { id: "about", label: "About", icon: Info },
-  ];
-
   return (
     <nav className="w-64 border-r border-border p-4 flex flex-col gap-2">
       <h2 className="pt-6 text-xl font-bold px-4 mb-4">Settings</h2>
-      {tabs.map((tab) => {
+      {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
         return (

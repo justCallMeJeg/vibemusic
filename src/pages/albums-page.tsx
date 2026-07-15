@@ -56,7 +56,7 @@ const AlbumGridCard = memo(function AlbumGridCard({
   );
 });
 
-export default function AlbumsPage() {
+export default memo(function AlbumsPage() {
   const albums = useLibraryStore((s) => s.albums);
   const isLoading = useLibraryStore((s) => s.isLoading);
   const albumsSortKey = useSettingsStore((s) => s.albumsSortKey);
@@ -197,4 +197,4 @@ export default function AlbumsPage() {
       )}
     </PageLayout>
   );
-}
+});

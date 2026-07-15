@@ -16,9 +16,44 @@ import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/shared/page-layout";
 
+const ArtistGridCard = memo(function ArtistGridCard({
+  artist,
+  onOpenDetail,
+  onPlay,
+  onPlayNext,
+  onAddToQueue,
+}: {
+  artist: Artist;
+  onOpenDetail: (id: number) => void;
+  onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+  onPlayNext: (id: number) => Promise<void>;
+  onAddToQueue: (id: number) => Promise<void>;
+}) {
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => onPlay(artist.id),
+      onShuffle: () => onPlay(artist.id, true),
+      onPlayNext: () => onPlayNext(artist.id),
+      onAddToQueue: () => onAddToQueue(artist.id),
+    }),
+    [artist.id, onPlay, onPlayNext, onAddToQueue],
+  );
 
+  return (
+    <CardItem
+      title={artist.name}
+      subtitle={`${artist.album_count} ${artist.album_count === 1 ? "Album" : "Albums"} • ${artist.track_count} ${artist.track_count === 1 ? "Song" : "Songs"}`}
+      artworkSrc={artist.artwork_path || undefined}
+      artworkType="artist"
+      variant="circle"
+      onClick={() => onOpenDetail(artist.id)}
+      onPlay={() => onPlay(artist.id, true)}
+      menuActions={menuActions}
+    />
+  );
+});
 
-export default function ArtistsPage() {
+export default memo(function ArtistsPage() {
   const artists = useLibraryStore((s) => s.artists);
   const isLoading = useLibraryStore((s) => s.isLoading);
   const artistsSortKey = useSettingsStore((s) => s.artistsSortKey);
@@ -58,43 +93,6 @@ export default function ArtistsPage() {
       toast.success("Added artist to queue");
     } catch (e) { logger.error("Failed to add artist to queue", e); }
   }, [addToQueue]);
-
-  const ArtistGridCard = memo(function ArtistGridCard({
-    artist,
-    onOpenDetail,
-    onPlay,
-    onPlayNext,
-    onAddToQueue,
-  }: {
-    artist: Artist;
-    onOpenDetail: (id: number) => void;
-    onPlay: (id: number, shuffle?: boolean) => Promise<void>;
-    onPlayNext: (id: number) => Promise<void>;
-    onAddToQueue: (id: number) => Promise<void>;
-  }) {
-    const menuActions = useMemo(
-      () => ({
-        onPlay: () => onPlay(artist.id),
-        onShuffle: () => onPlay(artist.id, true),
-        onPlayNext: () => onPlayNext(artist.id),
-        onAddToQueue: () => onAddToQueue(artist.id),
-      }),
-      [artist.id, onPlay, onPlayNext, onAddToQueue],
-    );
-
-    return (
-      <CardItem
-        title={artist.name}
-        subtitle={`${artist.album_count} ${artist.album_count === 1 ? "Album" : "Albums"} • ${artist.track_count} ${artist.track_count === 1 ? "Song" : "Songs"}`}
-        artworkSrc={artist.artwork_path || undefined}
-        artworkType="artist"
-        variant="circle"
-        onClick={() => onOpenDetail(artist.id)}
-        onPlay={() => onPlay(artist.id, true)}
-        menuActions={menuActions}
-      />
-    );
-  });
 
   const filteredAndSortedArtists = useMemo(() => {
     let result = [...artists];
@@ -194,4 +192,4 @@ export default function ArtistsPage() {
       )}
     </PageLayout>
   );
-}
+});

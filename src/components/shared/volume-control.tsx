@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Volume1, Volume2, VolumeX } from "lucide-react";
@@ -13,7 +14,7 @@ interface VolumeControlProps {
   onToggleMute: () => void;
 }
 
-export function VolumeControl({ volume, onVolumeChange, onToggleMute }: VolumeControlProps) {
+export const VolumeControl = memo(function VolumeControl({ volume, onVolumeChange, onToggleMute }: VolumeControlProps) {
   return (
     <div className="flex items-center gap-2 w-36">
       <Tooltip delayDuration={1000}>
@@ -39,4 +40,4 @@ export function VolumeControl({ volume, onVolumeChange, onToggleMute }: VolumeCo
       />
     </div>
   );
-}
+});

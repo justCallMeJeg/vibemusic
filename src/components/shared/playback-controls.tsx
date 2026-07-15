@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Shuffle,
@@ -25,7 +26,7 @@ interface PlaybackControlsProps {
   onToggleRepeat: () => void;
 }
 
-export function PlaybackControls({
+export const PlaybackControls = memo(function PlaybackControls({
   isPlaying,
   shuffle,
   repeat,
@@ -110,4 +111,4 @@ export function PlaybackControls({
       </Tooltip>
     </div>
   );
-}
+});

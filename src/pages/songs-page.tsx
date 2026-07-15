@@ -132,7 +132,7 @@ const SongListMenu = memo(function SongListMenu({
   );
 });
 
-export default function SongsPage() {
+export default memo(function SongsPage() {
   const tracks = useLibraryStore((s) => s.tracks);
   const isLoading = useLibraryStore((s) => s.isLoading);
   const [searchQuery, setSearchQuery] = useState("");
@@ -173,10 +173,10 @@ export default function SongsPage() {
           t.title.toLowerCase().includes(query) ||
           (t.artist && t.artist.toLowerCase().includes(query)) ||
           (t.album && t.album.toLowerCase().includes(query)),
-      );
-    }
+  );
+  };
 
-    // Sort
+  // Sort
     result.sort((a, b) => {
       let valA: string | number | undefined;
       let valB: string | number | undefined;
@@ -356,4 +356,4 @@ export default function SongsPage() {
       </div>
     </PageLayout>
   );
-}
+});
