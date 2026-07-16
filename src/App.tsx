@@ -221,7 +221,7 @@ export default function App() {
           {/* Queue Menu / Track Detail Panel */}
           <div
             className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
-              sidePanel !== "none" ? "w-96 p-1" : "w-0 p-0"
+              sidePanel !== "none" ? "w-96 p-px" : "w-0 p-0"
             } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
           >
             <Suspense fallback={null}>
