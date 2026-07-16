@@ -374,7 +374,7 @@ impl SymphoniaDecoder {
 
         self.format
             .seek(
-                SeekMode::Accurate,
+                SeekMode::Coarse,
                 SeekTo::Time {
                     time: Time::from_millis_u64(pos_ms),
                     track_id: Some(self.track_id),
@@ -790,8 +790,20 @@ impl AudioWorker {
 
             let capacity = producer.capacity().get();
             let target_fill = capacity / 2;
+            let cycle_start = Instant::now();
+            const MAX_CYCLE_DURATION: Duration = Duration::from_millis(10);
 
             loop {
+                if cycle_start.elapsed() >= MAX_CYCLE_DURATION {
+                    break;
+                }
+                let occupied = capacity - producer.vacant_len();
+                if occupied >= target_fill {
+                    break;
+                }
+                if producer.vacant_len() < self.primary_buffer.len() {
+                    break;
+                }
                 let occupied = capacity - producer.vacant_len();
                 if occupied >= target_fill {
                     break;
@@ -1015,25 +1027,32 @@ impl AudioWorker {
         self.secondary_decoder = None;
         self.crossfade_state = CrossfadeState::None;
 
-        if let Some(dec) = &mut self.primary_decoder {
-            if dec.seek_to(pos_ms).is_ok() {
-                self.current_position_ms = pos_ms;
-                self.samples_played =
-                    pos_ms * (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+        let seek_ok = self.primary_decoder.as_mut().map(|dec| dec.seek_to(pos_ms).is_ok()).unwrap_or(false);
 
-                {
-                    match self.state.lock() {
-                        Ok(mut s) => s.position_ms = pos_ms,
-                        Err(poisoned) => {
-                            error!("Audio state mutex poisoned in seek, recovering");
-                            poisoned.into_inner().position_ms = pos_ms;
-                        }
+        if seek_ok {
+            self.current_position_ms = pos_ms;
+            self.samples_played =
+                pos_ms * (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+
+            {
+                match self.state.lock() {
+                    Ok(mut s) => s.position_ms = pos_ms,
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in seek, recovering");
+                        poisoned.into_inner().position_ms = pos_ms;
                     }
                 }
-                self.update_media_controls();
-            } else {
-                error!("Seek failed");
             }
+
+            // Recreate the CPAL stream to flush stale samples from the ring buffer.
+            // Without this, the callback continues playing ~1s of pre-seek audio.
+            self._current_stream = None;
+            self.producer = None;
+            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
+
+            self.update_media_controls();
+        } else {
+            error!("Seek failed");
         }
     }
 
