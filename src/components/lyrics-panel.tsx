@@ -3,6 +3,7 @@ import {
   useAudioStore,
   useCurrentTrack,
   usePosition,
+  useTrackVersion,
 } from "@/stores/audio-store";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { getLyrics, LyricLine, LyricsData } from "@/lib/api";
@@ -92,6 +93,7 @@ export default function LyricsContent() {
   const currentTrack = useCurrentTrack();
   const position = usePosition();
   const seek = useAudioStore((s) => s.seek);
+  const trackVersion = useTrackVersion();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,9 +104,9 @@ export default function LyricsContent() {
 
   const handleAutoScroll = useCallback(() => setAutoScroll(true), []);
 
-  const lyricsCacheRef = useRef<Map<string, LyricsData> | null>(null);
+  const lyricsCacheRef = useRef<Map<string, { data: LyricsData; version: number }> | null>(null);
   if (lyricsCacheRef.current === null)
-    lyricsCacheRef.current = new Map<string, LyricsData>();
+    lyricsCacheRef.current = new Map<string, { data: LyricsData; version: number }>();
   const lyricsCache = lyricsCacheRef.current;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -209,11 +211,11 @@ export default function LyricsContent() {
     const path = currentTrack?.file_path;
     if (!path) return;
 
-    if (lyricsCache.has(path)) {
-      const cached = lyricsCache.get(path)!;
-      setLyrics(cached.lines);
-      setIsSynced(cached.is_synced);
-      setSource(cached.source);
+    const cached = lyricsCache.get(path);
+    if (cached && cached.version === trackVersion) {
+      setLyrics(cached.data.lines);
+      setIsSynced(cached.data.is_synced);
+      setSource(cached.data.source);
       setLoading(false);
       setError(null);
       return;
@@ -229,7 +231,7 @@ export default function LyricsContent() {
         setLyrics(data.lines);
         setIsSynced(data.is_synced);
         setSource(data.source);
-        lyricsCache.set(path, data);
+        lyricsCache.set(path, { data, version: trackVersion });
       })
       .catch((err) => {
         logger.warn("Failed to fetch lyrics:", err);
@@ -238,7 +240,7 @@ export default function LyricsContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [currentTrack?.file_path, lyricsCache]);
+  }, [currentTrack?.file_path, trackVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeIndex = useMemo(() => {
     if (!isSynced || !lyrics.length) return -1;

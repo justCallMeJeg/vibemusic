@@ -51,6 +51,7 @@ interface AudioState {
   _isTransitioning: boolean;
   _crossfadeDuration: number;
   _queueIndexMap: Map<number, number>;
+  _trackVersion: number;
 }
 
 // --- Store Actions Interface ---
@@ -111,6 +112,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       // These fire-and-forget so they don't block playback.
       // The Rust backend caches results (lyrics → .lrc, metadata → 5s memory TTL),
       // so subsequent calls from the UI panels are near-instant.
+      set({ _trackVersion: get()._trackVersion + 1 });
       probeFile(track.file_path).catch(() => {});
       getLyrics(track.file_path).catch(() => {});
     } catch (e) {
@@ -214,6 +216,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _isTransitioning: false,
     _crossfadeDuration: 0,
     _queueIndexMap: new Map(),
+    _trackVersion: 0,
 
     // Player Actions
     play: async (track, newQueue?) => {
@@ -679,6 +682,7 @@ export const useRepeat = () => useAudioStore((s) => s.repeat);
 export const useShuffle = () => useAudioStore((s) => s.shuffle);
 export const usePosition = () => useAudioStore((s) => s.position);
 export const useDuration = () => useAudioStore((s) => s.duration);
+export const useTrackVersion = () => useAudioStore((s) => s._trackVersion);
 
 // Derived selector for player visibility (used for dynamic bottom padding)
 export const useIsPlayerVisible = () =>
