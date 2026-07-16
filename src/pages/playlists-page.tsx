@@ -23,6 +23,49 @@ import { Input } from "@/components/ui/input";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
 
+const PlaylistGridCard = memo(function PlaylistGridCard({
+  playlist,
+  onOpenDetail,
+  onPlay,
+  onPlayNext,
+  onAddToQueue,
+  onEdit,
+  onDelete,
+}: {
+  playlist: Playlist;
+  onOpenDetail: (id: number) => void;
+  onPlay: (id: number, shuffle?: boolean) => Promise<void>;
+  onPlayNext: (id: number) => Promise<void>;
+  onAddToQueue: (id: number) => Promise<void>;
+  onEdit: (p: Playlist) => void;
+  onDelete: (p: Playlist) => void;
+}) {
+  const menuActions = useMemo(
+    () => ({
+      onPlay: () => onPlay(playlist.id),
+      onShuffle: () => onPlay(playlist.id, true),
+      onPlayNext: () => onPlayNext(playlist.id),
+      onAddToQueue: () => onAddToQueue(playlist.id),
+      onEdit: () => onEdit(playlist),
+      onDelete: () => onDelete(playlist),
+    }),
+    [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete],
+  );
+
+  return (
+    <CardItem
+      title={playlist.name}
+      subtitle={`${playlist.track_count} tracks`}
+      artworkSrc={playlist.artwork_path || undefined}
+      artworkType="playlist"
+      variant="portrait"
+      onClick={() => onOpenDetail(playlist.id)}
+      onPlay={() => onPlay(playlist.id)}
+      menuActions={menuActions}
+    />
+  );
+});
+
 export default memo(function PlaylistsPage() {
   // Use global store
   const playlists = useLibraryStore((s) => s.playlists);
@@ -113,49 +156,6 @@ export default memo(function PlaylistsPage() {
       toast.success("Added playlist to queue");
     } catch (e) { logger.error("Failed to add playlist to queue", e); }
   }, [addToQueue]);
-
-  const PlaylistGridCard = memo(function PlaylistGridCard({
-    playlist,
-    onOpenDetail,
-    onPlay,
-    onPlayNext,
-    onAddToQueue,
-    onEdit,
-    onDelete,
-  }: {
-    playlist: Playlist;
-    onOpenDetail: (id: number) => void;
-    onPlay: (id: number, shuffle?: boolean) => Promise<void>;
-    onPlayNext: (id: number) => Promise<void>;
-    onAddToQueue: (id: number) => Promise<void>;
-    onEdit: (p: Playlist) => void;
-    onDelete: (p: Playlist) => void;
-  }) {
-    const menuActions = useMemo(
-      () => ({
-        onPlay: () => onPlay(playlist.id),
-        onShuffle: () => onPlay(playlist.id, true),
-        onPlayNext: () => onPlayNext(playlist.id),
-        onAddToQueue: () => onAddToQueue(playlist.id),
-        onEdit: () => onEdit(playlist),
-        onDelete: () => onDelete(playlist),
-      }),
-      [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete],
-    );
-
-    return (
-      <CardItem
-        title={playlist.name}
-        subtitle={`${playlist.track_count} tracks`}
-        artworkSrc={playlist.artwork_path || undefined}
-        artworkType="playlist"
-        variant="portrait"
-        onClick={() => onOpenDetail(playlist.id)}
-        onPlay={() => onPlay(playlist.id)}
-        menuActions={menuActions}
-      />
-    );
-  });
 
 
   const confirmDelete = async () => {
