@@ -419,6 +419,7 @@ struct AudioWorker {
     duration_ms: u64,
     current_position_ms: u64,
     samples_played: u64,
+    current_file_sample_rate: u32,
 
     // Media controls position update tracking
     last_media_pos_update: Instant,
@@ -469,6 +470,7 @@ impl AudioWorker {
             duration_ms: 0,
             current_position_ms: 0,
             samples_played: 0,
+            current_file_sample_rate: sample_rate,
             last_media_pos_update: Instant::now(),
             primary_buffer: vec![0.0f32; 8192],
             secondary_buffer: vec![0.0f32; 8192],
@@ -600,6 +602,7 @@ impl AudioWorker {
 
         let file_rate = decoder.sample_rate();
         self.duration_ms = decoder.duration_ms();
+        self.current_file_sample_rate = file_rate;
         self.primary_buffer = buf;
         self.resample_buf.resize(self.primary_buffer.len() * 2, 0.0);
         self.recreate_cpal_stream(file_rate, self.device_channels);
@@ -817,6 +820,7 @@ impl AudioWorker {
                             self.resample_buf.resize(self.primary_buffer.len() * 2, 0.0);
                         }
                         self.primary_buffer.copy_from_slice(&self.secondary_buffer);
+                        self.current_file_sample_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(44100);
                         self.crossfade_state = CrossfadeState::None;
                         continue;
                     }
@@ -825,10 +829,7 @@ impl AudioWorker {
                 let primary_buffer = &mut self.primary_buffer;
 
                 let primary_read = if let Some(dec) = &mut self.primary_decoder {
-                    match dec.decode(primary_buffer) {
-                        Ok(n) => n,
-                        Err(_) => 0,
-                    }
+                    dec.decode(primary_buffer).unwrap_or_default()
                 } else {
                     0
                 };
@@ -841,10 +842,7 @@ impl AudioWorker {
                 if is_fading && self.secondary_decoder.is_some() {
                     let secondary_buffer = &mut self.secondary_buffer;
                     let secondary_read = if let Some(dec) = &mut self.secondary_decoder {
-                        match dec.decode(secondary_buffer) {
-                            Ok(n) => n,
-                            Err(_) => 0,
-                        }
+                        dec.decode(secondary_buffer).unwrap_or_default()
                     } else {
                         0
                     };
@@ -857,9 +855,7 @@ impl AudioWorker {
                     }
 
                     if primary_read < mix_count {
-                        for i in primary_read..mix_count {
-                            primary_buffer[i] = 0.0;
-                        }
+                        primary_buffer[primary_read..mix_count].fill(0.0);
                     }
 
                     for i in 0..mix_count {
@@ -869,7 +865,7 @@ impl AudioWorker {
                             (p * (1.0 - crossfade_progress)) + (s * crossfade_progress);
                     }
 
-                    let file_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(44100);
+                    let file_rate = self.current_file_sample_rate;
                     let out_len = Self::resample_audio(
                         &primary_buffer[..mix_count],
                         file_rate,
@@ -885,24 +881,22 @@ impl AudioWorker {
                     if samples_per_ms > 0 {
                         self.current_position_ms = self.samples_played / samples_per_ms;
                     }
-                } else {
-                    if primary_read > 0 {
-                        let file_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(44100);
-                        let out_len = Self::resample_audio(
-                            &primary_buffer[..primary_read],
-                            file_rate,
-                            self.device_sample_rate,
-                            self.device_channels as usize,
-                            &mut self.resample_buf,
-                        );
-                        producer.push_slice(&self.resample_buf[..out_len]);
+                } else if primary_read > 0 {
+                    let file_rate = self.current_file_sample_rate;
+                    let out_len = Self::resample_audio(
+                        &primary_buffer[..primary_read],
+                        file_rate,
+                        self.device_sample_rate,
+                        self.device_channels as usize,
+                        &mut self.resample_buf,
+                    );
+                    producer.push_slice(&self.resample_buf[..out_len]);
 
-                        self.samples_played += out_len as u64;
-                        let samples_per_ms =
-                            (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
-                        if samples_per_ms > 0 {
-                            self.current_position_ms = self.samples_played / samples_per_ms;
-                        }
+                    self.samples_played += out_len as u64;
+                    let samples_per_ms =
+                        (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                    if samples_per_ms > 0 {
+                        self.current_position_ms = self.samples_played / samples_per_ms;
                     }
                 }
             }
