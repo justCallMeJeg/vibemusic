@@ -361,7 +361,7 @@ export default memo(function HomePage() {
       <div
         ref={scrollRef}
         className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-8  scroll-mask-y",
+          "flex-1 overflow-y-overlay overflow-x-hidden px-2 space-y-8  scroll-mask-y",
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
             (isPlayerVisible ? "pb-player-bar" : "pb-8"),
           isEmpty && "flex flex-col",
@@ -381,7 +381,7 @@ export default memo(function HomePage() {
               </Button>
             </div>
 
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
+            <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
               {displayAlbums.map((album) => (
                 <AlbumCardItem
                   key={album.id}
@@ -410,7 +410,7 @@ export default memo(function HomePage() {
               </Button>
             </div>
 
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-2 px-2 scrollbar-none">
+            <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
               {displayPlaylists.map((p) => (
                 <PlaylistCardItem
                   key={p.id}

@@ -154,7 +154,8 @@
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -162,13 +163,29 @@
 }
 
 ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--muted-foreground) 8%, transparent);
+  border-radius: 999px;
+  transition: background-color 0.2s ease 2s;
+}
+
+*:hover::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--background);
+  transition: background-color 0.1s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+  transition: background-color 0.1s ease;
+}
+
+@utility overflow-x-overlay {
+  /* stylelint-disable-next-line declaration-property-value-keyword-no-deprecated */
+  overflow-x: overlay;
+}
+
+@utility overflow-y-overlay {
+  /* stylelint-disable-next-line declaration-property-value-keyword-no-deprecated */
+  overflow-y: overlay;
 }
 
 /* Marquee Animation */
