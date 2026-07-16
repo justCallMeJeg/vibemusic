@@ -60,7 +60,7 @@ pub async fn get_lyrics(path: String) -> Result<LyricsData, String> {
     let mut artist = None;
     let mut album = None;
     let mut duration = 0;
-    
+
     // We can extract metadata if valid, but we won't fail yet if file is unreadable (unlikely if exists)
     if let Ok(ref tagged_file) = tagged_file_res {
         duration = tagged_file.properties().duration().as_secs();
@@ -71,31 +71,8 @@ pub async fn get_lyrics(path: String) -> Result<LyricsData, String> {
         }
     }
 
-    // 2. Remote Synced: Query LRCLIB
-    let mut remote_plain_lyrics = None;
-
-    if let (Some(t), Some(a), Some(al)) = (&title, &artist, &album) {
-         if let Ok(response) = fetch_from_lrclib(t, a, al, duration).await {
-             // If we have synced lyrics, Save and Return!
-             if let Some(synced) = response.synced_lyrics {
-                 // Save to .lrc file
-                if let Err(e) = fs::write(&lrc_path, &synced) {
-                    warn!("Failed to save lrc file: {}", e);
-                }
-                 
-                 return Ok(LyricsData {
-                     lines: parse_lrc(&synced),
-                     is_synced: true,
-                     source: "LRCLIB (Synced)".to_string(),
-                 });
-             }
-             // Store plain lyrics for fallback step #4
-             remote_plain_lyrics = response.plain_lyrics;
-         }
-    }
-
-    // 3. Local Unsynced: Embedded Tags (USLT)
-    // Fallback to this if no synced lyrics were found locally or remotely
+    // 2. Local Unsynced: Embedded Tags (USLT)
+    // Check before network call to avoid round-trip for embedded-lyrics tracks.
     if let Ok(tagged_file) = tagged_file_res {
         let tag_opt = tagged_file.primary_tag().or_else(|| tagged_file.first_tag());
         if let Some(tag) = tag_opt {
@@ -114,6 +91,30 @@ pub async fn get_lyrics(path: String) -> Result<LyricsData, String> {
                  });
             }
         }
+    }
+
+    // 3. Remote Synced: Query LRCLIB
+    // Only reach here if no local .lrc or embedded lyrics found.
+    let mut remote_plain_lyrics = None;
+
+    if let (Some(t), Some(a), Some(al)) = (&title, &artist, &album) {
+         if let Ok(response) = fetch_from_lrclib(t, a, al, duration).await {
+             // If we have synced lyrics, Save and Return!
+             if let Some(synced) = response.synced_lyrics {
+                 // Save to .lrc file for future instant access
+                if let Err(e) = fs::write(&lrc_path, &synced) {
+                    warn!("Failed to save lrc file: {}", e);
+                }
+                 
+                 return Ok(LyricsData {
+                     lines: parse_lrc(&synced),
+                     is_synced: true,
+                     source: "LRCLIB (Synced)".to_string(),
+                 });
+             }
+             // Store plain lyrics for fallback
+             remote_plain_lyrics = response.plain_lyrics;
+         }
     }
 
     // 4. Remote Unsynced: Use the plain lyrics we might have fetched earlier
