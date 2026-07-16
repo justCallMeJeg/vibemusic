@@ -84,6 +84,22 @@ pub async fn get_lyrics(path: String) -> Result<LyricsData, String> {
                     })
                     .collect();
                  
+                 let lrc_path_bg = lrc_path.clone();
+                 let title_bg = title.clone();
+                 let artist_bg = artist.clone();
+                 let album_bg = album.clone();
+                 tauri::async_runtime::spawn(async move {
+                     if let (Some(t), Some(a), Some(al)) = (&title_bg, &artist_bg, &album_bg) {
+                         if let Ok(response) = fetch_from_lrclib(t, a, al, duration).await {
+                             if let Some(synced) = response.synced_lyrics {
+                                 if let Err(e) = fs::write(&lrc_path_bg, &synced) {
+                                     warn!("bg lrc fetch: failed to save: {}", e);
+                                 }
+                             }
+                         }
+                     }
+                 });
+                 
                  return Ok(LyricsData {
                      lines,
                      is_synced: false,
