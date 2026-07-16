@@ -3,7 +3,6 @@ use rusqlite::{params, Connection, Result, Transaction};
 use std::path::Path;
 use log::warn;
 
-
 /// Helper for interacting with the SQLite database.
 pub struct DbHelper {
     conn: Connection,
@@ -362,8 +361,8 @@ impl DbHelper {
             return Ok(());
         }
 
-        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-        let sql = format!("DELETE FROM tracks WHERE id IN ({})", placeholders.join(","));
+        let placeholders = vec!["?"; ids.len()].join(",");
+        let sql = format!("DELETE FROM tracks WHERE id IN ({})", placeholders);
         tx.execute(&sql, rusqlite::params_from_iter(ids.iter()))?;
 
         Ok(())
@@ -441,7 +440,7 @@ impl DbHelper {
             ORDER BY t.created_at DESC",
         )?;
 
-        let tracks = stmt.query_map([], |row| Self::row_to_library_track(row))?
+        let tracks = stmt.query_map([], Self::row_to_library_track)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(tracks)
@@ -545,7 +544,7 @@ impl DbHelper {
             ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC",
         )?;
 
-        let tracks = stmt.query_map(params![album_id], |row| Self::row_to_library_track(row))?
+        let tracks = stmt.query_map(params![album_id], Self::row_to_library_track)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(tracks)
@@ -657,7 +656,7 @@ impl DbHelper {
             ORDER BY pt.position ASC",
         )?;
 
-        let tracks = stmt.query_map(params![playlist_id], |row| Self::row_to_library_track(row))?
+        let tracks = stmt.query_map(params![playlist_id], Self::row_to_library_track)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(tracks)
@@ -705,16 +704,24 @@ impl DbHelper {
         Ok(())
     }
     pub fn get_all_artists(&self) -> Result<Vec<crate::library::Artist>> {
+        // Window function: pick the most recent album's artwork per artist
+        // Uses ROW_NUMBER() which requires SQLite 3.25+ (bundled version is 3.43)
         let mut stmt = self.conn.prepare(
-            "SELECT 
+            "WITH ranked_artwork AS (
+                SELECT artist_id, artwork_path,
+                       ROW_NUMBER() OVER (PARTITION BY artist_id ORDER BY year DESC) as rn
+                FROM albums WHERE artwork_path IS NOT NULL
+            )
+            SELECT 
                 a.id, 
                 a.name, 
                 COUNT(DISTINCT al.id) as album_count,
                 COUNT(DISTINCT ta.track_id) as track_count,
-                (SELECT artwork_path FROM albums WHERE artist_id = a.id ORDER BY year DESC LIMIT 1) as artwork_path
+                art.artwork_path
             FROM artists a
             LEFT JOIN albums al ON al.artist_id = a.id
             LEFT JOIN track_artists ta ON ta.artist_id = a.id
+            LEFT JOIN ranked_artwork art ON art.artist_id = a.id AND art.rn = 1
             GROUP BY a.id
             ORDER BY a.name ASC",
         )?;
@@ -732,7 +739,6 @@ impl DbHelper {
         let mut artists = Vec::new();
         for artist in artist_iter {
             let a = artist?;
-            // Filter out artists with no content (likely "Display Artist" ghosts or old data)
             if a.album_count > 0 || a.track_count > 0 {
                 artists.push(a);
             }
@@ -868,12 +874,45 @@ impl DbHelper {
         }
         Ok(tracks)
     }
+
     pub fn search(&self, query: &str) -> Result<crate::library::SearchResults> {
         const SEARCH_LIMIT: i64 = 20;
-        let pattern = format!("%{}%", query);
-        let limit = SEARCH_LIMIT;
 
-        // Search Tracks
+        // Prefix pattern uses the idx_tracks_title index (COLLATE NOCASE).
+        // Infix fallback scans the table but catches mid-word matches.
+        let prefix_pattern = format!("{}%", query);
+        let infix_pattern = format!("%{}%", query);
+
+        // Search Tracks — try indexed prefix first, fall back to infix
+        let tracks = self.search_tracks_by_pattern(&prefix_pattern, &infix_pattern, SEARCH_LIMIT)?;
+
+        // Search Albums — infix only (album count is typically small)
+        let albums = self.search_albums_infix(&infix_pattern, SEARCH_LIMIT)?;
+
+        // Search Playlists — prefix preferred
+        let playlists = self.search_playlists_by_pattern(&prefix_pattern, &infix_pattern, SEARCH_LIMIT)?;
+
+        Ok(crate::library::SearchResults { tracks, albums, playlists })
+    }
+
+    fn search_tracks_by_pattern(&self, prefix: &str, infix: &str, limit: i64) -> Result<Vec<crate::library::LibraryTrack>> {
+        let prefix_result = self.search_tracks_like(prefix, limit)?;
+        if (prefix_result.len() as i64) >= limit {
+            return Ok(prefix_result);
+        }
+        let remaining = limit - prefix_result.len() as i64;
+        let infix_result = self.search_tracks_like(infix, remaining)?;
+        let mut combined = prefix_result;
+        let mut seen: std::collections::HashSet<i64> = combined.iter().map(|t| t.id).collect();
+        for track in infix_result {
+            if seen.insert(track.id) {
+                combined.push(track);
+            }
+        }
+        Ok(combined)
+    }
+
+    fn search_tracks_like(&self, pattern: &str, limit: i64) -> Result<Vec<crate::library::LibraryTrack>> {
         let mut stmt = self.conn.prepare(
             "SELECT 
                 t.id, 
@@ -892,16 +931,18 @@ impl DbHelper {
             LEFT JOIN track_artists ta ON t.id = ta.track_id
             LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
             LEFT JOIN albums al ON t.album_id = al.id
-            WHERE t.title LIKE ? OR ar.name LIKE ?
+            WHERE t.title LIKE ?1 OR ar.name LIKE ?1
             GROUP BY t.id
             ORDER BY t.created_at DESC
-            LIMIT ?",
+            LIMIT ?2",
         )?;
 
-        let tracks: Vec<crate::library::LibraryTrack> = stmt.query_map(params![&pattern, &pattern, limit], |row| Self::row_to_library_track(row))?
+        let tracks = stmt.query_map(params![pattern, limit], Self::row_to_library_track)?
             .collect::<Result<Vec<_>, _>>()?;
+        Ok(tracks)
+    }
 
-        // Search Albums
+    fn search_albums_infix(&self, pattern: &str, limit: i64) -> Result<Vec<crate::library::LibraryAlbum>> {
         let mut stmt = self.conn.prepare(
             "SELECT 
                 al.id,
@@ -921,7 +962,7 @@ impl DbHelper {
             LIMIT ?",
         )?;
 
-        let album_iter = stmt.query_map(params![&pattern, &pattern, limit], |row| {
+        let albums = stmt.query_map(params![pattern, pattern, limit], |row| {
             Ok(crate::library::LibraryAlbum {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -932,14 +973,12 @@ impl DbHelper {
                 track_count: row.get(6)?,
                 total_duration_ms: row.get(7)?,
             })
-        })?;
+        })?.collect::<Result<Vec<_>, _>>()?;
 
-        let mut albums = Vec::new();
-        for album in album_iter {
-            albums.push(album?);
-        }
+        Ok(albums)
+    }
 
-        // Search Playlists
+    fn search_playlists_by_pattern(&self, prefix: &str, infix: &str, limit: i64) -> Result<Vec<crate::playlists::Playlist>> {
         let mut stmt = self.conn.prepare(
             "SELECT 
                 p.id, 
@@ -956,7 +995,7 @@ impl DbHelper {
             LIMIT ?",
         )?;
 
-        let playlist_iter = stmt.query_map(params![&pattern, limit], |row| {
+        let playlists_prefix: Vec<crate::playlists::Playlist> = stmt.query_map(params![prefix, limit], |row| {
             Ok(crate::playlists::Playlist {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -965,14 +1004,40 @@ impl DbHelper {
                 created_at: row.get(4)?,
                 track_count: row.get(5)?,
             })
-        })?;
+        })?.collect::<Result<Vec<_>, _>>()?;
 
-        let mut playlists = Vec::new();
-        for playlist in playlist_iter {
-            playlists.push(playlist?);
+        if !playlists_prefix.is_empty() {
+            return Ok(playlists_prefix);
         }
 
-        Ok(crate::library::SearchResults { tracks, albums, playlists })
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                p.id, 
+                p.name, 
+                p.description, 
+                p.artwork_path,
+                p.created_at,
+                COUNT(pt.id) as track_count
+            FROM playlists p
+            LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
+            WHERE p.name LIKE ?
+            GROUP BY p.id
+            ORDER BY p.name ASC
+            LIMIT ?",
+        )?;
+
+        let playlists = stmt.query_map(params![infix, limit], |row| {
+            Ok(crate::playlists::Playlist {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                artwork_path: row.get(3)?,
+                created_at: row.get(4)?,
+                track_count: row.get(5)?,
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(playlists)
     }
 
     pub fn record_playback(&self, track_id: i64, duration_ms: i64) -> Result<()> {
@@ -1142,7 +1207,7 @@ mod tests {
         tx.commit().unwrap();
 
         let existing = db.get_existing_metadata().unwrap();
-        assert!(existing.len() >= 1);
+        assert!(!existing.is_empty());
         assert!(existing.iter().any(|(p, _, _)| p == "/music/metadata_test.mp3"));
 
         cleanup(&db_path);
@@ -1191,7 +1256,7 @@ mod tests {
         let history = db.get_playback_history(0).unwrap();
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].0, id);
-        assert_eq!(history[0].2, 120000); // index 2 = duration_ms
+        assert_eq!(history[0].2, 120000);
 
         cleanup(&db_path);
     }
