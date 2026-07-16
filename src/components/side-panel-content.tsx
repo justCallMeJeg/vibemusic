@@ -1,14 +1,13 @@
-import { lazy, Suspense, memo } from "react";
+import { Suspense, memo } from "react";
 import { useSidePanel, useAudioStore } from "@/stores/audio-store";
 import { SidePanelLayout } from "@/components/shared/side-panel-layout";
-
-const QueueContent = lazy(() => import("./queue-menu"));
-const TrackDetailContent = lazy(() => import("./track-detail-panel"));
-const LyricsContent = lazy(() => import("./lyrics-panel"));
+import QueueContent from "./queue-menu";
+import TrackDetailContent from "./track-detail-panel";
+import LyricsContent from "./lyrics-panel";
 
 interface PanelConfig {
   title: string;
-  Component: React.LazyExoticComponent<React.ComponentType>;
+  Component: React.ComponentType;
   noContentPadding?: boolean;
 }
 
@@ -29,7 +28,11 @@ function SidePanelContent() {
   const { title, Component } = config;
 
   return (
-    <SidePanelLayout title={title} onClose={() => setSidePanel("none")} noContentPadding={config.noContentPadding}>
+    <SidePanelLayout
+      title={title}
+      onClose={() => setSidePanel("none")}
+      noContentPadding={config.noContentPadding}
+    >
       <Suspense fallback={null}>
         <Component />
       </Suspense>
