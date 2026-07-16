@@ -9,12 +9,13 @@ const LyricsContent = lazy(() => import("./lyrics-panel"));
 interface PanelConfig {
   title: string;
   Component: React.LazyExoticComponent<React.ComponentType>;
+  noContentPadding?: boolean;
 }
 
 const panelMap: Record<string, PanelConfig> = {
   queue: { title: "Queue", Component: QueueContent },
   "track-details": { title: "Track Details", Component: TrackDetailContent },
-  lyrics: { title: "Lyrics", Component: LyricsContent },
+  lyrics: { title: "Lyrics", Component: LyricsContent, noContentPadding: true },
 };
 
 function SidePanelContent() {
@@ -28,7 +29,7 @@ function SidePanelContent() {
   const { title, Component } = config;
 
   return (
-    <SidePanelLayout title={title} onClose={() => setSidePanel("none")}>
+    <SidePanelLayout title={title} onClose={() => setSidePanel("none")} noContentPadding={config.noContentPadding}>
       <Suspense fallback={null}>
         <Component />
       </Suspense>

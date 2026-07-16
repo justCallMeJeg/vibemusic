@@ -29,7 +29,7 @@ export function SidePanelLayout({
   return (
     <div
       className={cn(
-        "h-full flex flex-col rounded-lg outline outline-border w-full bg-popover/50 backdrop-blur-xl overflow-hidden",
+        "h-full flex flex-col rounded-lg outline outline-border w-full bg-popover overflow-hidden",
         className
       )}
     >
