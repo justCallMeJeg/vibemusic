@@ -119,18 +119,18 @@ pub fn run() {
                     }
                     _ => {}
                 })
-                .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
                         button: tauri::tray::MouseButton::Left,
                         ..
-                    } => {
+                    } = event
+                    {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
                     }
-                    _ => {}
                 })
                 .build(app)?;
 

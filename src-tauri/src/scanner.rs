@@ -519,7 +519,7 @@ pub async fn scan_music_library(app: AppHandle, folders: Vec<String>) -> Result<
         let current = progress_counter.fetch_add(1, Ordering::SeqCst) + 1;
         
         // Throttling: Emit event only every 50 files to prevent IPC flood
-        if current % 50 == 0 || current == total {
+        if current.is_multiple_of(50) || current == total {
             let _ = app.emit(
                 "scan-progress",
                 ScanProgress {
