@@ -1,6 +1,9 @@
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -16,9 +19,32 @@ pub struct MediaMetadata {
     pub genre: Option<String>,
 }
 
+const PROBE_CACHE_TTL: Duration = Duration::from_secs(5);
+
+type ProbeCache = HashMap<String, (Instant, MediaMetadata)>;
+
+fn probe_cache() -> &'static Mutex<ProbeCache> {
+    static CACHE: OnceLock<Mutex<ProbeCache>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 #[tauri::command]
 pub fn probe_file(path: String) -> Result<MediaMetadata, String> {
+    // Check in-memory cache first
+    let cache_key = path.clone();
+    {
+        let mut cache = probe_cache().lock().map_err(|e| format!("Cache lock poisoned: {}", e))?;
+        if let Some((stored_at, cached)) = cache.get(&cache_key) {
+            if stored_at.elapsed() < PROBE_CACHE_TTL {
+                return Ok(cached.clone());
+            }
+        }
+        // Evict expired entries opportunistically
+        cache.retain(|_, (t, _)| t.elapsed() < PROBE_CACHE_TTL);
+    }
+
     let path_obj = Path::new(&path);
+
     if !path_obj.exists() {
         return Err("File not found".to_string());
     }
@@ -50,7 +76,7 @@ pub fn probe_file(path: String) -> Result<MediaMetadata, String> {
         genre = tag.get_string(&lofty::tag::ItemKey::Genre).map(|s| s.to_string());
     }
 
-    Ok(MediaMetadata {
+    let metadata = MediaMetadata {
         duration_ms: props.duration().as_millis() as u64,
         sample_rate: props.sample_rate().unwrap_or(44100),
         channels: props.channels().unwrap_or(2) as u16,
@@ -60,5 +86,12 @@ pub fn probe_file(path: String) -> Result<MediaMetadata, String> {
         copyright,
         date,
         genre,
-    })
+    };
+
+    // Cache before returning
+    if let Ok(mut cache) = probe_cache().lock() {
+        cache.insert(cache_key, (Instant::now(), metadata.clone()));
+    }
+
+    Ok(metadata)
 }
