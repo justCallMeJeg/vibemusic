@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useLibraryStore } from "./library-store";
 import { toast } from "sonner";
-import { Track } from "@/lib/api";
+import { Track, getLyrics, probeFile } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { useStatsStore } from "./stats-store";
 
@@ -106,6 +106,13 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         album: track.album,
         artworkPath: track.artwork_path,
       });
+
+      // Background pre-fetch: lyrics + metadata
+      // These fire-and-forget so they don't block playback.
+      // The Rust backend caches results (lyrics → .lrc, metadata → 5s memory TTL),
+      // so subsequent calls from the UI panels are near-instant.
+      probeFile(track.file_path).catch(() => {});
+      getLyrics(track.file_path).catch(() => {});
     } catch (e) {
       logger.error("Failed to play", e);
       set({ status: "stopped" });
