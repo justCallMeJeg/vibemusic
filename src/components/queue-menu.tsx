@@ -1,37 +1,33 @@
-import { SidePanelLayout } from "@/components/shared/side-panel-layout";
+import { useCallback } from "react";
 import { VirtualizedSortableList } from "@/components/shared/virtualized-sortable-list";
 import { arrayMove } from "@dnd-kit/sortable";
 import {
   useCurrentTrack,
   useQueue,
-  useSidePanel,
   usePlayerStatus,
   getQueueActions,
 } from "@/stores/audio-store";
+import type { Track } from "@/lib/api";
 import QueueItem from "./shared/item/queue-item";
 import { ArtworkImage } from "./shared/artwork-image";
 import { Button } from "./ui/button";
 
-export default function QueueMenu() {
-  // Use atomic selectors
+export default function QueueContent() {
   const currentTrack = useCurrentTrack();
   const queue = useQueue();
-  const sidePanel = useSidePanel();
   const status = usePlayerStatus();
+  const { reorderQueue, clearQueue } = getQueueActions();
 
-  // Get actions using helper to avoid re-renders or direct store usage
-  const { reorderQueue, setSidePanel, clearQueue } = getQueueActions();
-
-  if (sidePanel !== "queue") return null;
+  const renderItem = useCallback(
+    (track: Track) => {
+      const isCurrent = currentTrack?.id === track.id;
+      return <QueueItem key={track.id} track={track} isActive={isCurrent} />;
+    },
+    [currentTrack?.id],
+  );
 
   return (
-    <SidePanelLayout
-      title="Queue"
-      onClose={() => setSidePanel("none")}
-      className="p-0" // Let layout handle padding internally if needed, or matched behavior
-      // The original had p-4 on container. SidePanelLayout has p-4 on header and content.
-      // So passing nothing is fine.
-    >
+    <>
       {currentTrack && (
         <div className="mb-6 shrink-0">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
@@ -64,7 +60,6 @@ export default function QueueMenu() {
       )}
 
       <div className="flex-1 overflow-hidden h-full flex flex-col">
-        {/* Tracks list header */}
         <div className="flex items-center justify-between mb-3 shrink-0">
           <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
             Tracks
@@ -90,12 +85,7 @@ export default function QueueMenu() {
               reorderQueue(arrayMove(queue, oldIndex, newIndex));
             }
           }}
-          renderItem={(track) => {
-            const isCurrent = currentTrack?.id === track.id;
-            return (
-              <QueueItem key={track.id} track={track} isActive={isCurrent} />
-            );
-          }}
+          renderItem={renderItem}
           paddingBottom="0px"
           emptyState={
             <p className="text-muted-foreground text-sm italic p-2">
@@ -104,6 +94,6 @@ export default function QueueMenu() {
           }
         />
       </div>
-    </SidePanelLayout>
+    </>
   );
 }

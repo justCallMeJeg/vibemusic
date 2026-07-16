@@ -33,9 +33,7 @@ import { useProfileTheme } from "@/hooks/use-profile-theme";
 
 
 
-const QueueMenu = lazy(() => import("./components/queue-menu"));
-const TrackDetailPanel = lazy(() => import("./components/track-detail-panel"));
-const LyricsPanel = lazy(() => import("./components/lyrics-panel"));
+const SidePanelContent = lazy(() => import("./components/side-panel-content"));
 const GlobalSearch = lazy(() =>
   import("./components/dialogs/global-search").then((m) => ({
     default: m.GlobalSearch,
@@ -227,9 +225,7 @@ export default function App() {
             } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
           >
             <Suspense fallback={null}>
-              <QueueMenu />
-              <TrackDetailPanel />
-              <LyricsPanel />
+              <SidePanelContent />
             </Suspense>
           </div>
         </div>

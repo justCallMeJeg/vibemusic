@@ -1,7 +1,5 @@
 import { memo } from "react";
-import { SidePanelLayout } from "./shared/side-panel-layout";
 import {
-  useSidePanel,
   useAudioStore,
   useCurrentTrack,
   usePosition,
@@ -31,9 +29,7 @@ const SyncedLyricLine = memo(function SyncedLyricLine({
 }) {
   if (!isSynced) {
     return (
-      <div
-        className="text-base text-muted-foreground/90 py-0.5"
-      >
+      <div className="text-base text-muted-foreground/90 py-0.5">
         {line.text}
       </div>
     );
@@ -74,9 +70,7 @@ const SyncedLyricLine = memo(function SyncedLyricLine({
   );
 });
 
-export default function LyricsPanel() {
-  const sidePanel = useSidePanel();
-  const setSidePanel = useAudioStore((s) => s.setSidePanel);
+export default function LyricsContent() {
   const currentTrack = useCurrentTrack();
   const position = usePosition();
   const seek = useAudioStore((s) => s.seek);
@@ -87,7 +81,6 @@ export default function LyricsPanel() {
   const [isSynced, setIsSynced] = useState(false);
   const [source, setSource] = useState<string>("");
 
-  // Cache lyrics data
   const lyricsCacheRef = useRef<Map<string, LyricsData> | null>(null);
   if (lyricsCacheRef.current === null)
     lyricsCacheRef.current = new Map<string, LyricsData>();
@@ -97,9 +90,8 @@ export default function LyricsPanel() {
   const activeLineRef = useRef<HTMLButtonElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
-  // Fetch lyrics when track changes
   useEffect(() => {
-    if (!currentTrack || sidePanel !== "lyrics") return;
+    if (!currentTrack) return;
 
     const path = currentTrack.file_path;
     if (lyricsCache.has(path)) {
@@ -131,9 +123,8 @@ export default function LyricsPanel() {
       .finally(() => {
         setLoading(false);
       });
-  }, [currentTrack, sidePanel, lyricsCache]);
+  }, [currentTrack, lyricsCache]);
 
-  // Determine active line index via binary search (timestamps are monotonic)
   const activeIndex = useMemo(() => {
     if (!isSynced || !lyrics.length) return -1;
     const first = lyrics[0].timestamp_ms;
@@ -156,7 +147,6 @@ export default function LyricsPanel() {
     return lo;
   }, [lyrics, position, isSynced]);
 
-  // Auto-scroll logic
   useEffect(() => {
     if (
       autoScroll &&
@@ -171,7 +161,6 @@ export default function LyricsPanel() {
       const elementTop = element.offsetTop;
       const elementHeight = element.clientHeight;
 
-      // Scroll to center the element
       container.scrollTo({
         top: elementTop - containerHeight / 2 + elementHeight / 2,
         behavior: "instant",
@@ -179,85 +168,83 @@ export default function LyricsPanel() {
     }
   }, [activeIndex, autoScroll]);
 
-  // Re-enable auto-scroll after user interaction stops (optional simplistic approach)
-  // For now, we'll just keep auto-scroll always on unless we want to detect scroll events.
-  // A simple way is to disable auto-scroll on wheel/touch, and re-enable on button or track change.
-  // Let's reset auto-scroll on track change.
   useEffect(() => {
     setAutoScroll(true);
   }, [currentTrack]);
 
-  if (sidePanel !== "lyrics") return null;
+  if (!currentTrack) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+        <Music2 className="w-8 h-8 opacity-50" />
+        <p>No track playing</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+        <Loader2 className="w-6 h-6 animate-spin" />
+        <p>Loading lyrics...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 px-6 text-center">
+        <p className="font-medium text-foreground">No lyrics available</p>
+        <p className="text-sm opacity-70">
+          Could not find embedded lyrics or an .lrc file for this track.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <SidePanelLayout
-      title="Lyrics"
-      onClose={() => setSidePanel("none")}
-      className="p-0"
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-y-auto pt-4 pb-[50%] px-6 scroll-smooth"
+      onWheel={() => setAutoScroll(false)}
+      onTouchStart={() => setAutoScroll(false)}
     >
-      {!currentTrack ? (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-          <Music2 className="w-8 h-8 opacity-50" />
-          <p>No track playing</p>
-        </div>
-      ) : loading ? (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <p>Loading lyrics...</p>
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 px-6 text-center">
-          <p className="font-medium text-foreground">No lyrics available</p>
-          <p className="text-sm opacity-70">
-            Could not find embedded lyrics or an .lrc file for this track.
-          </p>
-        </div>
-      ) : (
-        <div
-          ref={containerRef}
-          className="flex-1 overflow-y-auto pt-4 pb-[50%] px-6  scroll-smooth"
-          onWheel={() => setAutoScroll(false)}
-          onTouchStart={() => setAutoScroll(false)}
-        >
-          <div className="flex items-center justify-end mb-4 sticky top-0">
-            {!autoScroll && isSynced && (
-              <button
-                type="button"
-                onClick={() => setAutoScroll(true)}
-                className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-full transition-colors"
-              >
-                Resume Auto-Scroll
-              </button>
-            )}
-          </div>
+      <div className="flex items-center justify-end mb-4 sticky top-0">
+        {!autoScroll && isSynced && (
+          <button
+            type="button"
+            onClick={() => setAutoScroll(true)}
+            className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-full transition-colors"
+          >
+            Resume Auto-Scroll
+          </button>
+        )}
+      </div>
 
-          <div className="flex flex-col gap-4 min-h-0">
-            {lyrics.map((line, index) => (
-              <SyncedLyricLine
-                key={index}
-                line={line}
-                isActive={index === activeIndex}
-                isPast={index < activeIndex}
-                isSynced={isSynced}
-                activeLineRef={activeLineRef as React.RefObject<HTMLButtonElement | null>}
-                onSeek={(ms) => seek(ms)}
-                onAutoScroll={() => setAutoScroll(true)}
-              />
-            ))}
-          </div>
+      <div className="flex flex-col gap-4 min-h-0">
+        {lyrics.map((line, index) => (
+          <SyncedLyricLine
+            key={index}
+            line={line}
+            isActive={index === activeIndex}
+            isPast={index < activeIndex}
+            isSynced={isSynced}
+            activeLineRef={activeLineRef as React.RefObject<HTMLButtonElement | null>}
+            onSeek={(ms) => seek(ms)}
+            onAutoScroll={() => setAutoScroll(true)}
+          />
+        ))}
+      </div>
 
-          <div className="mt-8 text-center pb-4">
-            <div className="text-xs text-muted-foreground/50 italic flex flex-col gap-0.5">
-              <span>{isSynced ? "Synced Lyrics" : "Plain Text Lyrics"}</span>
-              {source && (
-                <span className="font-semibold text-primary/40">
-                  via {source}
-                </span>
-              )}
-            </div>
-          </div>
+      <div className="mt-8 text-center pb-4">
+        <div className="text-xs text-muted-foreground/50 italic flex flex-col gap-0.5">
+          <span>{isSynced ? "Synced Lyrics" : "Plain Text Lyrics"}</span>
+          {source && (
+            <span className="font-semibold text-primary/40">
+              via {source}
+            </span>
+          )}
         </div>
-      )}
-    </SidePanelLayout>
+      </div>
+    </div>
   );
 }
