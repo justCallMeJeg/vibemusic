@@ -7,7 +7,6 @@ import { useAudioStore } from "@/stores/audio-store";
 import { useProfileStore } from "@/stores/profile-store";
 import { useNavigationStore, Page } from "@/stores/navigation-store";
 import { useUpdateStore } from "@/stores/update-store";
-import { toast } from "sonner";
 
 export type CloseAction =
   | "show-quit-dialog"
@@ -127,21 +126,7 @@ export function useAppInit() {
         useNavigationStore.getState().setPage(settings.defaultPage as Page);
       }
 
-      const updateStore = useUpdateStore.getState();
-      updateStore.check(true).then((hasUpdate) => {
-        if (hasUpdate) {
-          toast.info("Update Available", {
-            description: "A new version of vibemusic is available.",
-            action: {
-              label: "View",
-              onClick: () => {
-                useNavigationStore.getState().setPage("about");
-              },
-            },
-            duration: 10000,
-          });
-        }
-      });
+      useUpdateStore.getState().check(true);
     }
   }, [isSettingsLoading, activeProfileId]);
 }

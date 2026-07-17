@@ -5,7 +5,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { logger } from "@/lib/logger";
-import { toast } from "sonner";
 
 type InstallFormat = "msi" | "exe" | "dmg" | "appImage" | "deb" | "rpm" | "unknown";
 
@@ -190,16 +189,6 @@ export const useUpdateStore = create<UpdateStore>()(
                 isReadyToInstall: true,
                 downloadProgress: null,
               });
-              toast.success("Update ready to install", {
-                description: `Version ${updateManifest.version} has been downloaded.`,
-                action: {
-                  label: "Install Now",
-                  onClick: () => {
-                    useUpdateStore.getState().install();
-                  },
-                },
-                duration: 10000,
-              });
             }),
           ]);
 
@@ -211,9 +200,6 @@ export const useUpdateStore = create<UpdateStore>()(
           const message = e instanceof Error ? e.message : String(e);
           logger.error("Failed to download update:", message);
           set({ error: message, isDownloading: false });
-          toast.error("Download failed", {
-            description: message,
-          });
         } finally {
           if (unlistenProgress) unlistenProgress();
           if (unlistenComplete) unlistenComplete();
@@ -235,9 +221,6 @@ export const useUpdateStore = create<UpdateStore>()(
           const message = e instanceof Error ? e.message : String(e);
           logger.error("Failed to install update:", message);
           set({ error: message });
-          toast.error("Installation failed", {
-            description: message,
-          });
         }
       },
 

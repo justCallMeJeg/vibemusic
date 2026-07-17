@@ -8,11 +8,20 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useUpdateStore } from "@/stores/update-store";
+import { UpdateStatusIcon } from "@/components/update-status-icon";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const appWindow = getCurrentWindow();
   const channel = useUpdateStore((s) => s.channel);
+  const showUpdateIcon = useUpdateStore(
+    (s) =>
+      s.isChecking ||
+      s.isDownloading ||
+      s.isReadyToInstall ||
+      s.isUpdateAvailable ||
+      !!s.error
+  );
 
   useEffect(() => {
     const checkMaximized = async () => {
@@ -64,6 +73,8 @@ export function TitleBar() {
       </div>
 
       <div className="flex items-center gap-1 relative z-50">
+        <UpdateStatusIcon />
+        {showUpdateIcon && <div className="w-px h-4 bg-border mx-1" />}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
