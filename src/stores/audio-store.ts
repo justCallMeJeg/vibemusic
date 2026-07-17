@@ -50,6 +50,8 @@ interface AudioState {
   _lastSeekTime: number; // To ignore legacy progress events after seeking
   _isTransitioning: boolean;
   _crossfadeDuration: number;
+  _fadeInOutEnabled: boolean;
+  _fadeInOutDuration: number;
   _queueIndexMap: Map<number, number>;
   _trackVersion: number;
 }
@@ -84,6 +86,7 @@ interface AudioActions {
 
   // Crossfade
   setCrossfadeDuration: (durationMs: number) => void;
+  setFadeInOut: (enabled: boolean, durationMs: number) => void;
 
   // Initialization
   initListeners: () => () => void;
@@ -218,6 +221,8 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _lastSeekTime: 0,
     _isTransitioning: false,
     _crossfadeDuration: 0,
+  _fadeInOutEnabled: false,
+  _fadeInOutDuration: 1000,
     _queueIndexMap: new Map(),
     _trackVersion: 0,
 
@@ -425,6 +430,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     setPosition: (position) => set({ position }),
     setDraggingSlider: (isDragging) => set({ _isDraggingSlider: isDragging }),
     setCrossfadeDuration: (durationMs) => set({ _crossfadeDuration: durationMs }),
+    setFadeInOut: (enabled, durationMs) => set({ _fadeInOutEnabled: enabled, _fadeInOutDuration: durationMs }),
 
     // Initialization
     initListeners: () => {

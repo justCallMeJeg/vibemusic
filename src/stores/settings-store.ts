@@ -49,6 +49,8 @@ interface SettingsState {
   currentProfileId: string | null;
 
   crossfadeDuration: number; // Audio
+  fadeInOutEnabled: boolean;
+  fadeInOutDuration: number;
   // ... (rest)
   // Behavior
   closeToTray: boolean;
@@ -94,6 +96,7 @@ interface SettingsActions {
   setAudioDevice: (deviceName: string) => void;
   refreshAudioDevices: () => Promise<void>;
   setCrossfadeDuration: (duration: number) => void;
+  setFadeInOut: (enabled: boolean, durationMs: number) => Promise<void>;
 
   // Behavior Actions
   setCloseToTray: (enabled: boolean) => void;
@@ -112,7 +115,7 @@ interface SettingsActions {
 
   setMiniPlayerStyle: (style: "square" | "wide" | "bar") => void;
   setMiniPlayerPosition: (
-    position: "bottom-right" | "bottom-left" | "top-right" | "top-left"
+    position: "bottom-right" | "bottom-left" | "top-right" | "top-left",
   ) => void;
   setEnableMediaKeys: (enabled: boolean) => Promise<void>;
 
@@ -134,6 +137,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     isLoading: true,
     currentProfileId: null,
     crossfadeDuration: 0,
+    fadeInOutEnabled: true,
+    fadeInOutDuration: 1000,
     closeToTray: false,
     scanOnStartup: false,
     autoplay: false,
@@ -191,7 +196,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await store.set("libraryPaths", newPaths);
         await store.save();
         invoke("watch_paths", { folders: newPaths }).catch((e) =>
-          logger.error("Failed to watch paths", e)
+          logger.error("Failed to watch paths", e),
         );
 
         // Auto-scan the new path
@@ -229,7 +234,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
       // Update watcher
       invoke("watch_paths", { folders: newPaths }).catch((e) =>
-        logger.error("Failed to watch paths", e)
+        logger.error("Failed to watch paths", e),
       );
 
       // Refresh UI to reflect removal
@@ -260,6 +265,16 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await invoke("audio_set_crossfade", { durationMs });
       const store = await getStore();
       await store.set("crossfadeDuration", durationMs);
+      await store.save();
+    },
+
+    setFadeInOut: async (enabled, durationMs) => {
+      set({ fadeInOutEnabled: enabled, fadeInOutDuration: durationMs });
+      useAudioStore.getState().setFadeInOut(enabled, durationMs);
+      await invoke("audio_set_fade_in_out", { enabled, durationMs });
+      const store = await getStore();
+      await store.set("fadeInOutEnabled", enabled);
+      await store.set("fadeInOutDuration", durationMs);
       await store.save();
     },
 
@@ -371,7 +386,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         const store = await load(`settings_${profileId}.json`);
 
         const getVal = async <T>(
-          key: string
+          key: string,
         ): Promise<T | null | undefined> => {
           return await store.get<T>(key);
         };
@@ -382,6 +397,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           libraryPaths,
           selectedDevice,
           crossfadeDuration,
+          fadeInOutEnabled,
+          fadeInOutDuration,
           closeToTray,
           scanOnStartup,
           autoplay,
@@ -404,6 +421,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           getVal<string[]>("libraryPaths"),
           getVal<string>("selectedDevice"),
           getVal<number>("crossfadeDuration"),
+          getVal<boolean>("fadeInOutEnabled"),
+          getVal<number>("fadeInOutDuration"),
           getVal<boolean>("closeToTray"),
           getVal<boolean>("scanOnStartup"),
           getVal<boolean>("autoplay"),
@@ -418,14 +437,16 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           getVal<string>("playlistsSortKey"),
           getVal<string>("playlistsSortDirection"),
           getVal<"square" | "wide" | "bar">("miniPlayerStyle"),
-          getVal<"bottom-right" | "bottom-left" | "top-right" | "top-left">("miniPlayerPosition"),
+          getVal<"bottom-right" | "bottom-left" | "top-right" | "top-left">(
+            "miniPlayerPosition",
+          ),
           getVal<boolean>("enableMediaKeys"),
         ]);
 
         let sidebarItems = _sidebarItems;
         if (sidebarItems) {
           sidebarItems = sidebarItems.map((item) =>
-            item.id === "settings" ? { ...item, hidden: false } : item
+            item.id === "settings" ? { ...item, hidden: false } : item,
           );
         }
 
@@ -439,6 +460,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           libraryPaths: libraryPaths ?? [],
           selectedDevice: selectedDevice ?? null,
           crossfadeDuration: crossfadeDuration ?? 0,
+          fadeInOutEnabled: fadeInOutEnabled ?? true,
+          fadeInOutDuration: fadeInOutDuration ?? 300,
           closeToTray: closeToTray ?? false,
           scanOnStartup: scanOnStartup ?? false,
           autoplay: autoplay ?? false,
@@ -468,15 +491,35 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         });
 
         await Promise.all([
-          selectedDevice ? invoke("audio_set_device", { deviceName: selectedDevice }) : Promise.resolve(),
-          typeof crossfadeDuration === "number" ? (() => {
-            useAudioStore.getState().setCrossfadeDuration(crossfadeDuration);
-            return invoke("audio_set_crossfade", { durationMs: crossfadeDuration });
-          })() : Promise.resolve(),
+          selectedDevice
+            ? invoke("audio_set_device", { deviceName: selectedDevice })
+            : Promise.resolve(),
+          typeof crossfadeDuration === "number"
+            ? (() => {
+                useAudioStore
+                  .getState()
+                  .setCrossfadeDuration(crossfadeDuration);
+                return invoke("audio_set_crossfade", {
+                  durationMs: crossfadeDuration,
+                });
+              })()
+            : Promise.resolve(),
+          typeof fadeInOutDuration === "number" &&
+          typeof fadeInOutEnabled === "boolean"
+            ? (() => {
+                useAudioStore
+                  .getState()
+                  .setFadeInOut(fadeInOutEnabled, fadeInOutDuration);
+                return invoke("audio_set_fade_in_out", {
+                  enabled: fadeInOutEnabled,
+                  durationMs: fadeInOutDuration,
+                });
+              })()
+            : Promise.resolve(),
         ]);
 
         invoke("watch_paths", { folders: libraryPaths ?? [] }).catch((e) =>
-          logger.error("Failed to watch paths on settings load", e)
+          logger.error("Failed to watch paths on settings load", e),
         );
 
         get().refreshAudioDevices();
@@ -485,5 +528,5 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         set({ isLoading: false });
       }
     },
-  })
+  }),
 );

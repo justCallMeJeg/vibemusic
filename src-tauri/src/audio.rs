@@ -8,7 +8,7 @@ use ringbuf::{
 };
 use serde::Serialize;
 use souvlaki::{MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig, SeekDirection};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -74,6 +74,7 @@ enum AudioCommand {
     SetVolume(f32),
     SetDevice(String),
     SetCrossfade(u64), // Duration in milliseconds
+    SetFadeInOut { enabled: bool, duration_ms: u64 },
 }
 
 /// Main audio engine for managing playback.
@@ -268,6 +269,12 @@ impl AudioEngine {
             .ok();
     }
 
+    pub fn set_fade_in_out(&self, enabled: bool, duration_ms: u64) {
+        self.command_tx
+            .send(AudioCommand::SetFadeInOut { enabled, duration_ms })
+            .ok();
+    }
+
     pub fn get_state(&self) -> PlaybackState {
         match self.state.lock() {
             Ok(guard) => guard.clone(),
@@ -415,6 +422,12 @@ struct AudioWorker {
     crossfade_setting: Duration,
     crossfade_state: CrossfadeState,
 
+    // Play/pause fade state (shared with CPAL callback via Arc)
+    fade_gain: Arc<AtomicU32>,
+    fade_target: Arc<AtomicU32>,
+    fade_step: Arc<AtomicU32>,
+    fade_in_out_enabled: bool,
+
     // Device config
     device_sample_rate: u32,
     device_channels: u16,
@@ -473,6 +486,10 @@ impl AudioWorker {
             secondary_decoder: None,
             crossfade_setting: Duration::from_secs(0),
             crossfade_state: CrossfadeState::None,
+            fade_gain: Arc::new(AtomicU32::new(f32::to_bits(1.0))),
+            fade_target: Arc::new(AtomicU32::new(f32::to_bits(1.0))),
+            fade_step: Arc::new(AtomicU32::new(f32::to_bits(0.0))),
+            fade_in_out_enabled: false,
             device_sample_rate: sample_rate,
             device_channels: channels,
             selected_device_name: None,
@@ -538,6 +555,15 @@ impl AudioWorker {
             }
             AudioCommand::SetCrossfade(ms) => {
                 self.crossfade_setting = Duration::from_millis(ms);
+            }
+            AudioCommand::SetFadeInOut { enabled, duration_ms } => {
+                self.fade_in_out_enabled = enabled;
+                let step = if enabled && duration_ms > 0 {
+                    1.0 / ((duration_ms as f32 / 1000.0) * self.device_sample_rate as f32 * self.device_channels as f32)
+                } else {
+                    0.0
+                };
+                self.fade_step.store(f32::to_bits(step), Ordering::Relaxed);
             }
         }
     }
@@ -728,6 +754,9 @@ impl AudioWorker {
         let volume = self.volume.clone();
         let is_playing = self.is_playing.clone();
         let device_error = self.device_error.clone();
+        let fade_gain_arc = self.fade_gain.clone();
+        let fade_target_arc = self.fade_target.clone();
+        let fade_step_arc = self.fade_step.clone();
         let channels = self.device_channels as usize;
         let mut consumer = consumer;
 
@@ -740,10 +769,28 @@ impl AudioWorker {
                 }
 
                 let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
+                let mut gain = f32::from_bits(fade_gain_arc.load(Ordering::Relaxed));
+                let target = f32::from_bits(fade_target_arc.load(Ordering::Relaxed));
+                let step = f32::from_bits(fade_step_arc.load(Ordering::Relaxed));
+
+                let mut should_stop = false;
                 for frame in data.chunks_mut(channels) {
                     for sample in frame.iter_mut() {
-                        *sample = consumer.try_pop().unwrap_or(0.0) * vol;
+                        if (gain - target).abs() > step * 0.5 {
+                            gain += if gain < target { step } else { -step };
+                            if (gain - target).abs() <= step {
+                                gain = target;
+                            }
+                        }
+                        if gain <= f32::EPSILON && target <= f32::EPSILON {
+                            should_stop = true;
+                        }
+                        *sample = consumer.try_pop().unwrap_or(0.0) * vol * gain;
                     }
+                }
+                fade_gain_arc.store(gain.to_bits(), Ordering::Relaxed);
+                if should_stop {
+                    is_playing.store(false, Ordering::Relaxed);
                 }
             },
             move |err| {
@@ -1023,50 +1070,100 @@ impl AudioWorker {
     }
 
     fn pause(&mut self) {
-        info!("Playback paused");
-        self.is_playing.store(false, Ordering::Relaxed);
-        {
-            match self.state.lock() {
-                Ok(mut s) => {
-                    s.is_paused = true;
-                    s.is_playing = false;
-                }
-                Err(poisoned) => {
-                    error!("Audio state mutex poisoned in pause, recovering");
-                    let mut s = poisoned.into_inner();
-                    s.is_paused = true;
-                    s.is_playing = false;
+        let step = f32::from_bits(self.fade_step.load(Ordering::Relaxed));
+        if self.fade_in_out_enabled && step > 0.0 && self.is_playing.load(Ordering::Relaxed) {
+            info!("Playback paused (fade-out)");
+            self.fade_target.store(f32::to_bits(0.0), Ordering::Relaxed);
+            {
+                match self.state.lock() {
+                    Ok(mut s) => {
+                        s.is_paused = true;
+                        s.is_playing = false;
+                    }
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in pause, recovering");
+                        let mut s = poisoned.into_inner();
+                        s.is_paused = true;
+                        s.is_playing = false;
+                    }
                 }
             }
+            self.update_media_controls();
+            self.emit_state();
+            // is_playing stays true — audio continues at decreasing volume in CPAL callback
+            // CPAL callback sets is_playing=false when gain reaches 0
+        } else {
+            info!("Playback paused");
+            self.is_playing.store(false, Ordering::Relaxed);
+            {
+                match self.state.lock() {
+                    Ok(mut s) => {
+                        s.is_paused = true;
+                        s.is_playing = false;
+                    }
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in pause, recovering");
+                        let mut s = poisoned.into_inner();
+                        s.is_paused = true;
+                        s.is_playing = false;
+                    }
+                }
+            }
+            self.update_media_controls();
+            self.emit_state();
         }
-        self.update_media_controls();
-        self.emit_state();
     }
 
     fn resume(&mut self) {
-        info!("Playback resumed");
-        self.is_playing.store(true, Ordering::Relaxed);
-        {
-            match self.state.lock() {
-                Ok(mut s) => {
-                    s.is_paused = false;
-                    s.is_playing = true;
-                }
-                Err(poisoned) => {
-                    error!("Audio state mutex poisoned in resume, recovering");
-                    let mut s = poisoned.into_inner();
-                    s.is_paused = false;
-                    s.is_playing = true;
+        let step = f32::from_bits(self.fade_step.load(Ordering::Relaxed));
+        if self.fade_in_out_enabled && step > 0.0 {
+            info!("Playback resumed (fade-in)");
+            self.is_playing.store(true, Ordering::Relaxed);
+            self.fade_gain.store(f32::to_bits(0.0), Ordering::Relaxed);
+            self.fade_target.store(f32::to_bits(1.0), Ordering::Relaxed);
+            {
+                match self.state.lock() {
+                    Ok(mut s) => {
+                        s.is_paused = false;
+                        s.is_playing = true;
+                    }
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in resume, recovering");
+                        let mut s = poisoned.into_inner();
+                        s.is_paused = false;
+                        s.is_playing = true;
+                    }
                 }
             }
+            self.update_media_controls();
+            self.emit_state();
+        } else {
+            info!("Playback resumed");
+            self.is_playing.store(true, Ordering::Relaxed);
+            {
+                match self.state.lock() {
+                    Ok(mut s) => {
+                        s.is_paused = false;
+                        s.is_playing = true;
+                    }
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in resume, recovering");
+                        let mut s = poisoned.into_inner();
+                        s.is_paused = false;
+                        s.is_playing = true;
+                    }
+                }
+            }
+            self.update_media_controls();
+            self.emit_state();
         }
-        self.update_media_controls();
-        self.emit_state();
     }
 
     fn stop(&mut self) {
         info!("Playback stopped");
         self.is_playing.store(false, Ordering::Relaxed);
+        self.fade_gain.store(f32::to_bits(1.0), Ordering::Relaxed);
+        self.fade_target.store(f32::to_bits(1.0), Ordering::Relaxed);
 
         self.primary_decoder = None;
         self.secondary_decoder = None;
@@ -1114,6 +1211,8 @@ impl AudioWorker {
         self.secondary_decoder = None;
         self.crossfade_state = CrossfadeState::None;
         self.crossfade_batches_logged = 0;
+        self.fade_gain.store(f32::to_bits(1.0), Ordering::Relaxed);
+        self.fade_target.store(f32::to_bits(1.0), Ordering::Relaxed);
 
         let seek_ok = self.primary_decoder.as_mut().map(|dec| dec.seek_to(pos_ms).is_ok()).unwrap_or(false);
 
@@ -1288,6 +1387,17 @@ pub fn audio_set_crossfade(
     duration_ms: u64,
 ) -> Result<(), AppError> {
     state.0.set_crossfade(duration_ms);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn audio_set_fade_in_out(
+    state: tauri::State<AudioState>,
+    enabled: bool,
+    duration_ms: Option<u64>,
+) -> Result<(), AppError> {
+    let duration = duration_ms.unwrap_or(1000).min(3000);
+    state.0.set_fade_in_out(enabled, duration);
     Ok(())
 }
 

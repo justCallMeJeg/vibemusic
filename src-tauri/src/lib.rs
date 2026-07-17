@@ -166,6 +166,7 @@ pub fn run() {
             audio::audio_get_devices,
             audio::audio_set_device,
             audio::audio_set_crossfade,
+            audio::audio_set_fade_in_out,
             // Playlist commands
             playlists::create_playlist,
             playlists::delete_playlist,
