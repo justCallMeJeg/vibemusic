@@ -1,6 +1,7 @@
 import { Switch } from "@/components/ui/switch";
-import { Settings, Power, HardDrive } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
+import { SettingsRow } from "@/components/shared/settings-row";
 
 export function SettingsGeneral() {
   const closeToTray = useSettingsStore((s) => s.closeToTray);
@@ -16,34 +17,19 @@ export function SettingsGeneral() {
       </div>
 
       <div className="grid gap-6">
-        {/* Close to Tray */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Power className="w-4 h-4 text-muted-foreground" />
-              <div className="font-medium">Close to Tray</div>
-            </div>
-            <div className="text-sm text-muted-foreground pl-6">
-              Closing the window minimizes to tray. When music is playing, a dialog will ask whether to minimize or quit.
-            </div>
-          </div>
+        <SettingsRow
+          label="Close to Tray"
+          description="Closing the window minimizes to tray. When music is playing, a dialog will ask whether to minimize or quit."
+        >
           <Switch checked={closeToTray} onCheckedChange={setCloseToTray} />
-        </div>
+        </SettingsRow>
 
-        {/* Scan on Startup */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-muted-foreground" />
-              <div className="font-medium">Scan on Startup</div>
-            </div>
-            <div className="text-sm text-muted-foreground pl-6">
-              Automatically scan library folders when app starts
-            </div>
-          </div>
+        <SettingsRow
+          label="Scan on Startup"
+          description="Automatically scan library folders when app starts"
+        >
           <Switch checked={scanOnStartup} onCheckedChange={setScanOnStartup} />
-        </div>
-
+        </SettingsRow>
       </div>
     </div>
   );

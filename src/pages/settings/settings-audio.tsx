@@ -1,5 +1,4 @@
 import { useSettingsStore } from "@/stores/settings-store";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Speaker, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { SettingsRow } from "@/components/shared/settings-row";
+import { SettingsGroup } from "@/components/shared/settings-group";
 
 export function SettingsAudio() {
   const selectedDevice = useSettingsStore((s) => s.selectedDevice);
@@ -32,37 +33,30 @@ export function SettingsAudio() {
     setIsRefreshingDevices(false);
   };
 
+  const crossfadeEnabled = crossfadeDuration > 0;
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       <div className="flex items-center gap-2 mb-6">
         <Speaker className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-semibold">Audio</h2>
       </div>
 
       <div className="grid gap-6">
-        {/* Output Device */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Output Device</div>
-            <div className="text-sm text-muted-foreground">
-              Select where audio should be played
-            </div>
-          </div>
+        <SettingsRow
+          label="Output Device"
+          description="Select where audio should be played"
+        >
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefreshDevices}
-              className={isRefreshingDevices ? "animate-spin" : ""}
-            >
-              <RefreshCw size={16} />
+            <Button variant="ghost" size="icon" onClick={handleRefreshDevices}>
+              <RefreshCw
+                size={16}
+                className={isRefreshingDevices ? "animate-spin" : ""}
+              />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-48 justify-between truncate"
-                >
+                <Button variant="outline" className="w-48 justify-between truncate">
                   <span className="truncate">
                     {selectedDevice || "Default System Device"}
                   </span>
@@ -74,14 +68,9 @@ export function SettingsAudio() {
                   value={selectedDevice || ""}
                   onValueChange={(v) => setAudioDevice(v)}
                 >
-                  <DropdownMenuRadioItem value="">
-                    Default System Device
-                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="">Default System Device</DropdownMenuRadioItem>
                   {audioDevices.map((device) => (
-                    <DropdownMenuRadioItem
-                      key={device.name}
-                      value={device.name}
-                    >
+                    <DropdownMenuRadioItem key={device.name} value={device.name}>
                       {device.name}
                     </DropdownMenuRadioItem>
                   ))}
@@ -89,60 +78,58 @@ export function SettingsAudio() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
+        </SettingsRow>
 
-        {/* Crossfade Setting */}
-        <div className="flex items-start justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Crossfade</div>
-            <div className="text-sm text-muted-foreground">
-              Overlap songs by specifying duration in milliseconds.
-            </div>
-          </div>
-          <div className="w-48 space-y-2">
-            <div className="flex items-center gap-2">
-              <Input
-                type="text"
-                value={crossfadeDuration}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (/^\d*$/.test(val)) {
-                    setCrossfadeDuration(Number(val));
-                  }
-                }}
-                className="bg-card border-border text-right font-mono"
-                placeholder="0"
-              />
-              <span className="text-sm text-muted-foreground font-medium">
-                ms
+        <SettingsGroup
+          title="Crossfade"
+          description="Overlap songs by specifying duration in milliseconds."
+          headerAction={
+            <Switch
+              checked={crossfadeEnabled}
+              onCheckedChange={(checked) =>
+                setCrossfadeDuration(checked ? 3000 : 0)
+              }
+            />
+          }
+        >
+          {crossfadeEnabled && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground font-mono w-8">
+                {crossfadeDuration >= 1000
+                  ? `${(crossfadeDuration / 1000).toFixed(1)}s`
+                  : `${crossfadeDuration}ms`}
               </span>
+              <Slider
+                className="flex-1"
+                min={500}
+                max={12000}
+                step={500}
+                value={[crossfadeDuration]}
+                onValueChange={([v]) => setCrossfadeDuration(v)}
+              />
             </div>
-          </div>
-        </div>
+          )}
+        </SettingsGroup>
 
-        {/* Fade In/Out */}
-        <div className="flex-col items-start p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="flex justify-between">
-            <div className="gap-1 pr-4">
-              <div className="font-medium">Fade in/out on play/pause</div>
-              <div className="text-sm text-muted-foreground">
-                Smoothly fade audio when playing or pausing a track.
-              </div>
-            </div>
+        <SettingsGroup
+          title="Fade in/out on play/pause"
+          description="Smoothly fade audio when playing or pausing a track."
+          headerAction={
             <Switch
               checked={fadeInOutEnabled}
               onCheckedChange={(checked) =>
                 setFadeInOut(checked, fadeInOutDuration)
               }
             />
-          </div>
+          }
+        >
           {fadeInOutEnabled && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <span className="h-full text-xs text-muted-foreground font-mono w-8">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground font-mono w-8">
                 {(fadeInOutDuration / 1000).toFixed(1)}s
               </span>
               <Slider
-                className="flex-1 w-full"
+                className="flex-1"
                 min={100}
                 max={3000}
                 step={100}
@@ -151,7 +138,7 @@ export function SettingsAudio() {
               />
             </div>
           )}
-        </div>
+        </SettingsGroup>
       </div>
     </div>
   );

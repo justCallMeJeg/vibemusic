@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useLibraryStore } from "@/stores/library-store";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
+import { SettingsGroup } from "@/components/shared/settings-group";
 
 export function SettingsLibrary() {
   const libraryPaths = useSettingsStore((s) => s.libraryPaths);
@@ -16,6 +18,7 @@ export function SettingsLibrary() {
   const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
   const [isRescanning, setIsRescanning] = useState(false);
   const [isPruning, setIsPruning] = useState(false);
+  const [pruneDialogOpen, setPruneDialogOpen] = useState(false);
 
   const handleAddFolder = async () => {
     try {
@@ -25,12 +28,10 @@ export function SettingsLibrary() {
       });
 
       if (selected && typeof selected === "string") {
-        // Create a toast that we'll update with progress
         const toastId = toast.loading(
-          "Adding folder and discovering audio files..."
+          "Adding folder and discovering audio files...",
         );
 
-        // Listen for scan progress events
         let unlisten: (() => void) | null = null;
 
         try {
@@ -54,16 +55,15 @@ export function SettingsLibrary() {
           const stats = await addLibraryPath(selected);
           await fetchLibrary();
 
-          // Show success message
           if (stats && stats.success_count > 0) {
             toast.success(
               `Added ${stats.success_count} tracks from new folder`,
-              { id: toastId }
+              { id: toastId },
             );
           } else if (stats && stats.scanned_count > 0) {
             toast.success(
               `Folder added. ${stats.scanned_count} files already in library.`,
-              { id: toastId }
+              { id: toastId },
             );
           } else {
             toast.success("Folder added to library", { id: toastId });
@@ -84,10 +84,8 @@ export function SettingsLibrary() {
     if (libraryPaths.length === 0) return;
     setIsRescanning(true);
 
-    // Create a toast that we'll update with progress
     const toastId = toast.loading("Discovering audio files...");
 
-    // Listen for scan progress events
     let unlisten: (() => void) | null = null;
 
     try {
@@ -105,12 +103,9 @@ export function SettingsLibrary() {
           toast.loading(`Importing tracks... (${current}/${total})`, {
             id: toastId,
           });
-        } else if (status === "complete") {
-          // Toast will be updated by the success handler below
         }
       });
 
-      // Run the scan
       const data = await invoke<{
         scanned_count: number;
         success_count: number;
@@ -119,16 +114,15 @@ export function SettingsLibrary() {
 
       await fetchLibrary();
 
-      // Show success message
       if (data.success_count > 0) {
         toast.success(
           `Scan complete! Found ${data.scanned_count} files, imported ${data.success_count} tracks.`,
-          { id: toastId }
+          { id: toastId },
         );
       } else if (data.scanned_count > 0) {
         toast.success(
           `Scan complete. ${data.scanned_count} files already up to date.`,
-          { id: toastId }
+          { id: toastId },
         );
       } else {
         toast.success("Scan complete. No audio files found.", { id: toastId });
@@ -142,7 +136,8 @@ export function SettingsLibrary() {
     }
   };
 
-  const handlePrune = async () => {
+  const handlePruneConfirm = async () => {
+    setPruneDialogOpen(false);
     setIsPruning(true);
 
     const promise = (async () => {
@@ -177,19 +172,16 @@ export function SettingsLibrary() {
       </div>
 
       <div className="grid gap-6">
-        <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">Music Folders</div>
-              <div className="text-sm text-muted-foreground">
-                Manage locations where Vibe looks for music
-              </div>
-            </div>
-            <Button onClick={handleAddFolder} className="gap-2">
-              <Plus size={16} /> Add Folder
+        <SettingsGroup
+          title="Music Folders"
+          description="Manage locations where Vibe looks for music"
+          headerAction={
+            <Button onClick={handleAddFolder} size="sm">
+              <Plus size={16} className="mr-1.5" />
+              Add Folder
             </Button>
-          </div>
-
+          }
+        >
           {libraryPaths.length > 0 ? (
             <div className="space-y-2">
               {libraryPaths.map((path) => (
@@ -227,27 +219,38 @@ export function SettingsLibrary() {
               variant="outline"
               onClick={handleRescan}
               disabled={isRescanning || libraryPaths.length === 0}
-              className="gap-2"
+              size="sm"
             >
               <RefreshCw
                 size={16}
                 className={isRescanning ? "animate-spin" : ""}
               />
-              {isRescanning ? "Scanning..." : "Rescan Library"}
+              Rescan Library
             </Button>
 
             <Button
               variant="outline"
-              onClick={handlePrune}
+              onClick={() => setPruneDialogOpen(true)}
               disabled={isPruning}
-              className="gap-2 hover:text-destructive hover:border-destructive/50"
+              size="sm"
+              className="hover:text-destructive hover:border-destructive/50"
             >
               <Trash2 size={16} />
               {isPruning ? "Pruning..." : "Prune Deleted Files"}
             </Button>
           </div>
-        </div>
+        </SettingsGroup>
       </div>
+
+      <ConfirmDialog
+        open={pruneDialogOpen}
+        onOpenChange={setPruneDialogOpen}
+        title="Prune Library?"
+        description="This will remove all tracks whose files no longer exist on disk from your library. This cannot be undone."
+        confirmText="Prune Library"
+        variant="destructive"
+        onConfirm={handlePruneConfirm}
+      />
     </div>
   );
 }

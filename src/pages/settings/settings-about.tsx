@@ -24,6 +24,8 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { logger } from "@/lib/logger";
+import { SettingsRow } from "@/components/shared/settings-row";
+import { SettingsGroup } from "@/components/shared/settings-group";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -60,7 +62,6 @@ export function SettingsAbout() {
     }
     const hasUpdate = await check();
     if (hasUpdate) {
-      // check() auto-opens ManualUpdateDialog if requiresManualDownload
       const state = useUpdateStore.getState();
       if (!state.requiresManualDownload) {
         setDialogOpen(true);
@@ -98,24 +99,12 @@ export function SettingsAbout() {
       </div>
 
       <div className="grid gap-6">
-        {/* App Info */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div>
-            <h3 className="text-lg font-medium text-foreground">vibemusic</h3>
-            <p className="text-sm text-muted-foreground">
-              Version {appVersion}
-            </p>
-          </div>
-        </div>
+        <SettingsRow label="vibemusic" description={`Version ${appVersion}`} />
 
-        {/* Update Channel */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Update Channel</div>
-            <div className="text-sm text-muted-foreground">
-              Choose between Stable releases or Nightly builds.
-            </div>
-          </div>
+        <SettingsRow
+          label="Update Channel"
+          description="Choose between Stable releases or Nightly builds."
+        >
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">
               Current:{" "}
@@ -123,11 +112,13 @@ export function SettingsAbout() {
                 {channel === "dev" ? "Nightly" : "Stable"}
               </span>
             </span>
-            <div className="flex bg-card p-1 rounded-lg border border-border">
+            <div className="flex bg-card p-1 rounded-lg border border-border" role="tablist" aria-label="Update channel">
               {(["stable", "dev"] as const).map((ch) => (
                 <Tooltip key={ch}>
                   <TooltipTrigger asChild>
                     <Button
+                      role="tab"
+                      aria-selected={channel === ch}
                       variant={channel === ch ? "default" : "ghost"}
                       size="sm"
                       onClick={() => {
@@ -142,27 +133,21 @@ export function SettingsAbout() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Switch to{" "}
-                    {ch === "stable" ? "Stable Release" : "Nightly Dev Build"}
+                    Switch to {ch === "stable" ? "Stable Release" : "Nightly Dev Build"}
                   </TooltipContent>
                 </Tooltip>
               ))}
             </div>
           </div>
-        </div>
+        </SettingsRow>
 
-        {/* Update Status & Actions */}
-        <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-4">
+        <SettingsGroup title="Updates">
           <div className="flex items-center justify-between">
-            <div className="font-medium">Updates</div>
+            <span className="font-medium">Status</span>
             {lastChecked && !isChecking && !isDownloading && (
               <p className="text-xs text-muted-foreground">
-                Last checked:{" "}
-                {lastChecked.toLocaleDateString()}{" "}
-                {lastChecked.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                Last checked: {lastChecked.toLocaleDateString()}{" "}
+                {lastChecked.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
             )}
           </div>
@@ -173,8 +158,7 @@ export function SettingsAbout() {
                 <span>Downloading update...</span>
                 <span>
                   {formatBytes(downloadProgress.downloaded)}
-                  {downloadProgress.total != null &&
-                    ` / ${formatBytes(downloadProgress.total)}`}
+                  {downloadProgress.total != null && ` / ${formatBytes(downloadProgress.total)}`}
                 </span>
               </div>
               <Progress value={downloadPercentage} max={100} />
@@ -191,16 +175,12 @@ export function SettingsAbout() {
                   v{updateManifest?.version} ready to install
                 </p>
               )}
-              {lastChecked &&
-                !isChecking &&
-                !isUpdateAvailable &&
-                !isDownloading &&
-                !isReadyToInstall && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Up to date
-                  </p>
-                )}
+              {lastChecked && !isChecking && !isUpdateAvailable && !isDownloading && !isReadyToInstall && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Up to date
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -230,16 +210,12 @@ export function SettingsAbout() {
               )}
             </div>
           </div>
-        </div>
+        </SettingsGroup>
 
-        {/* Troubleshooting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Troubleshooting</div>
-            <div className="text-sm text-muted-foreground">
-              View application logs for debugging
-            </div>
-          </div>
+        <SettingsRow
+          label="Troubleshooting"
+          description="View application logs for debugging"
+        >
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -251,7 +227,6 @@ export function SettingsAbout() {
                   logger.error("Failed to open logs folder", error);
                 }
               }}
-              className="gap-2"
             >
               <FileText className="h-4 w-4" />
               Open Logs
@@ -269,13 +244,12 @@ export function SettingsAbout() {
                   toast.error("Failed to read log file");
                 }
               }}
-              className="gap-2"
             >
               <ClipboardCopy className="h-4 w-4" />
               Copy Logs
             </Button>
           </div>
-        </div>
+        </SettingsRow>
       </div>
 
       <ConfirmDialog

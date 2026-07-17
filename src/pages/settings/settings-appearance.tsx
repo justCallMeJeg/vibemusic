@@ -8,20 +8,21 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Moon, Sun, Monitor, Palette, Layout, Keyboard } from "lucide-react";
-import { SidebarCustomizer } from "./sidebar-customizer";
+import { ChevronDown, Moon, Sun, Monitor, Palette } from "lucide-react";
+import { SettingsRow } from "@/components/shared/settings-row";
+import { SettingsGroup } from "@/components/shared/settings-group";
 
 export function SettingsAppearance() {
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const dynamicGradient = useSettingsStore((s) => s.dynamicGradient);
   const setDynamicGradient = useSettingsStore((s) => s.setDynamicGradient);
-  const defaultPage = useSettingsStore((s) => s.defaultPage);
-  const setDefaultPage = useSettingsStore((s) => s.setDefaultPage);
   const miniPlayerStyle = useSettingsStore((s) => s.miniPlayerStyle);
   const setMiniPlayerStyle = useSettingsStore((s) => s.setMiniPlayerStyle);
   const miniPlayerPosition = useSettingsStore((s) => s.miniPlayerPosition);
-  const setMiniPlayerPosition = useSettingsStore((s) => s.setMiniPlayerPosition);
+  const setMiniPlayerPosition = useSettingsStore(
+    (s) => s.setMiniPlayerPosition,
+  );
   const enableMediaKeys = useSettingsStore((s) => s.enableMediaKeys);
   const setEnableMediaKeys = useSettingsStore((s) => s.setEnableMediaKeys);
 
@@ -33,14 +34,10 @@ export function SettingsAppearance() {
       </div>
 
       <div className="grid gap-6">
-        {/* Theme Setting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Theme</div>
-            <div className="text-sm text-muted-foreground">
-              Choose your preferred visual theme
-            </div>
-          </div>
+        <SettingsRow
+          label="Theme"
+          description="Choose your preferred visual theme"
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-32 justify-between">
@@ -70,32 +67,23 @@ export function SettingsAppearance() {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </SettingsRow>
 
-        {/* Dynamic Gradient Setting */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="space-y-1">
-            <div className="font-medium">Dynamic Background</div>
-            <div className="text-sm text-muted-foreground">
-              Ambient gradient based on current album art
-            </div>
-          </div>
+        <SettingsRow
+          label="Dynamic Background"
+          description="Ambient gradient based on current album art"
+        >
           <Switch
             checked={dynamicGradient}
             onCheckedChange={setDynamicGradient}
           />
-        </div>
-        {/* Mini Player Settings */}
-        <div className="flex flex-col gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <Layout className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-medium">Mini Player</h3>
-          </div>
+        </SettingsRow>
 
+        <div className="border-t border-border pt-6 -mb-3" />
+
+        <SettingsGroup title="Mini Player">
           <div className="space-y-4">
-            {/* Layout */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Layout</div>
+            <SettingsRow variant="nested" label="Layout">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-32 justify-between">
@@ -122,11 +110,9 @@ export function SettingsAppearance() {
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </SettingsRow>
 
-            {/* Position */}
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Position</div>
+            <SettingsRow variant="nested" label="Position">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-32 justify-between">
@@ -145,7 +131,7 @@ export function SettingsAppearance() {
                           | "bottom-right"
                           | "bottom-left"
                           | "top-right"
-                          | "top-left"
+                          | "top-left",
                       )
                     }
                   >
@@ -164,74 +150,19 @@ export function SettingsAppearance() {
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </SettingsRow>
           </div>
-        </div>
+        </SettingsGroup>
 
-        {/* Media Keys */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="flex items-center gap-2">
-            <Keyboard className="w-5 h-5 text-muted-foreground shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Media Keys</span>
-              <span className="text-xs text-muted-foreground">
-                Allow keyboard media keys to control playback
-              </span>
-            </div>
-          </div>
+        <SettingsRow
+          label="Media Keys"
+          description="Allow keyboard media keys to control playback"
+        >
           <Switch
             checked={enableMediaKeys}
             onCheckedChange={setEnableMediaKeys}
           />
-        </div>
-
-        {/* Sidebar Layout */}
-        <div className="flex flex-col gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <Layout className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-medium">Sidebar Layout</h3>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">Default Page</div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-32 justify-between">
-                    <span className="capitalize">{defaultPage}</span>
-                    <ChevronDown className="w-4 h-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup
-                    value={defaultPage}
-                    onValueChange={setDefaultPage}
-                  >
-                    <DropdownMenuRadioItem value="home">
-                      Home
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="songs">
-                      Songs
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="albums">
-                      Albums
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="playlists">
-                      Playlists
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div className="text-sm text-muted-foreground mb-2">
-                Customize Sidebar Items
-              </div>
-              <SidebarCustomizer />
-            </div>
-          </div>
-        </div>
+        </SettingsRow>
       </div>
     </div>
   );
