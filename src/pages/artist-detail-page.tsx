@@ -32,11 +32,19 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
   index,
   currentTrackId,
   status,
+  tracks,
+  play,
+  pause,
+  resume,
 }: {
   track: Track;
   index: number;
   currentTrackId?: number;
   status: string;
+  tracks: Track[];
+  play: (track: Track, queue?: Track[]) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
 }) {
   const isCurrentTrack = currentTrackId === track.id;
   return (
@@ -67,6 +75,14 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
           {formatDuration(track.duration_ms)}
         </span>
       }
+      onClick={() => {
+        if (isCurrentTrack) {
+          if (status === "playing") pause();
+          else resume();
+        } else {
+          play(track, tracks);
+        }
+      }}
     />
   );
 });
@@ -79,6 +95,8 @@ export default memo(function ArtistDetailPage() {
     (s) => s.updateBreadcrumbLabel,
   );
   const play = useAudioStore((s) => s.play);
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
 
@@ -147,9 +165,13 @@ export default memo(function ArtistDetailPage() {
         index={index}
         currentTrackId={currentTrack?.id}
         status={status}
+        tracks={tracks}
+        play={play}
+        pause={pause}
+        resume={resume}
       />
     ),
-    [currentTrack?.id, status],
+    [currentTrack?.id, status, tracks, play, pause, resume],
   );
 
   if (!artist && !isLoading) {

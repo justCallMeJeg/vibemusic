@@ -7,6 +7,7 @@ interface TopTrack {
   title: string;
   artist: string;
   cover_image: string | null;
+  file_path: string;
   play_count: number;
   duration_ms: number;
 }

@@ -73,6 +73,7 @@ pub struct TopTrack {
     pub title: String,
     pub artist: String,
     pub cover_image: Option<String>,
+    pub file_path: String,
     pub play_count: i64,
     pub duration_ms: i64,
 }
@@ -139,7 +140,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
         // 1. Top Tracks
         let mut stmt = conn.prepare(
             "SELECT 
-                t.id, t.title, ar.name, al.artwork_path, 
+                t.id, t.title, ar.name, al.artwork_path, t.file_path,
                 COUNT(ph.id) as play_count,
                 t.duration_ms
              FROM playback_history ph
@@ -158,8 +159,9 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
                 title: row.get::<usize, String>(1)?,
                 artist: row.get::<usize, Option<String>>(2)?.unwrap_or("Unknown".to_string()),
                 cover_image: row.get::<usize, Option<String>>(3)?,
-                play_count: row.get::<usize, i64>(4)?,
-                duration_ms: row.get::<usize, i64>(5)?,
+                file_path: row.get::<usize, String>(4)?,
+                play_count: row.get::<usize, i64>(5)?,
+                duration_ms: row.get::<usize, i64>(6)?,
             })
         })?;
 

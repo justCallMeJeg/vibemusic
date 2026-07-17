@@ -283,7 +283,7 @@ export default memo(function InsightsPage() {
                                     artist: track.artist,
                                     artwork_path: track.cover_image,
                                     duration_ms: track.duration_ms,
-                                    file_path: "",
+                                    file_path: track.file_path,
                                     album: "",
                                     album_id: null,
                                     artist_id: null,
