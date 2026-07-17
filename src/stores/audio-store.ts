@@ -61,7 +61,7 @@ interface AudioActions {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   stop: () => Promise<void>;
-  next: () => Promise<void>;
+  next: (crossfade?: boolean) => Promise<void>;
   previous: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
@@ -98,7 +98,7 @@ type AudioStore = AudioState & AudioActions;
  */
 export const useAudioStore = create<AudioStore>((set, get) => {
   // Internal helper for playing a track
-  const playInternal = async (track: Track) => {
+  const playInternal = async (track: Track, crossfade: boolean = false) => {
     try {
       await invoke("audio_play", {
         path: track.file_path,
@@ -106,6 +106,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         artist: track.artist,
         album: track.album,
         artworkPath: track.artwork_path,
+        crossfade,
       });
 
       // Background pre-fetch: lyrics + metadata
@@ -136,7 +137,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
   };
 
   // Internal next handler
-  const handleNext = async () => {
+  const handleNext = async (crossfade: boolean = false) => {
     const state = get();
     // Record stats for the finishing track
     checkAndRecordStats(state.currentTrack, state.duration, state.position);
@@ -189,9 +190,11 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       currentIndex: nextIndex,
       status: "loading",
       position: 0,
+      _lastSeekTime: Date.now(),
+      _isTransitioning: true,
     });
 
-    await playInternal(nextTrack);
+    await playInternal(nextTrack, crossfade);
   };
 
   return {
@@ -465,32 +468,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           const state = get();
           if (state._isDraggingSlider) return;
 
-          // Throttle: only update if at least 500ms has passed
-          const now = Date.now();
-          if (now - state._lastProgressUpdate < 500) return;
-
-          // Ignore updates shortly after seeking to prevent jumping back
-          if (now - state._lastSeekTime < 1000) return;
-
           const s = event.payload;
-          set({
-            position: s.position_ms,
-            duration: s.duration_ms,
-            _lastProgressUpdate: now,
-          });
+          const now = Date.now();
 
-          // Automatic Crossfade Logic
+          // Automatic Crossfade Logic — must run BEFORE throttle for timely triggering
           const crossfadeMs = state._crossfadeDuration || 0;
+          const IPC_BUFFER_MS = 100;
           if (crossfadeMs > 0 && s.duration_ms > 0) {
-            // Small buffer to compensate for IPC latency between frontend trigger
-            // and backend receiving the play command
-            const IPC_BUFFER_MS = 100;
             const threshold = s.duration_ms - crossfadeMs - IPC_BUFFER_MS;
-
-            // Check if we reached the transition point
-            // Also ensure we aren't already transitioning
             if (s.position_ms >= threshold && !state._isTransitioning) {
-              // Verify we have a next track
               const hasNext =
                 state.queue.length > 0 &&
                 (state.repeat !== "off" ||
@@ -502,14 +488,30 @@ export const useAudioStore = create<AudioStore>((set, get) => {
                   threshold,
                 );
                 set({ _isTransitioning: true });
-                get().next();
+                get().next(true);
+                return;
               }
             }
-
-            // Reset transition flag if we are at the beginning of a track
-            if (state._isTransitioning && s.position_ms < threshold * 0.5) {
+            if (state._isTransitioning && s.position_ms < crossfadeMs + 500) {
               set({ _isTransitioning: false });
             }
+          }
+
+          // Throttle: only update if at least 500ms has passed
+          if (now - state._lastProgressUpdate < 500) return;
+
+          // Ignore updates shortly after seeking to prevent jumping back
+          if (now - state._lastSeekTime < 1000) return;
+
+          // Block position display during crossfade transition to prevent stale
+          // old-track events from overwriting position, but allow the event to
+          // flow through for rearm and auto-crossfade logic below.
+          if (!state._isTransitioning) {
+            set({
+              position: s.position_ms,
+              duration: s.duration_ms,
+              _lastProgressUpdate: now,
+            });
           }
         },
       );

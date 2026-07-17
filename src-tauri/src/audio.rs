@@ -65,6 +65,7 @@ enum AudioCommand {
         artist: String,
         album: String,
         artwork_path: Option<String>,
+        crossfade: bool,
     },
     Pause,
     Resume,
@@ -221,6 +222,7 @@ impl AudioEngine {
         artist: String,
         album: String,
         artwork_path: Option<String>,
+        crossfade: bool,
     ) {
         self.command_tx
             .send(AudioCommand::Play {
@@ -229,6 +231,7 @@ impl AudioEngine {
                 artist,
                 album,
                 artwork_path,
+                crossfade,
             })
             .ok();
     }
@@ -290,6 +293,7 @@ struct SymphoniaDecoder {
     decoder: Box<dyn AudioDecoder>,
     track_id: u32,
     sample_rate: u32,
+    channels: u16,
     duration_ms: u64,
 }
 
@@ -318,7 +322,7 @@ impl SymphoniaDecoder {
             .make_audio_decoder(audio_params, &dec_opts)
             .map_err(|e| format!("Failed to create decoder: {}", e))?;
         let sample_rate = audio_params.sample_rate.unwrap_or(44100);
-        let channels = audio_params.channels.as_ref().map(|c| c.count()).unwrap_or(2);
+        let channels = audio_params.channels.as_ref().map(|c| c.count() as u16).unwrap_or(2);
         let duration_ms = format.media_info().time_base
             .zip(format.media_info().duration)
             .and_then(|(tb, d)| tb.calc_time(Timestamp::from(d.get() as u32)))
@@ -333,6 +337,7 @@ impl SymphoniaDecoder {
                 decoder,
                 track_id,
                 sample_rate,
+                channels,
                 duration_ms,
             },
             buf,
@@ -385,6 +390,7 @@ impl SymphoniaDecoder {
     }
 
     fn sample_rate(&self) -> u32 { self.sample_rate }
+    fn channels(&self) -> u16 { self.channels }
     fn duration_ms(&self) -> u64 { self.duration_ms }
 }
 
@@ -421,6 +427,9 @@ struct AudioWorker {
     samples_played: u64,
     current_file_sample_rate: u32,
 
+    // Crossfade diagnostics
+    crossfade_batches_logged: u8,
+
     // Media controls position update tracking
     last_media_pos_update: Instant,
 
@@ -428,6 +437,7 @@ struct AudioWorker {
     primary_buffer: Vec<f32>,
     secondary_buffer: Vec<f32>,
     resample_buf: Vec<f32>,
+    mix_buf: Vec<f32>,
 }
 
 impl AudioWorker {
@@ -471,10 +481,12 @@ impl AudioWorker {
             current_position_ms: 0,
             samples_played: 0,
             current_file_sample_rate: sample_rate,
+            crossfade_batches_logged: 0,
             last_media_pos_update: Instant::now(),
             primary_buffer: vec![0.0f32; 8192],
             secondary_buffer: vec![0.0f32; 8192],
             resample_buf: vec![0.0f32; 8192],
+            mix_buf: vec![0.0f32; 8192],
         }
     }
 
@@ -503,9 +515,9 @@ impl AudioWorker {
     fn handle_command(&mut self, cmd: AudioCommand) {
         match cmd {
             AudioCommand::Play {
-                path, title, artist, album, artwork_path,
+                path, title, artist, album, artwork_path, crossfade,
             } => {
-                self.handle_play_request(&path, &title, &artist, &album, artwork_path.as_deref());
+                self.handle_play_request(&path, &title, &artist, &album, artwork_path.as_deref(), crossfade);
             }
             AudioCommand::Pause => self.pause(),
             AudioCommand::Resume => self.resume(),
@@ -530,10 +542,11 @@ impl AudioWorker {
         }
     }
 
-    fn handle_play_request(&mut self, path: &str, title: &str, artist: &str, album: &str, artwork_path: Option<&str>) {
+    fn handle_play_request(&mut self, path: &str, title: &str, artist: &str, album: &str, artwork_path: Option<&str>, crossfade_enabled: bool) {
         let is_same_track = self.current_file_path.as_deref() == Some(path);
 
-        let should_crossfade = self.is_playing.load(Ordering::Relaxed)
+        let should_crossfade = crossfade_enabled
+            && self.is_playing.load(Ordering::Relaxed)
             && self.crossfade_setting.as_millis() > 0
             && self.primary_decoder.is_some()
             && !is_same_track;
@@ -543,6 +556,18 @@ impl AudioWorker {
                         Ok((decoder, buf)) => {
                             info!("Crossfading to new track: {}", path);
                             debug!("Crossfade duration: {:?}", self.crossfade_setting);
+                            {
+                                let primary_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(0);
+                                let primary_ch = self.primary_decoder.as_ref().map(|d| d.channels()).unwrap_or(0);
+                                let secondary_rate = decoder.sample_rate();
+                                let secondary_ch = decoder.channels();
+                                debug!(
+                                    "[crossfade] start: pri_rate={}hz pri_ch={} sec_rate={}hz sec_ch={} dev_rate={}hz dev_ch={} pri_buf={} sec_buf={}",
+                                    primary_rate, primary_ch, secondary_rate, secondary_ch,
+                                    self.device_sample_rate, self.device_channels,
+                                    self.primary_buffer.len(), buf.len()
+                                );
+                            }
                             self.secondary_decoder = Some(decoder);
                             self.secondary_buffer = buf;
                             self.crossfade_state = CrossfadeState::Fading {
@@ -555,7 +580,6 @@ impl AudioWorker {
                     self.current_file_path = Some(path.to_string());
                     self.current_position_ms = 0;
                     self.samples_played = 0;
-                    self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
 
                     {
                         match self.state.lock() {
@@ -576,6 +600,7 @@ impl AudioWorker {
 
                     self.update_media_metadata(title, artist, album, artwork_path, self.duration_ms);
                     self.emit_state();
+                    self.emit_progress();
                 }
                 Err(e) => {
                     error!("Failed to create secondary decoder: {}", e);
@@ -696,15 +721,15 @@ impl AudioWorker {
 
         let min_buffer = self.primary_buffer.len() * 2;
         let buffer_size = (self.device_sample_rate as usize * self.device_channels as usize).max(min_buffer);
-        let rb = HeapRb::<f32>::new(buffer_size);
-        let (producer, consumer) = rb.split();
+
+        let (producer, consumer) = HeapRb::<f32>::new(buffer_size).split();
         self.producer = Some(producer);
 
         let volume = self.volume.clone();
         let is_playing = self.is_playing.clone();
         let device_error = self.device_error.clone();
-        let mut consumer = consumer;
         let channels = self.device_channels as usize;
+        let mut consumer = consumer;
 
         let stream = match device.build_output_stream(
             &config,
@@ -717,11 +742,7 @@ impl AudioWorker {
                 let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
                 for frame in data.chunks_mut(channels) {
                     for sample in frame.iter_mut() {
-                        if let Some(s) = consumer.try_pop() {
-                            *sample = s * vol;
-                        } else {
-                            *sample = 0.0;
-                        }
+                        *sample = consumer.try_pop().unwrap_or(0.0) * vol;
                     }
                 }
             },
@@ -804,38 +825,20 @@ impl AudioWorker {
                 if producer.vacant_len() < self.primary_buffer.len() {
                     break;
                 }
-                let occupied = capacity - producer.vacant_len();
-                if occupied >= target_fill {
-                    break;
-                }
-                if producer.vacant_len() < self.primary_buffer.len() {
-                    break;
-                }
 
                 let mut crossfade_progress = 0.0;
                 let mut is_fading = false;
+                let mut crossfade_dur = Duration::from_secs(0);
 
                 if let CrossfadeState::Fading {
                     start_time,
                     duration,
                 } = self.crossfade_state
                 {
+                    crossfade_dur = duration;
                     let elapsed = start_time.elapsed();
-                    if elapsed < duration {
-                        crossfade_progress = elapsed.as_secs_f32() / duration.as_secs_f32();
-                        is_fading = true;
-                    } else {
-                        debug!("Crossfade complete, swapping to secondary decoder");
-                        self.primary_decoder = self.secondary_decoder.take();
-                        if self.primary_buffer.len() != self.secondary_buffer.len() {
-                            self.primary_buffer.resize(self.secondary_buffer.len(), 0.0);
-                            self.resample_buf.resize(self.primary_buffer.len() * 2, 0.0);
-                        }
-                        self.primary_buffer.copy_from_slice(&self.secondary_buffer);
-                        self.current_file_sample_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(44100);
-                        self.crossfade_state = CrossfadeState::None;
-                        continue;
-                    }
+                    crossfade_progress = (elapsed.as_secs_f32() / duration.as_secs_f32()).min(1.0);
+                    is_fading = true;
                 }
 
                 let primary_buffer = &mut self.primary_buffer;
@@ -859,39 +862,111 @@ impl AudioWorker {
                         0
                     };
 
-                    let mix_count = secondary_read;
-
-                    if mix_count == 0 {
+                    if secondary_read == 0 {
                         track_finished = true;
                         break;
                     }
 
-                    if primary_read < mix_count {
-                        primary_buffer[primary_read..mix_count].fill(0.0);
-                    }
+                    let dev_channels = self.device_channels as usize;
+                    let dev_rate = self.device_sample_rate;
+                    let crossfade_dur_secs = crossfade_dur.as_secs_f32();
+                    let samples_per_sec = dev_rate as f32 * dev_channels as f32;
 
-                    for i in 0..mix_count {
-                        let p = primary_buffer[i];
-                        let s = secondary_buffer[i];
-                        primary_buffer[i] =
-                            (p * (1.0 - crossfade_progress)) + (s * crossfade_progress);
-                    }
-
-                    let file_rate = self.current_file_sample_rate;
-                    let out_len = Self::resample_audio(
-                        &primary_buffer[..mix_count],
-                        file_rate,
-                        self.device_sample_rate,
-                        self.device_channels as usize,
+                    let secondary_rate = self.secondary_decoder.as_ref()
+                        .map(|d| d.sample_rate()).unwrap_or(44100);
+                    let secondary_len = Self::resample_audio(
+                        &secondary_buffer[..secondary_read],
+                        secondary_rate, dev_rate, dev_channels,
                         &mut self.resample_buf,
                     );
-                    producer.push_slice(&self.resample_buf[..out_len]);
 
-                    self.samples_played += out_len as u64;
+                    if secondary_len == 0 {
+                        track_finished = true;
+                        break;
+                    }
+
+                    let vol_step_fade_in = if crossfade_dur_secs > 0.0 {
+                        1.0 / (crossfade_dur_secs * samples_per_sec)
+                    } else {
+                        1.0
+                    };
+                    for i in 0..secondary_len {
+                        let t = (crossfade_progress + i as f32 * vol_step_fade_in).min(1.0);
+                        self.resample_buf[i] *= t;
+                    }
+                    if self.mix_buf.len() < secondary_len {
+                        self.mix_buf.resize(secondary_len, 0.0);
+                    }
+                    self.mix_buf[..secondary_len].copy_from_slice(&self.resample_buf[..secondary_len]);
+
+                    let primary_rate = self.primary_decoder.as_ref()
+                        .map(|d| d.sample_rate()).unwrap_or(44100);
+
+                    if primary_buffer.len() < secondary_read {
+                        primary_buffer.resize(secondary_read, 0.0);
+                    }
+                    if primary_read < secondary_read {
+                        primary_buffer[primary_read..secondary_read].fill(0.0);
+                    }
+
+                    let primary_len = Self::resample_audio(
+                        &primary_buffer[..secondary_read],
+                        primary_rate, dev_rate, dev_channels,
+                        &mut self.resample_buf,
+                    );
+
+                    let vol_step_fade_out = if crossfade_dur_secs > 0.0 {
+                        -1.0 / (crossfade_dur_secs * samples_per_sec)
+                    } else {
+                        -1.0
+                    };
+
+                    debug!(
+                        "[crossfade] batch: pri_read={} sec_read={} pri_resampled={} sec_resampled={} rate_pri={}hz→{}hz rate_sec={}hz→{}hz progress={:.4} fade_delta_in={:.6}",
+                        primary_read, secondary_read, primary_len, secondary_len,
+                        primary_rate, dev_rate, secondary_rate, dev_rate,
+                        crossfade_progress, secondary_len as f32 * vol_step_fade_in,
+                    );
+                    for i in 0..primary_len {
+                        let t = (1.0 - crossfade_progress + i as f32 * vol_step_fade_out).max(0.0);
+                        self.resample_buf[i] *= t;
+                    }
+
+                    let mix_len = secondary_len.max(primary_len);
+                    for i in 0..secondary_len.min(primary_len) {
+                        self.resample_buf[i] += self.mix_buf[i];
+                    }
+                    if secondary_len > primary_len {
+                        if self.resample_buf.len() < secondary_len {
+                            self.resample_buf.resize(secondary_len, 0.0);
+                        }
+                        self.resample_buf[primary_len..secondary_len]
+                            .copy_from_slice(&self.mix_buf[primary_len..secondary_len]);
+                    }
+                    producer.push_slice(&self.resample_buf[..mix_len]);
+
+                    self.samples_played += secondary_len as u64;
                     let samples_per_ms =
-                        (self.device_sample_rate as u64 * self.device_channels as u64) / 1000;
+                        (dev_rate as u64 * self.device_channels as u64) / 1000;
                     if samples_per_ms > 0 {
                         self.current_position_ms = self.samples_played / samples_per_ms;
+                    }
+
+                    if crossfade_progress + secondary_len as f32 * vol_step_fade_in >= 1.0 {
+                        debug!("[crossfade] complete: new_rate={}hz new_ch={}",
+                            self.secondary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(0),
+                            self.secondary_decoder.as_ref().map(|d| d.channels()).unwrap_or(0),
+                        );
+                        self.primary_decoder = self.secondary_decoder.take();
+                        if self.primary_buffer.len() != self.secondary_buffer.len() {
+                            self.primary_buffer.resize(self.secondary_buffer.len(), 0.0);
+                            self.resample_buf.resize(self.primary_buffer.len() * 2, 0.0);
+                            self.mix_buf.resize(self.secondary_buffer.len() * 2, 0.0);
+                        }
+                        self.primary_buffer.copy_from_slice(&self.secondary_buffer);
+                        self.current_file_sample_rate = self.primary_decoder.as_ref().map(|d| d.sample_rate()).unwrap_or(44100);
+                        self.crossfade_state = CrossfadeState::None;
+                        self.crossfade_batches_logged = 5;
                     }
                 } else if primary_read > 0 {
                     let file_rate = self.current_file_sample_rate;
@@ -912,6 +987,17 @@ impl AudioWorker {
                     }
                 }
             }
+        }
+
+        if self.crossfade_batches_logged > 0 {
+            debug!(
+                "[crossfade] post batch {}/5: file_rate={}hz dev_rate={}hz dev_ch={} is_crossfade_done={}",
+                6 - self.crossfade_batches_logged,
+                self.current_file_sample_rate, self.device_sample_rate,
+                self.device_channels,
+                matches!(self.crossfade_state, CrossfadeState::None),
+            );
+            self.crossfade_batches_logged -= 1;
         }
 
         if track_finished {
@@ -992,6 +1078,7 @@ impl AudioWorker {
         self.duration_ms = 0;
         self.samples_played = 0;
         self.crossfade_state = CrossfadeState::None;
+        self.crossfade_batches_logged = 0;
 
         {
             match self.state.lock() {
@@ -1026,6 +1113,7 @@ impl AudioWorker {
 
         self.secondary_decoder = None;
         self.crossfade_state = CrossfadeState::None;
+        self.crossfade_batches_logged = 0;
 
         let seek_ok = self.primary_decoder.as_mut().map(|dec| dec.seek_to(pos_ms).is_ok()).unwrap_or(false);
 
@@ -1130,6 +1218,7 @@ pub fn audio_play(
     artist: Option<String>,
     album: Option<String>,
     artwork_path: Option<String>,
+    crossfade: Option<bool>,
 ) -> Result<(), AppError> {
     state.0.play(
         path,
@@ -1137,6 +1226,7 @@ pub fn audio_play(
         artist.unwrap_or("Unknown".into()),
         album.unwrap_or("Unknown".into()),
         artwork_path,
+        crossfade.unwrap_or(false),
     );
     Ok(())
 }
