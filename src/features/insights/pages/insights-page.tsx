@@ -183,7 +183,7 @@ export default memo(function InsightsPage() {
         )}
       >
         {isEmpty ? (
-          <div className="p-8">
+          <div className="flex items-center justify-center h-full">
             <EmptyState
               icon={BarChart2}
               title="No insights yet"
