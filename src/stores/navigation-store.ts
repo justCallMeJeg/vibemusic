@@ -60,6 +60,7 @@ interface NavigationActions {
   navigateToHistoryIndex: (index: number) => void;
   updateBreadcrumbLabel: (type: "album" | "artist" | "playlist", id: number, label: string) => void;
   toggleMiniPlayer: () => Promise<void>;
+  resetNavigation: () => void;
 }
 
 type NavigationStore = NavigationState & NavigationActions;
@@ -79,6 +80,15 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
   history: [{ label: PAGE_LABELS.home, page: "home" }],
 
   // Actions
+  resetNavigation: () =>
+    set({
+      currentPage: "home",
+      detailView: null,
+      isSearchOpen: false,
+      isMiniPlayer: false,
+      history: [{ label: PAGE_LABELS.home, page: "home" }],
+    }),
+
   setPage: (page) =>
     set({
       currentPage: page,

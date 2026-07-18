@@ -106,6 +106,7 @@ interface StatsState {
   fetchStats: (range?: TimeRange) => Promise<void>;
   setTimeRange: (range: TimeRange) => void;
   recordPlayback: (trackId: number, durationMs: number) => Promise<void>;
+  resetStats: () => void;
 }
 
 export const useStatsStore = create<StatsState>((set, get) => ({
@@ -143,4 +144,6 @@ export const useStatsStore = create<StatsState>((set, get) => ({
       logger.error("Failed to record playback", e);
     }
   },
+
+  resetStats: () => set({ data: null, error: null }),
 }));

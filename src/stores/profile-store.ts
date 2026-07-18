@@ -3,6 +3,9 @@ import { load, Store } from "@tauri-apps/plugin-store";
 import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
 import { useLibraryStore } from "./library-store";
+import { useAudioStore } from "./audio-store";
+import { useNavigationStore } from "./navigation-store";
+import { useStatsStore } from "./stats-store";
 import { logger } from "@/lib/logger";
 
 const TAILWIND_CLASS_TO_HEX: Record<string, string> = {
@@ -238,6 +241,9 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     // 0. Reset UI State to prevent ghost data
     // Use true to show skeletons immediately, preventing "Empty State" flash
     useLibraryStore.getState().resetLibrary(true);
+    useAudioStore.getState().resetAudio();
+    useNavigationStore.getState().resetNavigation();
+    useStatsStore.getState().resetStats();
 
     // 1. Notify backend FIRST
     await invoke("set_active_profile", { profileId: id });

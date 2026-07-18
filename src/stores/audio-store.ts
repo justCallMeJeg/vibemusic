@@ -88,6 +88,9 @@ interface AudioActions {
   setCrossfadeDuration: (durationMs: number) => void;
   setFadeInOut: (enabled: boolean, durationMs: number) => void;
 
+  // Reset
+  resetAudio: () => void;
+
   // Initialization
   initListeners: () => () => void;
 }
@@ -431,6 +434,30 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     setDraggingSlider: (isDragging) => set({ _isDraggingSlider: isDragging }),
     setCrossfadeDuration: (durationMs) => set({ _crossfadeDuration: durationMs }),
     setFadeInOut: (enabled, durationMs) => set({ _fadeInOutEnabled: enabled, _fadeInOutDuration: durationMs }),
+
+    // Reset
+    resetAudio: () =>
+      set({
+        status: "stopped",
+        currentTrack: null,
+        queue: [],
+        currentIndex: -1,
+        shuffle: false,
+        repeat: "off",
+        sidePanel: "none",
+        position: 0,
+        duration: 0,
+        _previousVolume: 1.0,
+        _isDraggingSlider: false,
+        _lastProgressUpdate: 0,
+        _lastSeekTime: 0,
+        _isTransitioning: false,
+        _crossfadeDuration: 0,
+        _fadeInOutEnabled: false,
+        _fadeInOutDuration: 1000,
+        _queueIndexMap: new Map(),
+        _trackVersion: 0,
+      }),
 
     // Initialization
     initListeners: () => {
