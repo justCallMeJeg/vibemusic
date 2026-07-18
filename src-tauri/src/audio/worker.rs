@@ -977,6 +977,8 @@ impl AudioWorker {
     pub(crate) fn seek(&mut self, pos_ms: u64) {
         info!("Seeking to {}ms", pos_ms);
 
+        let was_playing = self.is_playing.load(Ordering::Relaxed);
+
         self.secondary_decoder = None;
         self.crossfade_state = CrossfadeState::None;
         self.crossfade_batches_logged = 0;
@@ -1028,6 +1030,10 @@ impl AudioWorker {
                 self.device_channels,
                 Some(&prefill),
             );
+
+            if !was_playing {
+                self.is_playing.store(false, Ordering::Relaxed);
+            }
 
             self.update_media_controls();
         } else {
