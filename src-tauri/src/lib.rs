@@ -1,28 +1,26 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
+mod shared;
+
 mod artwork;
 mod audio;
 mod database;
-mod error;
-mod metadata;
+mod install_format;
 mod library;
+mod lyrics;
+mod metadata;
 mod playlists;
 mod profile;
 mod scanner;
+mod stats;
 mod updater;
 mod watcher;
-mod lyrics;
-mod stats;
-mod install_format;
-
 
 use audio::{AudioEngine, AudioState};
 use profile::{DbCache, ProfileState};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
-
-
 
 /// Entry point for the Tauri application.
 /// Initializes plugins, state, and runs the application loop.
@@ -101,7 +99,11 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
             let _tray = TrayIconBuilder::with_id("tray")
-                .icon(app.default_window_icon().expect("window icon must be configured").clone())
+                .icon(
+                    app.default_window_icon()
+                        .expect("window icon must be configured")
+                        .clone(),
+                )
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -156,17 +158,17 @@ pub fn run() {
             library::get_artist_tracks,
             library::search,
             // Audio commands
-            audio::audio_play,
-            audio::audio_pause,
-            audio::audio_resume,
-            audio::audio_stop,
-            audio::audio_seek,
-            audio::audio_set_volume,
-            audio::audio_get_state,
-            audio::audio_get_devices,
-            audio::audio_set_device,
-            audio::audio_set_crossfade,
-            audio::audio_set_fade_in_out,
+            audio::commands::audio_play,
+            audio::commands::audio_pause,
+            audio::commands::audio_resume,
+            audio::commands::audio_stop,
+            audio::commands::audio_seek,
+            audio::commands::audio_set_volume,
+            audio::commands::audio_get_state,
+            audio::commands::audio_get_devices,
+            audio::commands::audio_set_device,
+            audio::commands::audio_set_crossfade,
+            audio::commands::audio_set_fade_in_out,
             // Playlist commands
             playlists::create_playlist,
             playlists::delete_playlist,

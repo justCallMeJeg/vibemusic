@@ -53,6 +53,12 @@ symphonia = { version = "0.6", features = ["all"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 
+[lints.clippy]
+all = { level = "warn", priority = 1 }
+redundant_clone = { level = "deny", priority = 2 }
+needless_collect = { level = "deny", priority = 2 }
+clone_on_copy = { level = "deny", priority = 2 }
+
 [profile.release]
 codegen-units = 1 # Maximum optimization
 lto = true        # Link Time Optimization

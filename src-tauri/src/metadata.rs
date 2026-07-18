@@ -1,10 +1,10 @@
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
-use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MediaMetadata {
@@ -33,7 +33,9 @@ pub fn probe_file(path: String) -> Result<MediaMetadata, String> {
     // Check in-memory cache first
     let cache_key = path.clone();
     {
-        let mut cache = probe_cache().lock().map_err(|e| format!("Cache lock poisoned: {}", e))?;
+        let mut cache = probe_cache()
+            .lock()
+            .map_err(|e| format!("Cache lock poisoned: {}", e))?;
         if let Some((stored_at, cached)) = cache.get(&cache_key) {
             if stored_at.elapsed() < PROBE_CACHE_TTL {
                 return Ok(cached.clone());
@@ -68,12 +70,25 @@ pub fn probe_file(path: String) -> Result<MediaMetadata, String> {
     let mut date = None;
     let mut genre = None;
 
-    if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
-        album_artist = tag.get_string(&lofty::tag::ItemKey::AlbumArtist).map(|s| s.to_string());
-        composer = tag.get_string(&lofty::tag::ItemKey::Composer).map(|s| s.to_string());
-        copyright = tag.get_string(&lofty::tag::ItemKey::CopyrightUrl).map(|s| s.to_string());
-        date = tag.get_string(&lofty::tag::ItemKey::Year).map(|s| s.to_string());
-        genre = tag.get_string(&lofty::tag::ItemKey::Genre).map(|s| s.to_string());
+    if let Some(tag) = tagged_file
+        .primary_tag()
+        .or_else(|| tagged_file.first_tag())
+    {
+        album_artist = tag
+            .get_string(&lofty::tag::ItemKey::AlbumArtist)
+            .map(|s| s.to_string());
+        composer = tag
+            .get_string(&lofty::tag::ItemKey::Composer)
+            .map(|s| s.to_string());
+        copyright = tag
+            .get_string(&lofty::tag::ItemKey::CopyrightUrl)
+            .map(|s| s.to_string());
+        date = tag
+            .get_string(&lofty::tag::ItemKey::Year)
+            .map(|s| s.to_string());
+        genre = tag
+            .get_string(&lofty::tag::ItemKey::Genre)
+            .map(|s| s.to_string());
     }
 
     let metadata = MediaMetadata {

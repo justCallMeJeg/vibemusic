@@ -17,7 +17,10 @@ pub enum InstallFormat {
 
 impl InstallFormat {
     pub fn supports_auto_update(&self) -> bool {
-        matches!(self, InstallFormat::Msi | InstallFormat::Dmg | InstallFormat::AppImage)
+        matches!(
+            self,
+            InstallFormat::Msi | InstallFormat::Dmg | InstallFormat::AppImage
+        )
     }
 }
 
@@ -38,7 +41,10 @@ pub fn detect_install_format() -> InstallFormat {
             }
         }
         // fallback: check registry-like paths via parent dir name
-        if let Some(parent) = env::current_exe().ok().and_then(|p| p.parent().map(|p| p.to_string_lossy().to_lowercase())) {
+        if let Some(parent) = env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_string_lossy().to_lowercase()))
+        {
             if parent.contains("program files") {
                 return InstallFormat::Msi;
             }

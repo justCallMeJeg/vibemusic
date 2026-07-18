@@ -1,112 +1,22 @@
+//! Stats feature — playback analytics, trends, streaks, and listening patterns.
+//!
+//! Sub-modules:
+//! - [`types`]: Re-exports from the shared type registry
+//! - [`queries`]: Helper functions for streak calculation and week-day generation
+
+pub mod queries;
+#[cfg(test)]
+mod tests;
+pub mod types;
+
 use crate::profile::with_db;
-use chrono::{Local, NaiveDate};
-use serde::Serialize;
+use crate::shared::types::{
+    ActivityPoint, DayNightSplit, HeatmapPoint, StatsData, StreaksData, TopAlbum, TopArtist,
+    TopGenre, TopTrack, TrendsData, WeeklyWrapData,
+};
 use tauri::AppHandle;
 
-#[derive(Serialize)]
-pub struct StatsData {
-    pub top_tracks: Vec<TopTrack>,
-    pub top_artists: Vec<TopArtist>,
-    pub top_albums: Vec<TopAlbum>,
-    pub activity_history: Vec<ActivityPoint>,
-    pub top_genres: Vec<TopGenre>,
-    pub heatmap: Vec<HeatmapPoint>,
-    pub trends: TrendsData,
-    pub total_listening_ms: i64,
-    pub streaks: StreaksData,
-    pub day_night_split: DayNightSplit,
-    pub weekly_wrap: WeeklyWrapData,
-}
-
-#[derive(Serialize)]
-pub struct TrendsData {
-    pub listening_time_change: f64, // Percentage change
-    pub play_count_change: f64,
-    pub new_artists_count: i64,
-}
-
-#[derive(Serialize)]
-pub struct HeatmapPoint {
-    pub day: u8,
-    pub hour: u8,
-    pub intensity: u32,
-    pub normalized: f64,
-}
-
-#[derive(Serialize)]
-pub struct StreaksData {
-    pub current_streak: i64,
-    pub longest_streak: i64,
-    pub week_days: Vec<WeekDayStatus>,
-}
-
-#[derive(Serialize)]
-pub struct WeekDayStatus {
-    pub day: String,
-    pub active: bool,
-    pub date: String,
-}
-
-#[derive(Serialize)]
-pub struct DayNightSplit {
-    pub day_plays: i64,
-    pub night_plays: i64,
-    pub day_percentage: f64,
-    pub night_percentage: f64,
-}
-
-#[derive(Serialize)]
-pub struct WeeklyWrapData {
-    pub total_plays: i64,
-    pub total_listening_ms: i64,
-    pub unique_tracks: i64,
-    pub unique_artists: i64,
-    pub top_track: Option<String>,
-    pub top_artist: Option<String>,
-    pub most_active_day: Option<String>,
-    pub most_active_day_plays: i64,
-}
-
-#[derive(Serialize)]
-pub struct TopTrack {
-    pub id: i64,
-    pub title: String,
-    pub artist: String,
-    pub cover_image: Option<String>,
-    pub file_path: String,
-    pub play_count: i64,
-    pub duration_ms: i64,
-}
-
-#[derive(Serialize)]
-pub struct TopArtist {
-    pub id: i64,
-    pub name: String,
-    pub cover_image: Option<String>,
-    pub play_count: i64,
-}
-
-#[derive(Serialize)]
-pub struct TopAlbum {
-    pub id: i64,
-    pub title: String,
-    pub artist: String,
-    pub cover_image: Option<String>,
-    pub play_count: i64,
-}
-
-#[derive(Serialize)]
-pub struct ActivityPoint {
-    pub date: String, // YYYY-MM-DD
-    pub duration_ms: i64,
-}
-
-#[derive(Serialize)]
-pub struct TopGenre {
-    pub genre: String,
-    pub play_count: i64,
-}
-
+/// Records a playback event in the history table.
 #[tauri::command]
 pub async fn record_playback(
     app: AppHandle,
@@ -116,6 +26,7 @@ pub async fn record_playback(
     with_db(&app, |db| db.record_playback(track_id, duration_ms))
 }
 
+/// Returns aggregated listening statistics for the given time range.
 #[tauri::command]
 pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<StatsData, String> {
     with_db(&app, |db| {
@@ -139,7 +50,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         // 1. Top Tracks
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 t.id, t.title, ar.name, al.artwork_path, t.file_path,
                 COUNT(ph.id) as play_count,
                 t.duration_ms
@@ -157,7 +68,9 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
             Ok(TopTrack {
                 id: row.get::<usize, i64>(0)?,
                 title: row.get::<usize, String>(1)?,
-                artist: row.get::<usize, Option<String>>(2)?.unwrap_or("Unknown".to_string()),
+                artist: row
+                    .get::<usize, Option<String>>(2)?
+                    .unwrap_or("Unknown".to_string()),
                 cover_image: row.get::<usize, Option<String>>(3)?,
                 file_path: row.get::<usize, String>(4)?,
                 play_count: row.get::<usize, i64>(5)?,
@@ -169,7 +82,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         // 2. Top Artists
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 ar.id, ar.name,
                 (SELECT artwork_path FROM albums WHERE artist_id = ar.id ORDER BY year DESC LIMIT 1) as artwork_path,
                 COUNT(ph.id) as play_count
@@ -195,7 +108,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         // 3. Top Albums
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 al.id, al.title, ar.name, al.artwork_path,
                 COUNT(ph.id) as play_count
              FROM playback_history ph
@@ -212,7 +125,9 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
             Ok(TopAlbum {
                 id: row.get::<usize, i64>(0)?,
                 title: row.get::<usize, String>(1)?,
-                artist: row.get::<usize, Option<String>>(2)?.unwrap_or("Unknown".to_string()),
+                artist: row
+                    .get::<usize, Option<String>>(2)?
+                    .unwrap_or("Unknown".to_string()),
                 cover_image: row.get::<usize, Option<String>>(3)?,
                 play_count: row.get::<usize, i64>(4)?,
             })
@@ -224,7 +139,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
         let seven_days_ago = now - (7 * 24 * 60 * 60);
 
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 date(timestamp, 'unixepoch', 'localtime') as day,
                 SUM(duration_ms) as total_duration
              FROM playback_history
@@ -244,7 +159,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         // 5. Top Genres
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 t.genre,
                 COUNT(ph.id) as play_count
              FROM playback_history ph
@@ -273,7 +188,7 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         // 7. Heatmap
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 CAST(strftime('%w', timestamp, 'unixepoch', 'localtime') AS INTEGER) as day_of_week,
                 CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) as hour_of_day,
                 COUNT(*) as frequency
@@ -302,21 +217,26 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         let (prev_total_time, prev_play_count): (i64, i64) = if has_trends {
             conn.query_row(
-                "SELECT 
-                    COALESCE(SUM(duration_ms), 0), 
-                    COUNT(id) 
-                 FROM playback_history 
+                "SELECT
+                    COALESCE(SUM(duration_ms), 0),
+                    COUNT(id)
+                 FROM playback_history
                  WHERE timestamp >= ? AND timestamp < ?",
                 [prev_start, start_timestamp],
                 |row| Ok((row.get(0)?, row.get(1)?)),
-            ).unwrap_or((0, 0))
+            )
+            .unwrap_or((0, 0))
         } else {
             (0, 0)
         };
 
         let calc_change = |current: i64, prev: i64| -> f64 {
             if prev == 0 {
-                if current > 0 { 100.0 } else { 0.0 }
+                if current > 0 {
+                    100.0
+                } else {
+                    0.0
+                }
             } else {
                 ((current as f64 - prev as f64) / prev as f64) * 100.0
             }
@@ -325,7 +245,6 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
         let listening_time_change = calc_change(total_listening_ms, prev_total_time);
         let play_count_change = calc_change(current_play_count, prev_play_count);
 
-        // Discovery: Artists played in this period but NOT before
         let new_artists_count: i64 = if has_trends {
             conn.query_row(
                 "SELECT COUNT(DISTINCT t.artist_id)
@@ -340,7 +259,8 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
                  )",
                 [start_timestamp, start_timestamp],
                 |row| row.get(0),
-            ).unwrap_or(0)
+            )
+            .unwrap_or(0)
         } else {
             0
         };
@@ -357,14 +277,13 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
             .filter_map(|r| r.ok())
             .collect();
 
-        let (current_streak, longest_streak) = calculate_streaks(&streak_dates);
+        let (current_streak, longest_streak) = queries::calculate_streaks(&streak_dates);
 
-        // Generate week_days
-        let week_days = generate_week_days(&streak_dates, now);
+        let week_days = queries::generate_week_days(&streak_dates, now);
 
         // 10. Day/Night Split (combined)
         let (day_count, night_count): (i64, i64) = conn.query_row(
-            "SELECT 
+            "SELECT
                 COUNT(*) FILTER (WHERE CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) BETWEEN 6 AND 17),
                 COUNT(*) FILTER (WHERE CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) >= 18 OR CAST(strftime('%H', timestamp, 'unixepoch', 'localtime') AS INTEGER) < 6)
              FROM playback_history
@@ -375,14 +294,23 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
 
         let total_dn = (day_count + night_count) as f64;
         let (day_percentage, night_percentage) = if total_dn > 0.0 {
-            ((day_count as f64 / total_dn) * 100.0, (night_count as f64 / total_dn) * 100.0)
+            (
+                (day_count as f64 / total_dn) * 100.0,
+                (night_count as f64 / total_dn) * 100.0,
+            )
         } else {
             (0.0, 0.0)
         };
 
         // 11. Weekly Wrap (4 values in one query)
-        let (ww_total_plays, ww_total_time, ww_unique_tracks, ww_unique_artists): (i64, i64, i64, i64) = conn.query_row(
-            "SELECT 
+        let (ww_total_plays, ww_total_time, ww_unique_tracks, ww_unique_artists): (
+            i64,
+            i64,
+            i64,
+            i64,
+        ) = conn
+            .query_row(
+                "SELECT
                 COUNT(*),
                 COALESCE(SUM(duration_ms), 0),
                 COUNT(DISTINCT track_id),
@@ -390,24 +318,28 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
              FROM playback_history ph
              JOIN tracks t ON ph.track_id = t.id
              WHERE ph.timestamp >= ?",
-            [start_timestamp],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-        ).unwrap_or((0, 0, 0, 0));
+                [start_timestamp],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap_or((0, 0, 0, 0));
 
-        let ww_top_track: Option<String> = conn.query_row(
-            "SELECT t.title
+        let ww_top_track: Option<String> = conn
+            .query_row(
+                "SELECT t.title
              FROM playback_history ph
              JOIN tracks t ON ph.track_id = t.id
              WHERE ph.timestamp >= ?
              GROUP BY t.id
              ORDER BY COUNT(ph.id) DESC
              LIMIT 1",
-            [start_timestamp],
-            |row| row.get(0),
-        ).ok();
+                [start_timestamp],
+                |row| row.get(0),
+            )
+            .ok();
 
-        let ww_top_artist: Option<String> = conn.query_row(
-            "SELECT ar.name
+        let ww_top_artist: Option<String> = conn
+            .query_row(
+                "SELECT ar.name
              FROM playback_history ph
              JOIN tracks t ON ph.track_id = t.id
              JOIN artists ar ON t.artist_id = ar.id
@@ -415,20 +347,23 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
              GROUP BY ar.id
              ORDER BY COUNT(ph.id) DESC
              LIMIT 1",
-            [start_timestamp],
-            |row| row.get(0),
-        ).ok();
+                [start_timestamp],
+                |row| row.get(0),
+            )
+            .ok();
 
-        let (ww_most_active_day, ww_most_active_plays): (Option<String>, i64) = conn.query_row(
-            "SELECT date(timestamp, 'unixepoch', 'localtime') as day, COUNT(*) as cnt
+        let (ww_most_active_day, ww_most_active_plays): (Option<String>, i64) = conn
+            .query_row(
+                "SELECT date(timestamp, 'unixepoch', 'localtime') as day, COUNT(*) as cnt
              FROM playback_history
              WHERE timestamp >= ?
              GROUP BY day
              ORDER BY cnt DESC
              LIMIT 1",
-            [start_timestamp],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        ).unwrap_or((None, 0));
+                [start_timestamp],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap_or((None, 0));
 
         Ok(StatsData {
             top_tracks,
@@ -466,165 +401,4 @@ pub async fn get_stats(app: AppHandle, time_range: Option<String>) -> Result<Sta
             },
         })
     })
-}
-
-fn calculate_streaks(dates: &[String]) -> (i64, i64) {
-    if dates.is_empty() {
-        return (0, 0);
-    }
-
-    let today = Local::now().format("%Y-%m-%d").to_string();
-    let mut longest = 1i64;
-    let mut current_run = 1i64;
-
-    let parsed: Vec<NaiveDate> = dates
-        .iter()
-        .filter_map(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
-        .collect();
-
-    if parsed.is_empty() {
-        return (0, 0);
-    }
-
-    for pair in parsed.windows(2) {
-        let prev = pair[0];
-        let curr = pair[1];
-        if prev.succ_opt() == Some(curr) {
-            current_run += 1;
-        } else {
-            if current_run > longest {
-                longest = current_run;
-            }
-            current_run = 1;
-        }
-    }
-    if current_run > longest {
-        longest = current_run;
-    }
-
-    // Calculate current streak (from last play date backward)
-    let last = *parsed.last().expect("parsed should be non-empty here");
-    let current_streak = if let Ok(today_date) = NaiveDate::parse_from_str(&today, "%Y-%m-%d") {
-        let days_since = (today_date - last).num_days();
-        if days_since <= 1 {
-            let mut streak = 1i64;
-            let mut expected = last;
-            for date in parsed.iter().rev().skip(1) {
-                let diff = (expected - *date).num_days();
-                if diff == 1 {
-                    streak += 1;
-                    expected = *date;
-                } else {
-                    break;
-                }
-            }
-            streak
-        } else {
-            0
-        }
-    } else {
-        0
-    };
-
-    (current_streak, longest)
-}
-
-fn generate_week_days(active_dates: &[String], now: i64) -> Vec<WeekDayStatus> {
-    let mut week_days = Vec::new();
-
-    // Generate last 7 days based on current timestamp
-    let today_secs = now - (now % 86400);
-
-    for i in (0..7).rev() {
-        let day_secs = today_secs - (i as i64 * 86400);
-        if let Some(naive) = NaiveDate::from_ymd_opt(1970, 1, 1) {
-            let date = naive + chrono::Duration::days(day_secs / 86400);
-            let date_str = date.format("%Y-%m-%d").to_string();
-            let weekday = date.format("%a").to_string();
-            let active = active_dates.iter().any(|d| d == &date_str);
-            week_days.push(WeekDayStatus {
-                day: weekday,
-                active,
-                date: date_str,
-            });
-        }
-    }
-
-    week_days
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calculate_streaks_empty() {
-        let (current, longest) = calculate_streaks(&[]);
-        assert_eq!(current, 0);
-        assert_eq!(longest, 0);
-    }
-
-    #[test]
-    fn test_calculate_streaks_single_day() {
-        let dates = vec!["2024-01-15".to_string()];
-        let (_current, longest) = calculate_streaks(&dates);
-        assert_eq!(longest, 1);
-    }
-
-    #[test]
-    fn test_calculate_streaks_consecutive_days() {
-        let dates = vec![
-            "2024-01-01".to_string(),
-            "2024-01-02".to_string(),
-            "2024-01-03".to_string(),
-        ];
-        let (_, longest) = calculate_streaks(&dates);
-        assert_eq!(longest, 3);
-    }
-
-    #[test]
-    fn test_calculate_streaks_with_gap() {
-        let dates = vec![
-            "2024-01-01".to_string(),
-            "2024-01-02".to_string(),
-            "2024-01-05".to_string(),
-            "2024-01-06".to_string(),
-            "2024-01-07".to_string(),
-        ];
-        let (_, longest) = calculate_streaks(&dates);
-        assert_eq!(longest, 3); // 05-07 is longest run
-    }
-
-    #[test]
-    fn test_calculate_streaks_consecutive_in_order() {
-        let dates = vec![
-            "2024-01-01".to_string(),
-            "2024-01-02".to_string(),
-            "2024-01-03".to_string(),
-        ];
-        let (_, longest) = calculate_streaks(&dates);
-        assert_eq!(longest, 3);
-    }
-
-    #[test]
-    fn test_calculate_streaks_invalid_dates_filtered() {
-        let dates = vec![
-            "2024-01-01".to_string(),
-            "not-a-date".to_string(),
-            "2024-01-02".to_string(),
-        ];
-        let (_, longest) = calculate_streaks(&dates);
-        assert_eq!(longest, 2); // invalid date filtered out
-    }
-
-    #[test]
-    fn test_generate_week_days_current_day_active() {
-        let now = 1704067200; // 2024-01-01 00:00:00 UTC
-        let active = vec!["2024-01-01".to_string()];
-        let result = generate_week_days(&active, now);
-        assert_eq!(result.len(), 7);
-        let today = result.iter().find(|d| d.date == "2024-01-01");
-        assert!(today.is_some());
-        assert!(today.unwrap().active);
-    }
 }
