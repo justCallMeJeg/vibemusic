@@ -316,13 +316,18 @@ impl AudioWorker {
         self.current_file_sample_rate = file_rate;
         self.primary_buffer = buf;
         self.resample_buf.resize(self.primary_buffer.len() * 2, 0.0);
-        self.recreate_cpal_stream(file_rate, self.device_channels);
+        self.primary_decoder = Some(decoder);
+
+        let prefill = self.prefill_buffer(file_rate);
+        let prefill_frames = prefill.len() / self.device_channels as usize;
+
+        self.recreate_cpal_stream(file_rate, self.device_channels, Some(&prefill));
 
         info!("Playing track: {}", path);
-        self.primary_decoder = Some(decoder);
         self.current_file_path = Some(path.to_string());
-        self.current_position_ms = 0;
-        self.samples_played = 0;
+        self.current_position_ms =
+            prefill_frames as u64 * 1000 / self.device_sample_rate as u64;
+        self.samples_played = prefill_frames as u64;
 
         {
             match self.state.lock() {
@@ -331,7 +336,7 @@ impl AudioWorker {
                     s.is_paused = false;
                     s.current_file = Some(path.to_string());
                     s.duration_ms = self.duration_ms;
-                    s.position_ms = 0;
+                    s.position_ms = self.current_position_ms;
                 }
                 Err(poisoned) => {
                     error!("Audio state mutex poisoned in play_file_hard_cut, recovering");
@@ -340,14 +345,53 @@ impl AudioWorker {
                     s.is_paused = false;
                     s.current_file = Some(path.to_string());
                     s.duration_ms = self.duration_ms;
-                    s.position_ms = 0;
+                    s.position_ms = self.current_position_ms;
                 }
             }
         }
 
         self.update_media_metadata(title, artist, album, artwork_path, self.duration_ms);
-        self.is_playing.store(true, Ordering::Relaxed);
         self.emit_state();
+    }
+
+    fn prefill_buffer(&mut self, file_rate: u32) -> Vec<f32> {
+        let target_samples =
+            (self.device_sample_rate as usize * self.device_channels as usize) / 4;
+        let mut prefill = Vec::with_capacity(target_samples);
+        let start = Instant::now();
+
+        let Some(decoder) = self.primary_decoder.as_mut() else {
+            return prefill;
+        };
+
+        let dev_rate = self.device_sample_rate;
+        let dev_ch = self.device_channels as usize;
+
+        while prefill.len() < target_samples && start.elapsed() < Duration::from_millis(100) {
+            let Ok(n) = decoder.decode(&mut self.primary_buffer) else {
+                break;
+            };
+            if n == 0 {
+                break;
+            }
+
+            let len = if file_rate != dev_rate {
+                Self::resample_audio(
+                    &self.primary_buffer[..n],
+                    file_rate,
+                    dev_rate,
+                    dev_ch,
+                    &mut self.resample_buf,
+                )
+            } else {
+                let copy_len = n.min(self.resample_buf.len());
+                self.resample_buf[..copy_len].copy_from_slice(&self.primary_buffer[..copy_len]);
+                copy_len
+            };
+            prefill.extend_from_slice(&self.resample_buf[..len]);
+        }
+
+        prefill
     }
 
     pub(crate) fn update_media_metadata(
@@ -378,7 +422,12 @@ impl AudioWorker {
         }
     }
 
-    pub(crate) fn recreate_cpal_stream(&mut self, _sample_rate: u32, _channels: u16) {
+    pub(crate) fn recreate_cpal_stream(
+        &mut self,
+        _sample_rate: u32,
+        _channels: u16,
+        prefill: Option<&[f32]>,
+    ) {
         let host = cpal::default_host();
 
         let device = if let Some(ref name) = self.selected_device_name {
@@ -418,7 +467,12 @@ impl AudioWorker {
         let buffer_size =
             (self.device_sample_rate as usize * self.device_channels as usize).max(min_buffer);
 
-        let (producer, consumer) = HeapRb::<f32>::new(buffer_size).split();
+        let (mut producer, consumer) = HeapRb::<f32>::new(buffer_size).split();
+
+        if let Some(data) = prefill {
+            let _ = producer.push_slice(data);
+        }
+
         self.producer = Some(producer);
 
         let volume = self.volume.clone();
@@ -481,6 +535,8 @@ impl AudioWorker {
                 return;
             }
         };
+
+        self.is_playing.store(true, Ordering::Relaxed);
 
         if let Err(e) = stream.play() {
             error!("Failed to play audio stream: {}", e);
@@ -773,7 +829,7 @@ impl AudioWorker {
         if self.current_file_path.is_some() {
             self._current_stream = None;
             self.producer = None;
-            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
+            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels, None);
             self.app_handle.emit("audio-device-recovered", ()).ok();
         }
     }
@@ -950,7 +1006,28 @@ impl AudioWorker {
 
             self._current_stream = None;
             self.producer = None;
-            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels);
+
+            let prefill = self.prefill_buffer(self.current_file_sample_rate);
+            let prefill_frames = prefill.len() / self.device_channels as usize;
+            self.samples_played += prefill_frames as u64;
+            self.current_position_ms +=
+                prefill_frames as u64 * 1000 / self.device_sample_rate as u64;
+
+            {
+                match self.state.lock() {
+                    Ok(mut s) => s.position_ms = self.current_position_ms,
+                    Err(poisoned) => {
+                        error!("Audio state mutex poisoned in seek, recovering");
+                        poisoned.into_inner().position_ms = self.current_position_ms;
+                    }
+                }
+            }
+
+            self.recreate_cpal_stream(
+                self.device_sample_rate,
+                self.device_channels,
+                Some(&prefill),
+            );
 
             self.update_media_controls();
         } else {
