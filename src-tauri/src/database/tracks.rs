@@ -3,6 +3,26 @@ use crate::scanner::metadata::parse_artists;
 use crate::shared::types::{LibraryTrack, TrackMetadata};
 use rusqlite::{params, Result, Transaction};
 
+pub(crate) const TRACK_SELECT: &str = "\
+SELECT
+    t.id,
+    t.title,
+    ar.name as artist,
+    t.artist_id,
+    GROUP_CONCAT(ar_join.name, '|||') as artist_names,
+    GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
+    al.title as album,
+    t.album_id,
+    t.duration_ms,
+    t.file_path,
+    al.artwork_path,
+    GROUP_CONCAT(ta.role, '|||') as artist_roles
+FROM tracks t
+LEFT JOIN artists ar ON t.artist_id = ar.id
+LEFT JOIN track_artists ta ON t.id = ta.track_id
+LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
+LEFT JOIN albums al ON t.album_id = al.id";
+
 impl DbHelper {
     pub(crate) fn row_to_library_track(row: &rusqlite::Row) -> Result<LibraryTrack> {
         let names_str: Option<String> = row.get(4)?;
@@ -225,28 +245,11 @@ impl DbHelper {
     }
 
     pub fn get_all_tracks(&self) -> Result<Vec<LibraryTrack>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                t.id,
-                t.title,
-                ar.name as artist,
-                t.artist_id,
-                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
-                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
-                al.title as album,
-                t.album_id,
-                t.duration_ms,
-                t.file_path,
-                al.artwork_path,
-                GROUP_CONCAT(ta.role, '|||') as artist_roles
-            FROM tracks t
-            LEFT JOIN artists ar ON t.artist_id = ar.id
-            LEFT JOIN track_artists ta ON t.id = ta.track_id
-            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
-            LEFT JOIN albums al ON t.album_id = al.id
-            GROUP BY t.id
-            ORDER BY t.created_at DESC",
-        )?;
+        let query = format!(
+            "{} GROUP BY t.id ORDER BY t.created_at DESC",
+            TRACK_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let tracks = stmt
             .query_map([], Self::row_to_library_track)?
@@ -256,29 +259,11 @@ impl DbHelper {
     }
 
     pub fn get_album_tracks(&self, album_id: i64) -> Result<Vec<LibraryTrack>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                t.id,
-                t.title,
-                ar.name as artist,
-                t.artist_id,
-                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
-                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
-                al.title as album,
-                t.album_id,
-                t.duration_ms,
-                t.file_path,
-                al.artwork_path,
-                GROUP_CONCAT(ta.role, '|||') as artist_roles
-            FROM tracks t
-            LEFT JOIN artists ar ON t.artist_id = ar.id
-            LEFT JOIN track_artists ta ON t.id = ta.track_id
-            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
-            LEFT JOIN albums al ON t.album_id = al.id
-            WHERE t.album_id = ?
-            GROUP BY t.id
-            ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC",
-        )?;
+        let query = format!(
+            "{} WHERE t.album_id = ? GROUP BY t.id ORDER BY t.disc_number ASC, t.track_number ASC, t.title ASC",
+            TRACK_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let tracks = stmt
             .query_map(params![album_id], Self::row_to_library_track)?
@@ -288,30 +273,11 @@ impl DbHelper {
     }
 
     pub fn get_artist_tracks(&self, artist_id: i64) -> Result<Vec<LibraryTrack>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                t.id,
-                t.title,
-                ar.name as artist,
-                t.artist_id,
-                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
-                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
-                al.title as album,
-                t.album_id,
-                t.duration_ms,
-                t.file_path,
-                al.artwork_path,
-                GROUP_CONCAT(ta.role, '|||') as artist_roles
-            FROM tracks t
-            LEFT JOIN track_artists ta_filter ON t.id = ta_filter.track_id
-            LEFT JOIN artists ar ON t.artist_id = ar.id
-            LEFT JOIN track_artists ta ON t.id = ta.track_id
-            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
-            LEFT JOIN albums al ON t.album_id = al.id
-            WHERE ta_filter.artist_id = ?
-            GROUP BY t.id
-            ORDER BY t.created_at DESC",
-        )?;
+        let query = format!(
+            "{} LEFT JOIN track_artists ta_filter ON t.id = ta_filter.track_id WHERE ta_filter.artist_id = ? GROUP BY t.id ORDER BY t.created_at DESC",
+            TRACK_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let track_iter = stmt.query_map(params![artist_id], |row| {
             let names_str: Option<String> = row.get(4)?;

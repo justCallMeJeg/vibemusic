@@ -2,6 +2,8 @@ use super::DbHelper;
 use crate::shared::types::{LibraryTrack, Playlist};
 use rusqlite::{params, Result};
 
+use super::tracks::TRACK_SELECT;
+
 impl DbHelper {
     pub fn create_playlist(&self, name: String, description: Option<String>) -> Result<Playlist> {
         let mut stmt = self.conn.prepare(
@@ -77,30 +79,11 @@ impl DbHelper {
     }
 
     pub fn get_playlist_tracks(&self, playlist_id: i64) -> Result<Vec<LibraryTrack>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                t.id,
-                t.title,
-                ar.name as artist,
-                t.artist_id,
-                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
-                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
-                al.title as album,
-                t.album_id,
-                t.duration_ms,
-                t.file_path,
-                al.artwork_path,
-                GROUP_CONCAT(ta.role, '|||') as artist_roles
-            FROM tracks t
-            JOIN playlist_tracks pt ON t.id = pt.track_id
-            LEFT JOIN artists ar ON t.artist_id = ar.id
-            LEFT JOIN track_artists ta ON t.id = ta.track_id
-            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
-            LEFT JOIN albums al ON t.album_id = al.id
-            WHERE pt.playlist_id = ?
-            GROUP BY t.id, pt.position
-            ORDER BY pt.position ASC",
-        )?;
+        let query = format!(
+            "{} JOIN playlist_tracks pt ON t.id = pt.track_id WHERE pt.playlist_id = ? GROUP BY t.id, pt.position ORDER BY pt.position ASC",
+            TRACK_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let tracks = stmt
             .query_map(params![playlist_id], Self::row_to_library_track)?
@@ -133,18 +116,35 @@ impl DbHelper {
     }
 
     pub fn reorder_playlist(&mut self, playlist_id: i64, new_order: Vec<i64>) -> Result<()> {
-        let tx = self.conn.transaction()?;
-
-        {
-            let mut stmt = tx.prepare(
-                "UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND track_id = ?",
-            )?;
-
-            for (index, track_id) in new_order.iter().enumerate() {
-                stmt.execute(params![index as i64, playlist_id, track_id])?;
-            }
+        if new_order.is_empty() {
+            return Ok(());
         }
 
+        let tx = self.conn.transaction()?;
+
+        let cases: Vec<String> = new_order
+            .iter()
+            .enumerate()
+            .map(|(_, _)| format!("WHEN ? THEN ?"))
+            .collect();
+        let in_placeholders: Vec<&str> = vec!["?"; new_order.len()];
+        let sql = format!(
+            "UPDATE playlist_tracks SET position = CASE track_id {} END WHERE playlist_id = ? AND track_id IN ({})",
+            cases.join(" "),
+            in_placeholders.join(",")
+        );
+
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+        for (index, track_id) in new_order.iter().enumerate() {
+            params.push(Box::new(*track_id));
+            params.push(Box::new(index as i64));
+        }
+        params.push(Box::new(playlist_id));
+        for track_id in &new_order {
+            params.push(Box::new(*track_id));
+        }
+
+        tx.execute(&sql, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())))?;
         tx.commit()?;
         Ok(())
     }

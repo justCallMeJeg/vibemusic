@@ -3,6 +3,9 @@ use crate::shared::types::{LibraryAlbum, LibraryTrack, Playlist, SearchResults};
 use rusqlite::{params, Result};
 use std::collections::HashSet;
 
+use super::albums::ALBUM_SELECT;
+use super::tracks::TRACK_SELECT;
+
 impl DbHelper {
     pub fn search(&self, query: &str) -> Result<SearchResults> {
         const SEARCH_LIMIT: i64 = 20;
@@ -48,30 +51,11 @@ impl DbHelper {
     }
 
     fn search_tracks_like(&self, pattern: &str, limit: i64) -> Result<Vec<LibraryTrack>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                t.id,
-                t.title,
-                ar.name as artist,
-                t.artist_id,
-                GROUP_CONCAT(ar_join.name, '|||') as artist_names,
-                GROUP_CONCAT(ar_join.id, '|||') as artist_ids,
-                al.title as album,
-                t.album_id,
-                t.duration_ms,
-                t.file_path,
-                al.artwork_path,
-                GROUP_CONCAT(ta.role, '|||') as artist_roles
-            FROM tracks t
-            LEFT JOIN artists ar ON t.artist_id = ar.id
-            LEFT JOIN track_artists ta ON t.id = ta.track_id
-            LEFT JOIN artists ar_join ON ta.artist_id = ar_join.id
-            LEFT JOIN albums al ON t.album_id = al.id
-            WHERE t.title LIKE ?1 OR ar.name LIKE ?1
-            GROUP BY t.id
-            ORDER BY t.created_at DESC
-            LIMIT ?2",
-        )?;
+        let query = format!(
+            "{} WHERE t.title LIKE ?1 OR ar.name LIKE ?1 GROUP BY t.id ORDER BY t.created_at DESC LIMIT ?2",
+            TRACK_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let tracks = stmt
             .query_map(params![pattern, limit], Self::row_to_library_track)?
@@ -80,32 +64,11 @@ impl DbHelper {
     }
 
     fn search_albums_infix(&self, pattern: &str, limit: i64) -> Result<Vec<LibraryAlbum>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT
-                al.id,
-                al.title,
-                al.artist_id,
-                ar.name as artist_name,
-                al.year,
-                al.artwork_path,
-                COUNT(t.id) as track_count,
-                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms,
-                (SELECT GROUP_CONCAT(name, '|||') FROM (
-                    SELECT DISTINCT ar_t.name
-                    FROM tracks t_a
-                    JOIN track_artists ta_a ON ta_a.track_id = t_a.id
-                    JOIN artists ar_t ON ar_t.id = ta_a.artist_id
-                    WHERE t_a.album_id = al.id
-                )) as artist_names,
-                (SELECT t.album_artist FROM tracks t WHERE t.album_id = al.id AND t.album_artist IS NOT NULL LIMIT 1) as raw_album_artist
-            FROM albums al
-            LEFT JOIN artists ar ON al.artist_id = ar.id
-            LEFT JOIN tracks t ON t.album_id = al.id
-            WHERE al.title LIKE ? OR ar.name LIKE ?
-            GROUP BY al.id
-            ORDER BY al.title ASC
-            LIMIT ?",
-        )?;
+        let query = format!(
+            "{} WHERE al.title LIKE ? OR ar.name LIKE ? GROUP BY al.id ORDER BY al.title ASC LIMIT ?",
+            ALBUM_SELECT
+        );
+        let mut stmt = self.conn.prepare(&query)?;
 
         let albums = stmt
             .query_map(params![pattern, pattern, limit], |row| {

@@ -33,7 +33,13 @@ impl DbHelper {
         }
         let conn = Connection::open(path)?;
 
-        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")?;
+        conn.execute_batch(
+            "PRAGMA journal_mode=WAL;\
+             PRAGMA synchronous=NORMAL;\
+             PRAGMA cache_size = -8000;\
+             PRAGMA mmap_size = 268435456;\
+             PRAGMA temp_store = MEMORY;",
+        )?;
 
         let table_exists: bool = conn
             .query_row(
@@ -79,35 +85,46 @@ impl DbHelper {
                     [],
                 );
             }
-
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_tracks_created_at ON tracks(created_at)",
-                [],
-            )?;
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_albums_artist_year ON albums(artist_id, year DESC)",
-                [],
-            )?;
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title COLLATE NOCASE)",
-                [],
-            )?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS playback_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    track_id INTEGER NOT NULL,
-                    timestamp INTEGER NOT NULL,
-                    duration_ms INTEGER NOT NULL,
-                    FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
-                )",
-                [],
-            )?;
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_playback_history_timestamp ON playback_history(timestamp)",
-                [],
-            )?;
         }
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS playback_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                track_id INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL,
+                duration_ms INTEGER NOT NULL,
+                FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_playback_history_timestamp ON playback_history(timestamp)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_playback_history_track_id ON playback_history(track_id)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist_id)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre) WHERE genre IS NOT NULL AND genre != ''",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tracks_created_at ON tracks(created_at)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_albums_artist_year ON albums(artist_id, year DESC)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title COLLATE NOCASE)",
+            [],
+        )?;
 
         Ok(Self { conn })
     }
