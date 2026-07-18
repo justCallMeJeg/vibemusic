@@ -99,11 +99,12 @@ const HomeTrackRow = memo(function HomeTrackRow({
       <ArtistLinks
         names={track.artist_names}
         ids={track.artist_ids}
+        roles={track.artist_roles}
         fallbackName={track.artist}
         fallbackId={track.artist_id}
       />
     ),
-    [track.artist_names, track.artist_ids, track.artist, track.artist_id],
+    [track.artist_names, track.artist_ids, track.artist_roles, track.artist, track.artist_id],
   );
 
   return (

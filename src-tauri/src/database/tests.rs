@@ -37,6 +37,7 @@ fn make_track(path: &str, title: &str, artist: &str) -> TrackMetadata {
         title: Some(title.to_string()),
         artist: Some(artist.to_string()),
         artists: vec![artist.to_string()],
+        featured_artist_names: vec![],
         album: Some("Test Album".to_string()),
         album_artist: None,
         track_number: Some(1),

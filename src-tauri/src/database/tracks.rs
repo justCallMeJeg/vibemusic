@@ -1,4 +1,5 @@
 use super::DbHelper;
+use crate::scanner::metadata::parse_artists;
 use crate::shared::types::{LibraryTrack, TrackMetadata};
 use rusqlite::{params, Result, Transaction};
 
@@ -6,6 +7,7 @@ impl DbHelper {
     pub(crate) fn row_to_library_track(row: &rusqlite::Row) -> Result<LibraryTrack> {
         let names_str: Option<String> = row.get(4)?;
         let ids_str: Option<String> = row.get(5)?;
+        let roles_str: Option<String> = row.get(11)?;
 
         let artist_names = names_str
             .as_deref()
@@ -22,6 +24,14 @@ impl DbHelper {
             .filter_map(|s| s.parse::<i64>().ok())
             .collect();
 
+        let artist_roles = roles_str
+            .as_deref()
+            .unwrap_or("")
+            .split("|||")
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
         Ok(LibraryTrack {
             id: row.get(0)?,
             title: row.get(1)?,
@@ -29,6 +39,7 @@ impl DbHelper {
             artist_id: row.get(3)?,
             artist_names,
             artist_ids,
+            artist_roles,
             album: row.get(6)?,
             album_id: row.get(7)?,
             duration_ms: row.get(8)?,
@@ -45,7 +56,12 @@ impl DbHelper {
         };
 
         let album_artist_id = if let Some(album_artist) = &metadata.album_artist {
-            Some(Self::get_or_create_artist(tx, album_artist)?)
+            let parsed = parse_artists(Some(album_artist));
+            if let Some(first) = parsed.first() {
+                Some(Self::get_or_create_artist(tx, first)?)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -137,7 +153,15 @@ impl DbHelper {
         for artist_name in &metadata.artists {
             let artist_id = Self::get_or_create_artist(tx, artist_name)?;
             tx.execute(
-                "INSERT OR IGNORE INTO track_artists (track_id, artist_id) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO track_artists (track_id, artist_id, role) VALUES (?, ?, 'main')",
+                params![track_id, artist_id],
+            )?;
+        }
+
+        for artist_name in &metadata.featured_artist_names {
+            let artist_id = Self::get_or_create_artist(tx, artist_name)?;
+            tx.execute(
+                "INSERT OR IGNORE INTO track_artists (track_id, artist_id, role) VALUES (?, ?, 'featured')",
                 params![track_id, artist_id],
             )?;
         }
@@ -213,7 +237,8 @@ impl DbHelper {
                 t.album_id,
                 t.duration_ms,
                 t.file_path,
-                al.artwork_path
+                al.artwork_path,
+                GROUP_CONCAT(ta.role, '|||') as artist_roles
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN track_artists ta ON t.id = ta.track_id
@@ -243,7 +268,8 @@ impl DbHelper {
                 t.album_id,
                 t.duration_ms,
                 t.file_path,
-                al.artwork_path
+                al.artwork_path,
+                GROUP_CONCAT(ta.role, '|||') as artist_roles
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN track_artists ta ON t.id = ta.track_id
@@ -274,7 +300,8 @@ impl DbHelper {
                 t.album_id,
                 t.duration_ms,
                 t.file_path,
-                al.artwork_path
+                al.artwork_path,
+                GROUP_CONCAT(ta.role, '|||') as artist_roles
             FROM tracks t
             LEFT JOIN track_artists ta_filter ON t.id = ta_filter.track_id
             LEFT JOIN artists ar ON t.artist_id = ar.id
@@ -289,6 +316,7 @@ impl DbHelper {
         let track_iter = stmt.query_map(params![artist_id], |row| {
             let names_str: Option<String> = row.get(4)?;
             let ids_str: Option<String> = row.get(5)?;
+            let roles_str: Option<String> = row.get(11)?;
 
             let artist_names = names_str
                 .as_deref()
@@ -305,6 +333,14 @@ impl DbHelper {
                 .filter_map(|s| s.parse::<i64>().ok())
                 .collect();
 
+            let artist_roles = roles_str
+                .as_deref()
+                .unwrap_or("")
+                .split("|||")
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string())
+                .collect();
+
             Ok(LibraryTrack {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -312,6 +348,7 @@ impl DbHelper {
                 artist_id: row.get(3)?,
                 artist_names,
                 artist_ids,
+                artist_roles,
                 album: row.get(6)?,
                 album_id: row.get(7)?,
                 duration_ms: row.get(8)?,

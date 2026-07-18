@@ -39,6 +39,7 @@ describe("getTracks", () => {
         artist_id: 1,
         artist_names: ["Artist"],
         artist_ids: [1],
+        artist_roles: ["main"],
         album: "Album",
         album_id: 1,
         duration_ms: 200000,

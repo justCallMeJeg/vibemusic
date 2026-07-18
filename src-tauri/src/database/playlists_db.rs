@@ -89,7 +89,8 @@ impl DbHelper {
                 t.album_id,
                 t.duration_ms,
                 t.file_path,
-                al.artwork_path
+                al.artwork_path,
+                GROUP_CONCAT(ta.role, '|||') as artist_roles
             FROM tracks t
             JOIN playlist_tracks pt ON t.id = pt.track_id
             LEFT JOIN artists ar ON t.artist_id = ar.id

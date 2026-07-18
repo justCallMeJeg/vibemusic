@@ -60,7 +60,8 @@ impl DbHelper {
                 t.album_id,
                 t.duration_ms,
                 t.file_path,
-                al.artwork_path
+                al.artwork_path,
+                GROUP_CONCAT(ta.role, '|||') as artist_roles
             FROM tracks t
             LEFT JOIN artists ar ON t.artist_id = ar.id
             LEFT JOIN track_artists ta ON t.id = ta.track_id
@@ -88,7 +89,15 @@ impl DbHelper {
                 al.year,
                 al.artwork_path,
                 COUNT(t.id) as track_count,
-                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms
+                COALESCE(SUM(t.duration_ms), 0) as total_duration_ms,
+                (SELECT GROUP_CONCAT(name, '|||') FROM (
+                    SELECT DISTINCT ar_t.name
+                    FROM tracks t_a
+                    JOIN track_artists ta_a ON ta_a.track_id = t_a.id
+                    JOIN artists ar_t ON ar_t.id = ta_a.artist_id
+                    WHERE t_a.album_id = al.id
+                )) as artist_names,
+                (SELECT t.album_artist FROM tracks t WHERE t.album_id = al.id AND t.album_artist IS NOT NULL LIMIT 1) as raw_album_artist
             FROM albums al
             LEFT JOIN artists ar ON al.artist_id = ar.id
             LEFT JOIN tracks t ON t.album_id = al.id
@@ -109,6 +118,8 @@ impl DbHelper {
                     artwork_path: row.get(5)?,
                     track_count: row.get(6)?,
                     total_duration_ms: row.get(7)?,
+                    artist_names: crate::database::albums::parse_album_artist_names(row, 8),
+                    album_artist_names: crate::database::albums::parse_raw_album_artist(row, 9),
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;

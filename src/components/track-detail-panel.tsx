@@ -45,6 +45,7 @@ export default function TrackDetailContent() {
         title={currentTrack.title}
         artistNames={currentTrack.artist_names}
         artistIds={currentTrack.artist_ids}
+        artistRoles={currentTrack.artist_roles}
         fallbackArtist={currentTrack.artist}
         fallbackArtistId={currentTrack.artist_id}
         artworkPath={currentTrack.artwork_path}

@@ -60,6 +60,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
                 ? [track.artist_id]
                 : []
           }
+          roles={track.artist_roles}
           fallbackName={track.artist}
           fallbackId={track.artist_id}
         />

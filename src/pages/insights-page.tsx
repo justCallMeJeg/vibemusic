@@ -289,6 +289,7 @@ export default memo(function InsightsPage() {
                                     artist_id: null,
                                     artist_ids: [],
                                     artist_names: [],
+                                    artist_roles: [],
                                     track_number: null,
                                   });
                                 }}

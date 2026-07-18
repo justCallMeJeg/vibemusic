@@ -114,6 +114,7 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
                 <ArtistLinks
                   names={track.artist_names}
                   ids={track.artist_ids}
+                  roles={track.artist_roles}
                   fallbackName={track.artist}
                   fallbackId={track.artist_id}
                 />

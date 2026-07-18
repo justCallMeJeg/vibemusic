@@ -12,6 +12,7 @@ const makeTrack = (id: number, title: string): Track => ({
   artist_id: id,
   artist_names: ["Artist"],
   artist_ids: [id],
+  artist_roles: ["main"],
   album: "Album",
   album_id: 1,
   duration_ms: 200000,

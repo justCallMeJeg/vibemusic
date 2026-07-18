@@ -112,6 +112,7 @@ export default function MusicControler() {
                 <ArtistLinks
                   names={currentTrack.artist_names}
                   ids={currentTrack.artist_ids}
+                  roles={currentTrack.artist_roles}
                   fallbackName={currentTrack.artist}
                   fallbackId={currentTrack.artist_id}
                 />

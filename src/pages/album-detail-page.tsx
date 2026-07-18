@@ -50,6 +50,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
                 ? [track.artist_id]
                 : []
           }
+          roles={track.artist_roles}
           fallbackName={track.artist}
           fallbackId={track.artist_id}
         />
@@ -181,7 +182,7 @@ export default memo(function AlbumDetailPage() {
   return (
     <DetailPageTemplate
       title={album?.title ?? ""}
-      subtitle={album?.artist_name ?? undefined}
+      subtitle={album?.album_artist_names?.length ? album.album_artist_names.join(", ") : (album?.artist_name ?? undefined)}
       artworkPath={album?.artwork_path}
       onBack={goBack}
       onPlay={tracks.length > 0 ? handlePlay : undefined}
@@ -192,7 +193,7 @@ export default memo(function AlbumDetailPage() {
         headerContent={
           <DetailHero
             title={album?.title ?? ""}
-            subtitle={album?.artist_name ?? "Unknown Artist"}
+            subtitle={album?.album_artist_names?.length ? album.album_artist_names.join(", ") : (album?.artist_name ?? "Unknown Artist")}
             tertiaryText={album ? formatDuration(album.total_duration_ms) : ""}
             artworkPath={album?.artwork_path}
             placeholderType="track"

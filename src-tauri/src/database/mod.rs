@@ -121,6 +121,17 @@ impl DbHelper {
     }
 
     pub fn get_or_create_artist(tx: &Transaction, name: &str) -> Result<i64> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(rusqlite::Error::InvalidParameterName("artist name is empty".into()));
+        }
+        if let Ok(id) = tx.query_row(
+            "SELECT id FROM artists WHERE name = ?1 COLLATE NOCASE",
+            params![name],
+            |row| row.get(0),
+        ) {
+            return Ok(id);
+        }
         let id = tx.query_row(
             "INSERT INTO artists (name) VALUES (?1) ON CONFLICT(name) DO NOTHING RETURNING id",
             params![name],
@@ -129,7 +140,7 @@ impl DbHelper {
         match id {
             Ok(id) => Ok(id),
             Err(_) => tx.query_row(
-                "SELECT id FROM artists WHERE name = ?1",
+                "SELECT id FROM artists WHERE name = ?1 COLLATE NOCASE",
                 params![name],
                 |row| row.get(0),
             ),
@@ -144,20 +155,53 @@ impl DbHelper {
         artwork_path: Option<&String>,
     ) -> Result<i64> {
         {
-            let sql = "SELECT id, artwork_path FROM albums WHERE title = ? AND (artist_id = ? OR (artist_id IS NULL AND ? IS NULL))";
+            let sql = "SELECT id, artist_id, artwork_path FROM albums WHERE title = ? AND (artist_id = ? OR (artist_id IS NULL AND ? IS NULL))";
             let mut stmt = tx.prepare(sql)?;
             let mut rows = stmt.query(params![title, artist_id, artist_id])?;
 
             if let Some(row) = rows.next()? {
                 let id: i64 = row.get(0)?;
-                let current_artwork: Option<String> = row.get(1)?;
-
-                let should_update = current_artwork.is_none() && artwork_path.is_some();
+                let current_artwork: Option<String> = row.get(2)?;
 
                 drop(rows);
                 drop(stmt);
 
+                let should_update = current_artwork.is_none() && artwork_path.is_some();
                 if should_update {
+                    tx.execute(
+                        "UPDATE albums SET artwork_path = ? WHERE id = ?",
+                        params![artwork_path, id],
+                    )?;
+                }
+
+                return Ok(id);
+            }
+            drop(rows);
+            drop(stmt);
+        }
+
+        // artist attribution may have changed due to splitting — match by title alone
+        {
+            let sql = "SELECT id, artist_id, artwork_path FROM albums WHERE title = ? ORDER BY id LIMIT 1";
+            let mut stmt = tx.prepare(sql)?;
+            let mut rows = stmt.query(params![title])?;
+
+            if let Some(row) = rows.next()? {
+                let id: i64 = row.get(0)?;
+                let existing_artist_id: Option<i64> = row.get(1)?;
+                let current_artwork: Option<String> = row.get(2)?;
+
+                drop(rows);
+                drop(stmt);
+
+                if existing_artist_id != artist_id {
+                    let artwork =
+                        current_artwork.or_else(|| artwork_path.cloned());
+                    tx.execute(
+                        "UPDATE albums SET artist_id = ?, year = COALESCE(?, year), artwork_path = COALESCE(?, artwork_path), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                        params![artist_id, year, artwork, id],
+                    )?;
+                } else if current_artwork.is_none() && artwork_path.is_some() {
                     tx.execute(
                         "UPDATE albums SET artwork_path = ? WHERE id = ?",
                         params![artwork_path, id],

@@ -21,6 +21,7 @@ export interface Track {
   artist_id: number | null;
   artist_names: string[];
   artist_ids: number[];
+  artist_roles: string[];
   album: string | null;
   album_id: number | null;
   duration_ms: number;
@@ -34,6 +35,8 @@ export interface Album {
   title: string;
   artist_id: number | null;
   artist_name: string | null;
+  artist_names: string[];
+  album_artist_names: string[];
   year: number | null;
   artwork_path: string | null;
   track_count: number;

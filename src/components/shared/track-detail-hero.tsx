@@ -6,6 +6,7 @@ interface TrackDetailHeroProps {
   title: string;
   artistNames?: string[];
   artistIds?: number[];
+  artistRoles?: string[];
   fallbackArtist?: string | null;
   fallbackArtistId?: number | null;
   artworkPath?: string | null;
@@ -16,6 +17,7 @@ export function TrackDetailHero({
   title,
   artistNames,
   artistIds,
+  artistRoles,
   fallbackArtist,
   fallbackArtistId,
   artworkPath,
@@ -40,6 +42,7 @@ export function TrackDetailHero({
           <ArtistLinks
             names={artistNames ?? []}
             ids={artistIds ?? []}
+            roles={artistRoles ?? []}
             fallbackName={fallbackArtist}
             fallbackId={fallbackArtistId}
             className="justify-center whitespace-normal"
