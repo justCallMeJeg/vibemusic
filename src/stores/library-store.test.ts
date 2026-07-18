@@ -1,69 +1,64 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
 
 const mockInvoke = vi.mocked(invoke);
 
 beforeEach(() => {
   mockInvoke.mockReset();
-  useLibraryStore.setState({
+  useContentStore.setState({
     tracks: [],
     albums: [],
-    playlists: [],
     artists: [],
     isLoading: false,
     isInitialized: false,
   });
 });
 
-describe("library-store", () => {
+describe("content-store", () => {
   it("has correct initial state", () => {
-    const s = useLibraryStore.getState();
+    const s = useContentStore.getState();
     expect(s.tracks).toEqual([]);
     expect(s.albums).toEqual([]);
-    expect(s.playlists).toEqual([]);
     expect(s.artists).toEqual([]);
     expect(s.isLoading).toBe(false);
     expect(s.isInitialized).toBe(false);
   });
 
-  it("resetLibrary clears all data", () => {
-    useLibraryStore.setState({
+  it("resetContent clears all data", () => {
+    useContentStore.setState({
       tracks: [{ id: 1, title: "Song", artist: "A", album: "B", album_id: 1, artist_id: 1, artist_names: ["A"], artist_ids: [1], artist_roles: ["main"], duration_ms: 200000, file_path: "/a.mp3", artwork_path: null, track_number: 1 }],
       albums: [{ id: 1, title: "Album", artist_name: "A", artist_names: [], album_artist_names: [], artist_id: 1, artwork_path: null, year: 2024, track_count: 1, total_duration_ms: 200000 }],
-      playlists: [{ id: 1, name: "P", description: null, artwork_path: null, track_count: 1, created_at: "now" }],
       artists: [{ id: 1, name: "A", album_count: 1, track_count: 1, artwork_path: null }],
       isInitialized: true,
     });
-    useLibraryStore.getState().resetLibrary();
-    const s = useLibraryStore.getState();
+    useContentStore.getState().resetContent();
+    const s = useContentStore.getState();
     expect(s.tracks).toEqual([]);
     expect(s.albums).toEqual([]);
-    expect(s.playlists).toEqual([]);
     expect(s.artists).toEqual([]);
     expect(s.isInitialized).toBe(false);
     expect(s.isLoading).toBe(false);
   });
 
-  it("resetLibrary can set loading", () => {
-    useLibraryStore.getState().resetLibrary(true);
-    expect(useLibraryStore.getState().isLoading).toBe(true);
+  it("resetContent can set loading", () => {
+    useContentStore.getState().resetContent(true);
+    expect(useContentStore.getState().isLoading).toBe(true);
   });
 
-  it("fetchLibrary calls invoke for all four collections", async () => {
+  it("fetchContent calls invoke for all three collections", async () => {
     mockInvoke.mockResolvedValue([]);
-    await useLibraryStore.getState().fetchLibrary();
+    await useContentStore.getState().fetchContent();
     expect(mockInvoke).toHaveBeenCalledWith("get_all_tracks");
     expect(mockInvoke).toHaveBeenCalledWith("get_all_albums");
     expect(mockInvoke).toHaveBeenCalledWith("get_all_artists");
-    expect(mockInvoke).toHaveBeenCalledWith("get_playlists");
-    expect(useLibraryStore.getState().isInitialized).toBe(true);
-    expect(useLibraryStore.getState().isLoading).toBe(false);
+    expect(useContentStore.getState().isInitialized).toBe(true);
+    expect(useContentStore.getState().isLoading).toBe(false);
   });
 
-  it("fetchLibrary sets error state on failure", async () => {
+  it("fetchContent sets error state on failure", async () => {
     mockInvoke.mockRejectedValue(new Error("network error"));
-    await useLibraryStore.getState().fetchLibrary();
-    expect(useLibraryStore.getState().isLoading).toBe(false);
+    await useContentStore.getState().fetchContent();
+    expect(useContentStore.getState().isLoading).toBe(false);
   });
 });

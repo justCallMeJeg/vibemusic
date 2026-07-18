@@ -1,12 +1,12 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
-import MusicController from "./components/music-controller";
+import MusicController from "@features/player/components/music-controller";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
 
-import MainContent from "./components/main-content";
-import { BackgroundGradient } from "./components/background-gradient";
-import { SidebarSection } from "./components/sidebar-section";
+import MainContent from "@features/shell/components/main-content";
+import { BackgroundGradient } from "@features/shell/components/background-gradient";
+import { SidebarSection } from "@features/shell/components/sidebar-section";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
@@ -18,24 +18,25 @@ import {
   useAppInit,
 } from "@/hooks/use-app-init";
 import type { CloseAction } from "@/hooks/use-app-init";
-import { useFolderImport } from "@/hooks/use-folder-import";
+import { useFolderImport } from "@features/settings/hooks/use-folder-import";
 import { useSettingsStore } from "@/stores/settings-store";
 
-import { TitleBar } from "./components/titlebar";
+import { TitleBar } from "@features/shell/components/titlebar";
 import { useProfileStore } from "@/stores/profile-store";
-import { AppDialogs } from "./components/app-dialogs";
-import { ShellStates } from "@/components/shell-states";
+import { AppDialogs } from "@features/shell/components/app-dialogs";
+import { ShellStates } from "@features/shell/components/shell-states";
 import { useDialogStore } from "@/stores/dialog-store";
 
-import { useLibraryStore } from "@/stores/library-store";
+import { useContentStore } from "@features/library/store/content-store";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { logger } from "@/lib/logger";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
 
 
 
-const SidePanelContent = lazy(() => import("./components/side-panel-content"));
+const SidePanelContent = lazy(() => import("@features/shell/components/side-panel-content"));
 const GlobalSearch = lazy(() =>
-  import("./components/dialogs/global-search").then((m) => ({
+  import("@features/search/components/global-search").then((m) => ({
     default: m.GlobalSearch,
   })),
 );
@@ -101,7 +102,10 @@ export default function App() {
         hasDoneInitialScan.current = true;
         setIsScanning(true);
         invoke("scan_music_library", { folders: settings.libraryPaths })
-          .then(() => useLibraryStore.getState().fetchLibrary())
+          .then(() => {
+            useContentStore.getState().fetchContent();
+            usePlaylistStore.getState().fetchPlaylists();
+          })
           .catch((err) => logger.error("Startup scan failed:", err))
           .finally(() => setIsScanning(false));
       }
@@ -135,7 +139,10 @@ export default function App() {
   });
 
   // Listen for global scan progress to refresh library - extracted to custom hook
-  useScanProgressListener(() => useLibraryStore.getState().fetchLibrary());
+  useScanProgressListener(async () => {
+    await useContentStore.getState().fetchContent();
+    await usePlaylistStore.getState().fetchPlaylists();
+  });
 
   const isPlaybackActive = status === "playing" || status === "paused";
 

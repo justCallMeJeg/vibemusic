@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { load, Store } from "@tauri-apps/plugin-store";
 import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { useAudioStore } from "./audio-store";
 import { useNavigationStore } from "./navigation-store";
 import { useStatsStore } from "./stats-store";
@@ -122,7 +123,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
         // Fetch library for the active profile on app startup
         if (activeProfileId) {
-          await useLibraryStore.getState().fetchLibrary();
+          await useContentStore.getState().fetchContent();
         }
       }
     } catch (e) {
@@ -240,7 +241,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   selectProfile: async (id) => {
     // 0. Reset UI State to prevent ghost data
     // Use true to show skeletons immediately, preventing "Empty State" flash
-    useLibraryStore.getState().resetLibrary(true);
+    useContentStore.getState().resetContent(true);
     useAudioStore.getState().resetAudio();
     useNavigationStore.getState().resetNavigation();
     useStatsStore.getState().resetStats();
@@ -255,7 +256,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
     // Reload library data for the new profile
     if (id) {
-      await useLibraryStore.getState().fetchLibrary();
+      await useContentStore.getState().fetchContent();
+      await usePlaylistStore.getState().fetchPlaylists();
     }
   },
 }));

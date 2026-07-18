@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
 import { toast } from "sonner";
 import { Track, getLyrics, probeFile } from "@/lib/api";
 import { logger } from "@/lib/logger";
@@ -654,7 +654,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
               // File is genuinely missing - safe to auto-delete
               try {
                 await invoke("delete_track", { trackId: track.id });
-                useLibraryStore.getState().fetchLibrary();
+                useContentStore.getState().fetchContent();
 
                 toast("File not found", {
                   description: `Removed "${track.title}" from library.`,

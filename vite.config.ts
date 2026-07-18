@@ -11,6 +11,7 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@features": fileURLToPath(new URL("./src/features", import.meta.url)),
     },
   },
   test: {

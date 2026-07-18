@@ -1,9 +1,9 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { ErrorBoundary } from "./components/error-boundary";
+import { ErrorBoundary } from "@features/shell/components/error-boundary";
 
-const MiniPlayerApp = lazy(() => import("./components/miniplayer-app"));
+const MiniPlayerApp = lazy(() => import("@features/player/components/miniplayer-app"));
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element not found");

@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 
 // Lazy store initialization
 import { invoke } from "@tauri-apps/api/core";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
 import { useAudioStore } from "./audio-store";
 
 const getStore = async () => {
@@ -206,7 +206,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
             success_count: number;
             error_count: number;
           }>("scan_music_library", { folders: [path] });
-          await useLibraryStore.getState().fetchLibrary();
+          await useContentStore.getState().fetchContent();
           return stats;
         } catch (e) {
           logger.error("Failed to scan new library path", e);
@@ -238,7 +238,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       );
 
       // Refresh UI to reflect removal
-      useLibraryStore.getState().fetchLibrary();
+      useContentStore.getState().fetchContent();
     },
 
     setAudioDevice: async (device) => {
