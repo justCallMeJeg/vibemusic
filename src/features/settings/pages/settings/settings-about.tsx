@@ -26,6 +26,7 @@ import { readTextFile } from "@tauri-apps/plugin-fs";
 import { logger } from "@/lib/logger";
 import { SettingsRow } from "@/components/shared/settings-row";
 import { SettingsGroup } from "@/components/shared/settings-group";
+import { SettingsSection } from "@/components/shared/settings-section";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -92,13 +93,8 @@ export function SettingsAbout() {
     : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Info className="w-5 h-5 text-primary" />
-        <h2 className="text-xl font-semibold">About</h2>
-      </div>
-
-      <div className="grid gap-6">
+    <>
+      <SettingsSection icon={Info} title="About">
         <SettingsRow label="vibemusic" description={`Version ${appVersion}`} />
 
         <SettingsRow
@@ -250,7 +246,7 @@ export function SettingsAbout() {
             </Button>
           </div>
         </SettingsRow>
-      </div>
+      </SettingsSection>
 
       <ConfirmDialog
         open={warningOpen}
@@ -265,6 +261,6 @@ export function SettingsAbout() {
         }}
       />
       <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-    </div>
+    </>
   );
 }

@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useContentStore } from "@features/library/store/content-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { SettingsGroup } from "@/components/shared/settings-group";
+import { SettingsSection } from "@/components/shared/settings-section";
 
 export function SettingsLibrary() {
   const libraryPaths = useSettingsStore((s) => s.libraryPaths);
@@ -165,13 +166,8 @@ export function SettingsLibrary() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <FolderOpen className="w-5 h-5 text-primary" />
-        <h2 className="text-xl font-semibold">Library</h2>
-      </div>
-
-      <div className="grid gap-6">
+    <>
+      <SettingsSection icon={FolderOpen} title="Library">
         <SettingsGroup
           title="Music Folders"
           description="Manage locations where Vibe looks for music"
@@ -238,7 +234,7 @@ export function SettingsLibrary() {
             </Button>
           </div>
         </SettingsGroup>
-      </div>
+      </SettingsSection>
 
       <ConfirmDialog
         open={pruneDialogOpen}
@@ -249,6 +245,6 @@ export function SettingsLibrary() {
         variant="destructive"
         onConfirm={handlePruneConfirm}
       />
-    </div>
+    </>
   );
 }

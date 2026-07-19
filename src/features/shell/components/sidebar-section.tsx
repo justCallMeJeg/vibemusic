@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { Profile } from "@/stores/profile-store";
 import NavigationMenu from "./navigation-menu";
 
@@ -11,7 +12,12 @@ interface SidebarSectionProps {
 
 export function SidebarSection({ activeProfile, onProfileClick, onImport, isScanning }: SidebarSectionProps) {
   return (
-    <div className="mt-2 pt-6 flex flex-col gap-6 w-16 shrink-0 h-full pb-32">
+    <div
+      data-region="sidebar"
+      tabIndex={-1}
+      className="mt-2 pt-6 flex flex-col gap-6 w-16 shrink-0 h-full pb-32"
+      onFocus={() => useFocusRegionStore.getState().setActiveRegion("sidebar")}
+    >
       <div
         id="user_profile"
         role="button"

@@ -15,7 +15,7 @@ export function SettingsGroup({
 }: SettingsGroupProps) {
   return (
     <div className="p-4 rounded-xl bg-secondary/50 border border-border space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">{title}</span>

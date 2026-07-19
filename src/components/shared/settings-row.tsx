@@ -34,7 +34,7 @@ export function SettingsRow({
           <span
             className={cn(
               variant === "nested"
-                ? "text-sm text-muted-foreground"
+                ? "text-sm font-medium"
                 : "font-medium",
             )}
           >

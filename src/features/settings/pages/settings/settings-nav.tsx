@@ -7,6 +7,7 @@ import {
   Speaker,
   Info,
   PanelLeft,
+  FlaskConical,
 } from "lucide-react";
 
 export const SETTINGS_SECTIONS = [
@@ -15,6 +16,7 @@ export const SETTINGS_SECTIONS = [
   { id: "navigation", label: "Navigation", icon: PanelLeft },
   { id: "library", label: "Library", icon: FolderOpen },
   { id: "audio", label: "Audio", icon: Speaker },
+  { id: "experimental", label: "Experimental", icon: FlaskConical },
   { id: "about", label: "About", icon: Info },
 ] as const;
 
