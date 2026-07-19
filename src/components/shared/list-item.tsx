@@ -4,17 +4,9 @@ import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 import { Play, Pause } from "lucide-react";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuSeparator,
-} from "@/components/ui/context-menu";
-import { ListPlus, Shuffle, Pencil, Trash2 } from "lucide-react";
+import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
+import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
+import type { TrackMenuActions } from "@/components/shared/context-menu-types";
 
 const rowVariants = cva(
   "mx-0.5 group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
@@ -54,17 +46,7 @@ interface ListItemProps
 
   placeholderType?: "artist" | "track";
   onClick?: () => void;
-  menuActions?: {
-    onPlay?: () => void;
-    onPause?: () => void;
-    onShuffle?: () => void;
-    onPlayNext?: () => void;
-    onAddToQueue?: () => void;
-    onAddToPlaylist?: (playlistId: number) => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-    playlists?: { id: number; name: string }[];
-  };
+  menuActions?: TrackMenuActions;
 }
 
 export const ListItem = memo(function ListItem({
@@ -86,17 +68,6 @@ export const ListItem = memo(function ListItem({
   menuActions,
   ...props
 }: ListItemProps) {
-  const showContextMenu =
-    menuActions &&
-    (menuActions.onPlay ||
-      menuActions.onPause ||
-      menuActions.onShuffle ||
-      menuActions.onPlayNext ||
-      menuActions.onAddToQueue ||
-      menuActions.onAddToPlaylist ||
-      menuActions.onEdit ||
-      menuActions.onDelete);
-
   const handleKeyDown = onClick
     ? (e: React.KeyboardEvent) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -221,72 +192,21 @@ export const ListItem = memo(function ListItem({
     </div>
   );
 
-  if (showContextMenu) {
+  const menuItems = useTrackContextMenu({
+    onPlay: menuActions?.onPlay,
+    onPause: menuActions?.onPause,
+    onShuffle: menuActions?.onShuffle,
+    onPlayNext: menuActions?.onPlayNext,
+    onAddToQueue: menuActions?.onAddToQueue,
+    onAddToPlaylist: menuActions?.onAddToPlaylist,
+    onEdit: menuActions?.onEdit,
+    onDelete: menuActions?.onDelete,
+    playlists: menuActions?.playlists,
+  });
+
+  if (menuItems.length > 0) {
     return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-        <ContextMenuContent>
-          {(menuActions?.onPlay || menuActions?.onPause) && (
-            <ContextMenuItem
-              onSelect={menuActions.onPlay || menuActions.onPause}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              {menuActions.onPause ? "Pause" : "Play"}
-            </ContextMenuItem>
-          )}
-          {menuActions?.onShuffle && (
-            <ContextMenuItem onSelect={menuActions.onShuffle}>
-              <Shuffle className="mr-2 h-4 w-4" /> Shuffle
-            </ContextMenuItem>
-          )}
-          {menuActions?.onPlayNext && (
-            <ContextMenuItem onSelect={menuActions.onPlayNext}>
-              <ListPlus className="mr-2 h-4 w-4" /> Play Next
-            </ContextMenuItem>
-          )}
-          {menuActions?.onAddToQueue && (
-            <ContextMenuItem onSelect={menuActions.onAddToQueue}>
-              <ListPlus className="mr-2 h-4 w-4" /> Add to Queue
-            </ContextMenuItem>
-          )}
-          {menuActions?.onAddToPlaylist && menuActions.playlists && (
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>Add to Playlist</ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48">
-                {menuActions.playlists.map((pl) => (
-                  <ContextMenuItem
-                    key={pl.id}
-                    onSelect={() => menuActions.onAddToPlaylist!(pl.id)}
-                  >
-                    {pl.name}
-                  </ContextMenuItem>
-                ))}
-                {menuActions.playlists.length === 0 && (
-                  <div className="px-2 py-1 text-xs text-muted-foreground">
-                    No playlists
-                  </div>
-                )}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          )}
-          {(menuActions?.onEdit || menuActions?.onDelete) && (
-            <ContextMenuSeparator />
-          )}
-          {menuActions?.onEdit && (
-            <ContextMenuItem onSelect={menuActions.onEdit}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </ContextMenuItem>
-          )}
-          {menuActions?.onDelete && (
-            <ContextMenuItem
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
-              onSelect={menuActions.onDelete}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </ContextMenuItem>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
+      <UnifiedContextMenu items={menuItems}>{row}</UnifiedContextMenu>
     );
   }
 

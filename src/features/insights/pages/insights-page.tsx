@@ -3,6 +3,8 @@ import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useStatsStore, type TimeRange } from "@/stores/stats-store";
 import { useNavigationStore, useCurrentPage } from "@/stores/navigation-store";
 import { useAudioStore, useIsPlayerVisible } from "@/stores/audio-store";
+import { getAlbumTracks, getArtistTracks } from "@/lib/api";
+import { logger } from "@/lib/logger";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -127,6 +129,8 @@ export default memo(function InsightsPage() {
   const { openAlbumDetail, openArtistDetail } = useNavigationStore();
   const currentPage = useCurrentPage();
   const play = useAudioStore((s) => s.play);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playNext = useAudioStore((s) => s.playNext);
   const isPlayerVisible = useIsPlayerVisible();
   const insightsScrollRef = useScrollMask();
   const hasLoadedOnce = useRef(false);
@@ -266,35 +270,41 @@ export default memo(function InsightsPage() {
                                 <Skeleton className="h-3 w-6 shrink-0" />
                               </div>
                             ))
-                          : rankedTracks.map((track, i) => (
-                              <ListItem
-                                key={track.id}
-                                title={track.title}
-                                subtitle={track.artist}
-                                artworkSrc={track.cover_image ?? undefined}
-                                index={i + 1}
-                                trailing={<span className="tabular-nums text-xs">{track.play_count}</span>}
-                                variant="compact"
-                                showArtwork
-                                onClick={() => {
-                                  play({
-                                    id: track.id,
-                                    title: track.title,
-                                    artist: track.artist,
-                                    artwork_path: track.cover_image,
-                                    duration_ms: track.duration_ms,
-                                    file_path: track.file_path,
-                                    album: "",
-                                    album_id: null,
-                                    artist_id: null,
-                                    artist_ids: [],
-                                    artist_names: [],
-                                    artist_roles: [],
-                                    track_number: null,
-                                  });
-                                }}
-                              />
-                            ))}
+                          : rankedTracks.map((track, i) => {
+                              const trackObj = {
+                                id: track.id,
+                                title: track.title,
+                                artist: track.artist,
+                                artwork_path: track.cover_image,
+                                duration_ms: track.duration_ms,
+                                file_path: track.file_path,
+                                album: "",
+                                album_id: null,
+                                artist_id: null,
+                                artist_ids: [],
+                                artist_names: [],
+                                artist_roles: [],
+                                track_number: null,
+                              };
+                              return (
+                                <ListItem
+                                  key={track.id}
+                                  title={track.title}
+                                  subtitle={track.artist}
+                                  artworkSrc={track.cover_image ?? undefined}
+                                  index={i + 1}
+                                  trailing={<span className="tabular-nums text-xs">{track.play_count}</span>}
+                                  variant="compact"
+                                  showArtwork
+                                  onClick={() => play(trackObj)}
+                                  menuActions={{
+                                    onPlay: () => play(trackObj),
+                                    onPlayNext: () => playNext(trackObj),
+                                    onAddToQueue: () => addToQueue(trackObj),
+                                  }}
+                                />
+                              );
+                            })}
                         {!showSkeleton && rankedTracks.length === 0 && (
                           <div className="text-xs text-muted-foreground px-2 py-4 text-center">
                             No tracks played yet
@@ -329,6 +339,19 @@ export default memo(function InsightsPage() {
                                 variant="compact"
                                 showArtwork
                                 onClick={() => openArtistDetail(artist.id)}
+                                menuActions={{
+                                  onPlay: async () => {
+                                    try {
+                                      const artistTracks = await getArtistTracks(artist.id);
+                                      if (artistTracks.length > 0) {
+                                        play(artistTracks[0], artistTracks);
+                                      }
+                                    } catch (err) {
+                                      logger.error("Failed to play artist tracks", err);
+                                    }
+                                  },
+                                  onGoToArtist: () => openArtistDetail(artist.id),
+                                }}
                               />
                             ))}
                         {!showSkeleton && rankedArtists.length === 0 && (
@@ -353,19 +376,50 @@ export default memo(function InsightsPage() {
                                 <Skeleton className="h-3 w-6 shrink-0" />
                               </div>
                             ))
-                          : rankedAlbums.map((album, i) => (
-                              <ListItem
-                                key={album.id}
-                                title={album.title}
-                                subtitle={album.artist}
-                                artworkSrc={album.cover_image ?? undefined}
-                                index={i + 1}
-                                trailing={<span className="tabular-nums text-xs">{album.play_count}</span>}
-                                variant="compact"
-                                showArtwork
-                                onClick={() => openAlbumDetail(album.id)}
-                              />
-                            ))}
+                          : rankedAlbums.map((album, i) => {
+                              const handlePlayAlbum = async () => {
+                                try {
+                                  const albumTracks = await getAlbumTracks(album.id);
+                                  if (albumTracks.length > 0) {
+                                    const sorted = albumTracks.sort(
+                                      (a, b) => (a.track_number || 0) - (b.track_number || 0),
+                                    );
+                                    play(sorted[0], sorted);
+                                  }
+                                } catch (err) {
+                                  logger.error("Failed to play album", err);
+                                }
+                              };
+                              const handleShuffleAlbum = async () => {
+                                try {
+                                  const albumTracks = await getAlbumTracks(album.id);
+                                  if (albumTracks.length > 0) {
+                                    const shuffled = [...albumTracks].sort(() => Math.random() - 0.5);
+                                    play(shuffled[0], shuffled);
+                                  }
+                                } catch (err) {
+                                  logger.error("Failed to shuffle album", err);
+                                }
+                              };
+                              return (
+                                <ListItem
+                                  key={album.id}
+                                  title={album.title}
+                                  subtitle={album.artist}
+                                  artworkSrc={album.cover_image ?? undefined}
+                                  index={i + 1}
+                                  trailing={<span className="tabular-nums text-xs">{album.play_count}</span>}
+                                  variant="compact"
+                                  showArtwork
+                                  onClick={() => openAlbumDetail(album.id)}
+                                  menuActions={{
+                                    onPlay: handlePlayAlbum,
+                                    onShuffle: handleShuffleAlbum,
+                                    onGoToAlbum: () => openAlbumDetail(album.id),
+                                  }}
+                                />
+                              );
+                            })}
                         {!showSkeleton && rankedAlbums.length === 0 && (
                           <div className="text-xs text-muted-foreground px-2 py-4 text-center">
                             No albums played yet

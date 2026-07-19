@@ -27,6 +27,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   play,
   pause,
   resume,
+  menuActions,
 }: {
   track: Track;
   index: number;
@@ -36,6 +37,19 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   play: (track: Track, queue?: Track[]) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
+  menuActions?: {
+    onPlay?: () => void;
+    onPause?: () => void;
+    onShuffle?: () => void;
+    onPlayNext?: () => void;
+    onAddToQueue?: () => void;
+    onEdit?: () => void;
+    onDelete?: () => void;
+    onGoToAlbum?: () => void;
+    onGoToArtist?: () => void;
+    onAddToPlaylist?: (playlistId: number) => void;
+    playlists?: { id: number; name: string }[];
+  };
 }) {
   return (
     <ListItem
@@ -73,6 +87,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
           play(track, tracks);
         }
       }}
+      menuActions={menuActions}
     />
   );
 });
@@ -88,6 +103,10 @@ export default memo(function AlbumDetailPage() {
   const resume = useAudioStore((s) => s.resume);
   const status = usePlayerStatus();
   const currentTrack = useCurrentTrack();
+
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playNext = useAudioStore((s) => s.playNext);
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,20 +171,38 @@ export default memo(function AlbumDetailPage() {
   };
 
   const renderItem = useCallback(
-    (track: Track, index: number) => (
-      <AlbumTrackRow
-        key={track.id}
-        track={track}
-        index={index}
-        currentTrackId={currentTrack?.id}
-        status={status}
-        tracks={tracks}
-        play={play}
-        pause={pause}
-        resume={resume}
-      />
-    ),
-    [currentTrack?.id, status, tracks, play, pause, resume],
+    (track: Track, index: number) => {
+      const menuActions = {
+        onPlay: () => play(track, tracks),
+        onPause: currentTrack?.id === track.id && status === "playing" ? () => pause() : undefined,
+        onShuffle: () => {
+          const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+          play(shuffled[0], shuffled);
+        },
+        onPlayNext: () => playNext(track),
+        onAddToQueue: () => addToQueue(track),
+        onGoToArtist:
+          track.artist_ids?.[0] || track.artist_id
+            ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
+            : undefined,
+      };
+
+      return (
+        <AlbumTrackRow
+          key={track.id}
+          track={track}
+          index={index}
+          currentTrackId={currentTrack?.id}
+          status={status}
+          tracks={tracks}
+          play={play}
+          pause={pause}
+          resume={resume}
+          menuActions={menuActions}
+        />
+      );
+    },
+    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openArtistDetail],
   );
 
   if (!album && !isLoading) {

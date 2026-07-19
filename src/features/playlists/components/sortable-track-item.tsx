@@ -18,6 +18,8 @@ export function SortableTrackItem({ track, index, onRemove }: SortableTrackItemP
   const currentTrack = useCurrentTrack();
   const play = useAudioStore((s) => s.play);
   const pause = useAudioStore((s) => s.pause);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playNext = useAudioStore((s) => s.playNext);
   const {
     attributes,
     listeners,
@@ -95,6 +97,12 @@ export function SortableTrackItem({ track, index, onRemove }: SortableTrackItemP
             } else {
               play(track);
             }
+          }}
+          menuActions={{
+            onPlay: () => play(track),
+            onPause: isCurrentTrack ? () => pause() : undefined,
+            onPlayNext: () => playNext(track),
+            onAddToQueue: () => addToQueue(track),
           }}
         />
       </div>

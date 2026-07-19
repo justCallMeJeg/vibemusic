@@ -3,6 +3,8 @@ import "./styles/globals.css";
 import MusicController from "@features/player/components/music-controller";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
+import { useKeyboardShortcuts, useGlobalKeydownListener } from "@/hooks/use-keyboard-shortcuts";
+import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
 import MainContent from "@features/shell/components/main-content";
 import { BackgroundGradient } from "@features/shell/components/background-gradient";
@@ -68,6 +70,17 @@ export default function App() {
   const activeProfile = activeProfileId ? profilesMap.get(activeProfileId) : undefined;
 
   useProfileTheme();
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts();
+  useGlobalKeydownListener();
+
+  // Block native WebView right-click context menu
+  useEffect(() => {
+    const handler = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
+  }, []);
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 
@@ -258,6 +271,7 @@ export default function App() {
         confirmProfileSwitch={confirmProfileSwitch}
         handleConfirmRefresh={handleConfirmRefresh}
       />
+      <KeyboardShortcutsOverlay />
     </main>
   );
 }

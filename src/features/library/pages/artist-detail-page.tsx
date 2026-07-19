@@ -36,6 +36,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
   play,
   pause,
   resume,
+  menuActions,
 }: {
   track: Track;
   index: number;
@@ -45,6 +46,19 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
   play: (track: Track, queue?: Track[]) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
+  menuActions?: {
+    onPlay?: () => void;
+    onPause?: () => void;
+    onShuffle?: () => void;
+    onPlayNext?: () => void;
+    onAddToQueue?: () => void;
+    onEdit?: () => void;
+    onDelete?: () => void;
+    onGoToAlbum?: () => void;
+    onGoToArtist?: () => void;
+    onAddToPlaylist?: (playlistId: number) => void;
+    playlists?: { id: number; name: string }[];
+  };
 }) {
   const isCurrentTrack = currentTrackId === track.id;
   return (
@@ -84,6 +98,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
           play(track, tracks);
         }
       }}
+      menuActions={menuActions}
     />
   );
 });
@@ -98,6 +113,8 @@ export default memo(function ArtistDetailPage() {
   const play = useAudioStore((s) => s.play);
   const pause = useAudioStore((s) => s.pause);
   const resume = useAudioStore((s) => s.resume);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playNext = useAudioStore((s) => s.playNext);
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
 
@@ -159,20 +176,35 @@ export default memo(function ArtistDetailPage() {
   }, [detailView, updateBreadcrumbLabel]);
 
   const renderItem = useCallback(
-    (track: Track, index: number) => (
-      <ArtistTrackRow
-        key={track.id}
-        track={track}
-        index={index}
-        currentTrackId={currentTrack?.id}
-        status={status}
-        tracks={tracks}
-        play={play}
-        pause={pause}
-        resume={resume}
-      />
-    ),
-    [currentTrack?.id, status, tracks, play, pause, resume],
+    (track: Track, index: number) => {
+      const menuActions = {
+        onPlay: () => play(track, tracks),
+        onPause: currentTrack?.id === track.id && status === "playing" ? () => pause() : undefined,
+        onShuffle: () => {
+          const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+          play(shuffled[0], shuffled);
+        },
+        onPlayNext: () => playNext(track),
+        onAddToQueue: () => addToQueue(track),
+        onGoToAlbum: track.album_id != null ? () => openAlbumDetail(track.album_id!) : undefined,
+      };
+
+      return (
+        <ArtistTrackRow
+          key={track.id}
+          track={track}
+          index={index}
+          currentTrackId={currentTrack?.id}
+          status={status}
+          tracks={tracks}
+          play={play}
+          pause={pause}
+          resume={resume}
+          menuActions={menuActions}
+        />
+      );
+    },
+    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openAlbumDetail],
   );
 
   if (!artist && !isLoading) {
@@ -316,6 +348,10 @@ export default memo(function ArtistDetailPage() {
                         variant="compact"
                         onClick={() => handleAlbumClick(album.id)}
                         onPlay={() => handlePlayAlbum(album.id)}
+                        menuActions={{
+                          onPlay: () => handlePlayAlbum(album.id),
+                          onShuffle: () => handlePlayAlbum(album.id),
+                        }}
                       />
                     </div>
                   ))}
