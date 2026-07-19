@@ -278,6 +278,7 @@ export function GlobalSearch() {
     <CommandDialog
       open={isSearchOpen}
       onOpenChange={setSearchOpen}
+      showCloseButton={false}
       commandProps={{
         shouldFilter: false, // DISABLE CLIENT SIDE FILTERING!
       }}
