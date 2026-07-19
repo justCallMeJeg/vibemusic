@@ -10,7 +10,7 @@ import { getArtistTracks, Artist } from "@/lib/api";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
-import { Music2, Search } from "lucide-react";
+import { Users, Search } from "lucide-react";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
@@ -185,7 +185,7 @@ export default memo(function ArtistsPage() {
               />
             ) : (
               <EmptyState
-                icon={Music2}
+                icon={Users}
                 title="No artists found"
                 description="Import music to see your artists here."
                 action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}

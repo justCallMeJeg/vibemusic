@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { ArtworkImage } from "@/components/shared/artwork-image";
-import { SearchX, Shuffle, ChevronLeft, ChevronRight, Music } from "lucide-react";
+import { SearchX, Shuffle, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -331,7 +331,7 @@ export default memo(function ArtistDetailPage() {
 
             {albums.length === 0 && tracks.length === 0 && (
               <EmptyState
-                icon={Music}
+                icon={Users}
                 title="No content found"
                 description="This artist has no albums or tracks in your library."
               />
