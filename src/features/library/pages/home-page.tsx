@@ -367,6 +367,7 @@ export default memo(function HomePage() {
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
             (isPlayerVisible ? "pb-player-bar" : "pb-8"),
           isEmpty && "flex flex-col",
+          isEmpty && isPlayerVisible && "pb-player-bar",
         )}
       >
         {/* Albums Section */}
@@ -473,6 +474,7 @@ export default memo(function HomePage() {
               icon={Play}
               title="Your library is empty"
               description="Import your local music to get started."
+              action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
             />
           )}
       </div>

@@ -1,9 +1,11 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { debounce } from "@/lib/utils";
+import { debounce, cn } from "@/lib/utils";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
   items: T[];
@@ -92,16 +94,15 @@ export function VirtualizedGrid<T>({
     <div
       ref={parentRef}
       role="list"
-      className={`flex-1 overflow-y-auto px-2 scroll-mask-y  ${className} ${
-        items.length === 0 ? "flex flex-col" : ""
-      }`}
+      className={cn(
+        "flex-1 overflow-y-auto px-2 scroll-mask-y",
+        className,
+        items.length === 0 && "flex flex-col",
+        items.length === 0 && isPlayerVisible && "pb-player-bar",
+      )}
     >
       {items.length === 0 ? (
-        emptyState || (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            No items found
-          </div>
-        )
+        emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
       ) : (
         <div
           style={{

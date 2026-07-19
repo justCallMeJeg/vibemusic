@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { getArtistTracks, Artist } from "@/lib/api";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 import { Music2, Search } from "lucide-react";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
@@ -63,6 +64,7 @@ export default memo(function ArtistsPage() {
   const deferredQuery = useDeferredValue(searchQuery);
 
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
+  const setPage = useNavigationStore((s) => s.setPage);
   const play = useAudioStore((s) => s.play);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
@@ -178,13 +180,15 @@ export default memo(function ArtistsPage() {
               <EmptyState
                 icon={Search}
                 title="No matches found"
-                description={`We couldn't find any artists matching "${searchQuery}"`}
+                description={`No artists match "${searchQuery}"`}
+                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
               />
             ) : (
               <EmptyState
                 icon={Music2}
                 title="No artists found"
                 description="Import music to see your artists here."
+                action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
               />
             )
           }

@@ -7,7 +7,7 @@ import {
   usePlayerStatus,
   useCurrentTrack,
 } from "@/stores/audio-store";
-import { Music } from "lucide-react";
+import { SearchX, Music } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { ListItem } from "@/components/shared/list-item";
@@ -170,12 +170,12 @@ export default memo(function AlbumDetailPage() {
 
   if (!album && !isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        <div className="text-muted-foreground">Album not found</div>
-        <Button variant="ghost" onClick={goBack}>
-          Go back
-        </Button>
-      </div>
+      <EmptyState
+        icon={SearchX}
+        title="Album not found"
+        description="The album you're looking for doesn't exist or has been removed."
+        action={<Button variant="ghost" onClick={goBack}>Go back</Button>}
+      />
     );
   }
 

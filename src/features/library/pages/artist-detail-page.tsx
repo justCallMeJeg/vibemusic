@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { ArtworkImage } from "@/components/shared/artwork-image";
-import { Shuffle, ChevronLeft, ChevronRight, Music } from "lucide-react";
+import { SearchX, Shuffle, ChevronLeft, ChevronRight, Music } from "lucide-react";
 import { CardItem } from "@/components/shared/card-item";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -177,12 +177,12 @@ export default memo(function ArtistDetailPage() {
 
   if (!artist && !isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 text-muted-foreground">
-        <span>Artist not found</span>
-        <Button variant="ghost" onClick={goBack}>
-          Go back
-        </Button>
-      </div>
+      <EmptyState
+        icon={SearchX}
+        title="Artist not found"
+        description="The artist you're looking for doesn't exist or has been removed."
+        action={<Button variant="ghost" onClick={goBack}>Go back</Button>}
+      />
     );
   }
 
@@ -330,14 +330,11 @@ export default memo(function ArtistDetailPage() {
             )}
 
             {albums.length === 0 && tracks.length === 0 && (
-              <div className="py-16">
-                <EmptyState
-                  icon={Music}
-                  title="No content found"
-                  description="This artist has no albums or tracks in your library."
-                  variant="default"
-                />
-              </div>
+              <EmptyState
+                icon={Music}
+                title="No content found"
+                description="This artist has no albums or tracks in your library."
+              />
             )}
           </>
         }

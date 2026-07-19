@@ -22,8 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { useNavigationStore } from "@/stores/navigation-store";
 import { EmptyState } from "@/components/shared/empty-state";
-import { ArrowUpDown, Search, Filter } from "lucide-react";
+import { ArrowUpDown, Search, Music2 } from "lucide-react";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useContentStore } from "@features/library/store/content-store";
 import { usePlaylistStore } from "@features/playlists/store/playlist-store";
@@ -154,6 +155,7 @@ export default memo(function SongsPage() {
   const playNext = useAudioStore((s) => s.playNext);
   const playlists = usePlaylistStore((s) => s.playlists);
   const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
+  const setPage = useNavigationStore((s) => s.setPage);
 
   // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -304,6 +306,7 @@ export default memo(function SongsPage() {
         className={cn(
           "flex-1 overflow-y-auto px-2 scroll-mask-y",
           !isLoading && displayedTracks.length === 0 && "flex flex-col gap-1",
+          !isLoading && displayedTracks.length === 0 && isPlayerVisible && "pb-player-bar",
         )}
       >
         {isLoading ? null : displayedTracks.length === 0 ? (
@@ -311,13 +314,15 @@ export default memo(function SongsPage() {
             <EmptyState
               icon={Search}
               title="No matches found"
-              description={`We couldn't find any songs matching "${searchQuery}"`}
+              description={`No songs match "${searchQuery}"`}
+              action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
             />
           ) : (
             <EmptyState
-              icon={Filter}
+              icon={Music2}
               title="No songs found"
               description="Import music using the sidebar button to get started."
+              action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
             />
           )
         ) : (

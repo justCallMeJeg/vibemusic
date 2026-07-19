@@ -4,6 +4,8 @@ import { probeFile, MediaMetadata } from "@/lib/api";
 import { TrackDetailHero } from "@/components/shared/track-detail-hero";
 import TrackMetadata from "@/components/shared/track-metadata";
 import { logger } from "@/lib/logger";
+import { Music } from "lucide-react";
+import { EmptyPanel } from "@/components/shared/empty-panel";
 
 export default function TrackDetailContent() {
   const currentTrack = useCurrentTrack();
@@ -33,9 +35,7 @@ export default function TrackDetailContent() {
 
   if (!currentTrack) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <p>No track playing</p>
-      </div>
+      <EmptyPanel icon={Music} title="No track playing" />
     );
   }
 

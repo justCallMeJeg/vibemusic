@@ -255,13 +255,15 @@ export default memo(function PlaylistsPage() {
               <EmptyState
                 icon={Search}
                 title="No matches found"
-                description={`We couldn't find any playlists matching "${deferredQuery}"`}
+                description={`No playlists match "${searchQuery}"`}
+                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
               />
             ) : (
               <EmptyState
                 icon={ListMusic}
                 title="No playlists created"
                 description="Create your first playlist to organize your music."
+                action={<Button onClick={() => setIsDialogOpen(true)}>Create Playlist</Button>}
               />
             )
           }

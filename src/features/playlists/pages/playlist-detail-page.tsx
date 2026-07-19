@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { Plus, Music } from "lucide-react";
+import { SearchX, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -153,9 +153,12 @@ export default memo(function PlaylistDetailPage() {
 
   if (!playlist && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-muted-foreground">Playlist not found</div>
-      </div>
+      <EmptyState
+        icon={SearchX}
+        title="Playlist not found"
+        description="The playlist you're looking for doesn't exist or has been removed."
+        action={<Button variant="ghost" onClick={goBack}>Go back</Button>}
+      />
     );
   }
 
@@ -246,7 +249,6 @@ export default memo(function PlaylistDetailPage() {
               icon={Music}
               title="This playlist is empty"
               description="Add songs from your library to build this playlist."
-              variant="default"
               action={
                 <Button
                   variant="outline"

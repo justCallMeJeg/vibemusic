@@ -11,6 +11,8 @@ import type { Track } from "@/lib/api";
 import QueueItem from "./queue-item";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { Button } from "@/components/ui/button";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { ListMusic } from "lucide-react";
 
 export default function QueueContent() {
   const currentTrack = useCurrentTrack();
@@ -88,9 +90,7 @@ export default function QueueContent() {
           renderItem={renderItem}
           paddingBottom="0px"
           emptyState={
-            <p className="text-muted-foreground text-sm italic p-2">
-              Queue is empty
-            </p>
+            <EmptyPanel icon={ListMusic} title="Queue is empty" />
           }
         />
       </div>

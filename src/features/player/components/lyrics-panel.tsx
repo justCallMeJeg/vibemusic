@@ -11,6 +11,7 @@ import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { Music2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyPanel } from "@/components/shared/empty-panel";
 
 function LyricsSkeleton() {
   const widths = [70, 40, 55, 90, 60, 45, 80, 50, 75, 65];
@@ -312,10 +313,7 @@ export default function LyricsContent() {
 
   if (!currentTrack) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 p-4">
-        <Music2 className="w-8 h-8 opacity-50" />
-        <p>No track playing</p>
-      </div>
+      <EmptyPanel icon={Music2} title="No track playing" />
     );
   }
 
@@ -325,12 +323,11 @@ export default function LyricsContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 px-6 text-center p-4">
-        <p className="font-medium text-foreground">No lyrics available</p>
-        <p className="text-sm opacity-70">
-          Could not find embedded lyrics or an .lrc file for this track.
-        </p>
-      </div>
+      <EmptyPanel
+        icon={Music2}
+        title="No lyrics available"
+        description="Could not find embedded lyrics or an .lrc file for this track."
+      />
     );
   }
 

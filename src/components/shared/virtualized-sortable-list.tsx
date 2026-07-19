@@ -3,6 +3,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { ListMusic } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -95,7 +97,9 @@ export function VirtualizedSortableList<T>({
     <div
       ref={parentRef}
       onScroll={onScroll}
-      className={`flex-1 overflow-y-auto overflow-x-hidden ${className} scroll-mask-y `}
+      className={`flex-1 overflow-y-auto overflow-x-hidden ${className} scroll-mask-y ${
+        items.length === 0 && isPlayerVisible ? "pb-player-bar" : ""
+      }`}
     >
       <div
         style={{
@@ -107,11 +111,7 @@ export function VirtualizedSortableList<T>({
         {header && <div>{header}</div>}
 
         {items.length === 0 ? (
-          emptyState || (
-            <div className="flex items-center justify-center flex-1 text-muted-foreground p-8">
-              No items
-            </div>
-          )
+          emptyState || <EmptyPanel icon={ListMusic} title="No items" />
         ) : (
           <DndContext
             sensors={sensors}

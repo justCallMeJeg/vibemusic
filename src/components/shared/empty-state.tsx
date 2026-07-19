@@ -14,9 +14,8 @@ interface EmptyStateProps {
   title: string;
   description: string;
   action?: ReactNode;
-  className?: string; // Class for the outer wrapper
-  emptyClassName?: string; // Class for the Empty primitives wrapper if needed
-  variant?: "default" | "page"; // 'page' includes the -mt-20 offset for full page center
+  className?: string;
+  emptyClassName?: string;
 }
 
 export function EmptyState({
@@ -26,13 +25,11 @@ export function EmptyState({
   action,
   className,
   emptyClassName,
-  variant = "page",
 }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex-1 w-full flex flex-col items-center justify-center",
-        variant === "page" && "-mt-20",
+        "flex-1 w-full flex flex-col items-center justify-center min-h-0",
         className
       )}
     >

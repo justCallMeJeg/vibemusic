@@ -2,6 +2,7 @@ import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
 import { cn } from "@/lib/utils";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
 import { useContentStore } from "@features/library/store/content-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ export default memo(function AlbumsPage() {
   const deferredQuery = useDeferredValue(searchQuery);
 
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
+  const setPage = useNavigationStore((s) => s.setPage);
   const play = useAudioStore((s) => s.play);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
@@ -183,13 +185,15 @@ export default memo(function AlbumsPage() {
               <EmptyState
                 icon={Search}
                 title="No matches found"
-                description={`We couldn't find any albums matching "${searchQuery}"`}
+                description={`No albums match "${searchQuery}"`}
+                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
               />
             ) : (
               <EmptyState
                 icon={Disc}
                 title="No albums found"
                 description="Import music to see your albums here."
+                action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
               />
             )
           }

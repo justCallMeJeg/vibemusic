@@ -3,6 +3,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { ListMusic } from "lucide-react";
 
 interface VirtualizedListProps<T> {
   items: T[];
@@ -69,7 +71,9 @@ export function VirtualizedList<T>({
       ref={parentRef}
       onScroll={onScroll}
       role="list"
-      className={`flex-1 overflow-y-auto ${className} scroll-mask-y `}
+      className={`flex-1 overflow-y-auto ${className} scroll-mask-y ${
+        items.length === 0 && !hasHeader && isPlayerVisible ? "pb-player-bar" : ""
+      }`}
     >
       <div
         style={{
@@ -79,11 +83,7 @@ export function VirtualizedList<T>({
         }}
       >
         {items.length === 0 && !hasHeader
-          ? emptyState || (
-              <div className="flex items-center justify-center flex-1 text-muted-foreground p-8">
-                No items found
-              </div>
-            )
+          ? emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
           : virtualizer.getVirtualItems().map((virtualRow) => {
               const isHeaderRow = hasHeader && virtualRow.index === 0;
               const itemIndex = hasHeader
