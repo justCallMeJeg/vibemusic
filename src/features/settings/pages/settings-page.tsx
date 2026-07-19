@@ -8,6 +8,7 @@ import { SettingsAppearance } from "./settings/settings-appearance";
 import { SettingsNavigation } from "./settings/settings-navigation";
 import { SettingsLibrary } from "./settings/settings-library";
 import { SettingsAudio } from "./settings/settings-audio";
+import { SettingsExperimental } from "./settings/settings-experimental";
 import { SettingsAbout } from "./settings/settings-about";
 
 export default function SettingsPage() {
@@ -138,6 +139,13 @@ export default function SettingsPage() {
             className="scroll-mt-18"
           >
             <SettingsAudio />
+          </section>
+          <section
+            ref={setSectionRef("experimental")}
+            id="experimental"
+            className="scroll-mt-18"
+          >
+            <SettingsExperimental />
           </section>
           <section
             ref={setSectionRef("about")}

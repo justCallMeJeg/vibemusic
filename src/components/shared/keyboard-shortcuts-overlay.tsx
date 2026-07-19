@@ -40,6 +40,14 @@ export function KeyboardShortcutsOverlay() {
       ],
     },
     {
+      label: "Focus Regions",
+      shortcuts: [
+        { keys: "Tab", description: "Cycle to next focus region" },
+        { keys: "Shift+Tab", description: "Cycle to previous focus region" },
+        { keys: "Ctrl+L", description: "Focus main content area" },
+      ],
+    },
+    {
       label: "Playback",
       shortcuts: [
         { keys: "Space", description: "Play / Pause" },

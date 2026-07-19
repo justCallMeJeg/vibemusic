@@ -152,6 +152,12 @@
   outline: 1px solid red;
 }
 
+[data-region][data-region-active="true"] {
+  outline: 1px solid color-mix(in oklch, var(--accent) 100%, transparent);
+  outline-offset: -1px;
+  transition: outline-color 0.15s ease;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

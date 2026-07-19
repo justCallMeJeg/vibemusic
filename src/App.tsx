@@ -4,6 +4,7 @@ import MusicController from "@features/player/components/music-controller";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
 import { useKeyboardShortcuts, useGlobalKeydownListener } from "@/hooks/use-keyboard-shortcuts";
+import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
 import MainContent from "@features/shell/components/main-content";
@@ -234,15 +235,25 @@ export default function App() {
           isScanning={isScanning}
         />
 
-        {/* Main Content */}
         <div className="flex-1 min-w-0 min-h-0 flex">
-          <MainContent />
+          <div
+            data-region="main"
+            tabIndex={-1}
+            className="flex-1 min-w-0 min-h-0"
+            onFocus={() => useFocusRegionStore.getState().setActiveRegion("main")}
+          >
+            <MainContent />
+          </div>
 
           {/* Queue Menu / Track Detail Panel */}
           <div
+            data-region="sidepanel"
+            data-region-visible={sidePanel !== "none" ? "true" : "false"}
+            tabIndex={-1}
             className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
               sidePanel !== "none" ? "w-96 p-px" : "w-0 p-0"
             } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
+            onFocus={() => useFocusRegionStore.getState().setActiveRegion("sidepanel")}
           >
             <Suspense fallback={null}>
               <SidePanelContent />
@@ -253,11 +264,15 @@ export default function App() {
 
       {/* Music Controller */}
       <div
+        data-region="player"
+        data-region-visible={isPlayerVisible ? "true" : "false"}
+        tabIndex={-1}
         className={`fixed bottom-0 left-0 right-0 p-6 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
           isPlayerVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0"
         }`}
+        onFocus={() => useFocusRegionStore.getState().setActiveRegion("player")}
       >
         <MusicController />
       </div>

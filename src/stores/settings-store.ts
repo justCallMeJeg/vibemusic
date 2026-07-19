@@ -20,6 +20,11 @@ export interface SidebarItem {
   hidden: boolean;
 }
 
+export interface ExperimentalFeatures {
+  focusRegions: boolean;
+  showFocusIndicator: boolean;
+}
+
 // Helper to get system theme preference
 const getSystemTheme = (): "dark" | "light" => {
   if (typeof window !== "undefined" && window.matchMedia) {
@@ -77,6 +82,9 @@ interface SettingsState {
 
   // Media Keys
   enableMediaKeys: boolean;
+
+  // Experimental Features
+  experimentalFeatures: ExperimentalFeatures;
 }
 
 interface SettingsActions {
@@ -118,6 +126,10 @@ interface SettingsActions {
     position: "bottom-right" | "bottom-left" | "top-right" | "top-left",
   ) => void;
   setEnableMediaKeys: (enabled: boolean) => Promise<void>;
+  setExperimentalFeature: <K extends keyof ExperimentalFeatures>(
+    key: K,
+    value: ExperimentalFeatures[K],
+  ) => Promise<void>;
 
   loadSettings: (profileId?: string) => Promise<void>;
 }
@@ -145,6 +157,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     miniPlayerStyle: "square",
     miniPlayerPosition: "bottom-right",
     enableMediaKeys: true,
+    experimentalFeatures: {
+      focusRegions: false,
+      showFocusIndicator: false,
+    },
 
     // Sidebar Defaults
     sidebarItems: [
@@ -374,6 +390,14 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.set("enableMediaKeys", enabled);
       await store.save();
     },
+    setExperimentalFeature: async (key, value) => {
+      const current = get().experimentalFeatures;
+      const next = { ...current, [key]: value };
+      set({ experimentalFeatures: next });
+      const store = await getStore();
+      await store.set("experimentalFeatures", next);
+      await store.save();
+    },
 
     loadSettings: async (profileId?: string) => {
       if (!profileId) {
@@ -415,6 +439,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           miniPlayerStyle,
           miniPlayerPosition,
           enableMediaKeys,
+          experimentalFeatures,
         ] = await Promise.all([
           getVal<"dark" | "light" | "system">("theme"),
           getVal<boolean>("dynamicGradient"),
@@ -441,6 +466,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
             "miniPlayerPosition",
           ),
           getVal<boolean>("enableMediaKeys"),
+          getVal<ExperimentalFeatures>("experimentalFeatures"),
         ]);
 
         let sidebarItems = _sidebarItems;
@@ -487,6 +513,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           miniPlayerStyle: miniPlayerStyle ?? "square",
           miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
           enableMediaKeys: enableMediaKeys ?? true,
+          experimentalFeatures: experimentalFeatures ?? {
+            focusRegions: false,
+            showFocusIndicator: false,
+          },
           isLoading: false,
         });
 

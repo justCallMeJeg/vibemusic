@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useKeybindsStore, type KeybindEntry } from "@/stores/keybinds-store";
 import { useNavigationStore, type Page, PAGE_LABELS } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
+import { useFocusRegionStore } from "@/stores/focus-region-store";
+import { useSettingsStore } from "@/stores/settings-store";
 
 const SCOPE = "app";
 
@@ -183,6 +185,56 @@ export function useKeyboardShortcuts() {
       }
     };
   }, [register, unregister]);
+
+  // Focus region shortcuts — only registered when feature is enabled
+  const focusRegionsOn = useSettingsStore((s) => s.experimentalFeatures.focusRegions);
+
+  useEffect(() => {
+    if (!focusRegionsOn) return;
+
+    const focusEntries: [string, KeybindEntry][] = [
+      [
+        "focus-next",
+        {
+          combo: { key: "Tab" },
+          handler: () => useFocusRegionStore.getState().cycleForward(),
+          description: "Cycle to next focus region",
+          preventDefault: true,
+          skipWhenDialogOpen: true,
+        },
+      ],
+      [
+        "focus-prev",
+        {
+          combo: { key: "Tab", shift: true },
+          handler: () => useFocusRegionStore.getState().cycleBackward(),
+          description: "Cycle to previous focus region",
+          preventDefault: true,
+          skipWhenDialogOpen: true,
+        },
+      ],
+      [
+        "focus-content",
+        {
+          combo: { key: "l", ctrl: true },
+          handler: () => useFocusRegionStore.getState().focusRegion("main"),
+          description: "Focus main content area",
+          preventDefault: true,
+          skipWhenDialogOpen: true,
+        },
+      ],
+    ];
+
+    for (const [id, entry] of focusEntries) {
+      register(id, entry, SCOPE);
+    }
+
+    return () => {
+      for (const [id] of focusEntries) {
+        unregister(id, SCOPE);
+      }
+    };
+  }, [focusRegionsOn, register, unregister]);
 }
 
 // Global keydown listener
