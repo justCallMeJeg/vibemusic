@@ -15,6 +15,7 @@ export function PlaylistCreateDialog({
   onOpenChange,
 }: PlaylistCreateDialogProps) {
   const [name, setName] = useState("");
+  const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const createPlaylist = usePlaylistStore((s) => s.createPlaylist);
 
@@ -22,11 +23,14 @@ export function PlaylistCreateDialog({
     if (!name.trim()) return;
 
     setIsCreating(true);
+    setError("");
     try {
       const success = await createPlaylist(name);
       if (success) {
         setName("");
         onOpenChange(false);
+      } else {
+        setError("Failed to create playlist");
       }
     } finally {
       setIsCreating(false);
@@ -70,13 +74,16 @@ export function PlaylistCreateDialog({
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setError(""); }}
               placeholder="My awesome playlist"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleCreate();
               }}
             />
+            {error && (
+              <p className="text-sm text-destructive mt-1">{error}</p>
+            )}
           </div>
         </div>
       </div>

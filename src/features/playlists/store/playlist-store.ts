@@ -67,7 +67,12 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
       toast.success("Playlist created");
       return true;
     } catch (error) {
-      logger.error("Failed to create playlist", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("UNIQUE constraint")) {
+        toast.error("A playlist with this name already exists");
+      } else {
+        logger.error("Failed to create playlist", error);
+      }
       return false;
     }
   },
