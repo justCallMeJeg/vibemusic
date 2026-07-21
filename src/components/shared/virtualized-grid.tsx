@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback, cloneElement, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { debounce, cn } from "@/lib/utils";
@@ -15,14 +15,12 @@ interface VirtualizedGridProps<T> {
   emptyState?: React.ReactNode;
   paddingBottom?: string;
   className?: string;
-  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  /** Enable keyboard navigation (arrow keys, Enter) */
   keyboardNav?: boolean;
   /** Called when Enter is pressed on focused item */
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
-  /** Called when Shift+F10 or ContextMenu key on focused item */
-  onItemContextMenu?: (index: number) => void;
 }
 
 // Helper hook to calculate grid columns based on window width (matching Tailwind breakpoints)
@@ -53,7 +51,9 @@ function useGridColumns() {
   );
 
   useEffect(() => {
-    window.addEventListener("resize", debouncedUpdateColumns, { passive: true });
+    window.addEventListener("resize", debouncedUpdateColumns, {
+      passive: true,
+    });
     return () => window.removeEventListener("resize", debouncedUpdateColumns);
   }, [debouncedUpdateColumns]);
 
@@ -70,7 +70,6 @@ export function VirtualizedGrid<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
-  onItemContextMenu,
 }: VirtualizedGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -112,7 +111,6 @@ export function VirtualizedGrid<T>({
     columns,
     onActivate: onItemActivate,
     onActivateSecondary: onItemActivateSecondary,
-    onContextMenu: onItemContextMenu,
     onIndexChange: (index) => {
       if (keyboardNav && index >= 0) {
         const rowIndex = Math.floor(index / columns);
@@ -179,7 +177,17 @@ export function VirtualizedGrid<T>({
               >
                 {rowItems.map((item, colIdx) => {
                   const itemIndex = startIndex + colIdx;
-                  return renderItem(item, itemIndex);
+                  const rendered = renderItem(item, itemIndex);
+                  if (!keyboardNav || !isValidElement(rendered)) return rendered;
+                  return cloneElement(rendered, {
+                    'data-item-index': itemIndex,
+                    tabIndex: roving.getTabIndex(itemIndex),
+                    className: cn(
+                      (rendered.props as any)?.className,
+                      "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                      roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                    ),
+                  } as any);
                 })}
               </div>
             );

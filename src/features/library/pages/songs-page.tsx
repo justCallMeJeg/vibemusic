@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useCallback, useDeferredValue, useEffect } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useDeferredValue, useEffect, cloneElement } from "react";
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -53,7 +53,8 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue,
   addToPlaylist,
   playlists,
-  dataItemIndex,
+  'data-item-index': dataItemIndex,
+  tabIndex,
 }: {
   track: Track;
   status: string;
@@ -65,7 +66,8 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue: (track: Track) => void;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   playlists: { id: number; name: string }[];
-  dataItemIndex?: number;
+  'data-item-index'?: number;
+  tabIndex?: number;
 }) {
   const isCurrent = currentTrackId === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
@@ -135,6 +137,7 @@ const SongListMenu = memo(function SongListMenu({
       trailing={trailing}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      tabIndex={tabIndex}
     />
   );
 });
@@ -381,31 +384,37 @@ export default memo(function SongsPage() {
               return (
                 <div
                   key={track.id}
-                  data-item-index={virtualItem.index}
-                  tabIndex={roving.getTabIndex(virtualItem.index)}
-                  className={cn(
-                    "absolute top-0 left-0 w-full",
-                    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                    roving.activeIndex === virtualItem.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
-                  )}
+                  className="absolute top-0 left-0 w-full"
                   style={{
                     height: `${virtualItem.size}px`,
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <SongListMenu
-                    track={track}
-                    status={status}
-                    currentTrackId={currentTrack?.id}
-                    pause={pause}
-                    resume={resume}
-                    play={play}
-                    playNext={playNext}
-                    addToQueue={addToQueue}
-                    addToPlaylist={addToPlaylist}
-                    playlists={playlists}
-                    dataItemIndex={virtualItem.index}
-                  />
+                  {(() => {
+                    const rendered = (
+                      <SongListMenu
+                        track={track}
+                        status={status}
+                        currentTrackId={currentTrack?.id}
+                        pause={pause}
+                        resume={resume}
+                        play={play}
+                        playNext={playNext}
+                        addToQueue={addToQueue}
+                        addToPlaylist={addToPlaylist}
+                        playlists={playlists}
+                      />
+                    );
+                    return cloneElement(rendered, {
+                      'data-item-index': virtualItem.index,
+                      tabIndex: roving.getTabIndex(virtualItem.index),
+                      className: cn(
+                        (rendered.props as any)?.className,
+                        "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                        roving.activeIndex === virtualItem.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                      ),
+                    } as any);
+                  })()}
                 </div>
               );
             })}

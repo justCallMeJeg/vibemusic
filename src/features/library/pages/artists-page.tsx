@@ -165,47 +165,49 @@ export default memo(function ArtistsPage() {
       </PageHeader>
 
       {isLoading ? null : (
-        <VirtualizedGrid
-          items={filteredAndSortedArtists}
-          renderItem={(artist, index) => (
-            <ArtistGridCard
-              key={artist.id}
-              artist={artist}
-              onOpenDetail={openArtistDetail}
-              onPlay={handlePlayArtist}
-              onPlayNext={handlePlayNext}
-              onAddToQueue={handleAddToQueue}
-              data-item-index={index}
-            />
-          )}
-          itemHeight={220}
-          emptyState={
-            searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No matches found"
-                description={`No artists match "${searchQuery}"`}
-                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+        <>
+          <VirtualizedGrid
+            items={filteredAndSortedArtists}
+            renderItem={(artist, index) => (
+              <ArtistGridCard
+                key={artist.id}
+                artist={artist}
+                onOpenDetail={openArtistDetail}
+                onPlay={handlePlayArtist}
+                onPlayNext={handlePlayNext}
+                onAddToQueue={handleAddToQueue}
+                data-item-index={index}
               />
-            ) : (
-              <EmptyState
-                icon={Users}
-                title="No artists found"
-                description="Import music to see your artists here."
-                action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
-              />
-            )
-          }
-          keyboardNav
-          onItemActivate={(index) => {
-            const artist = filteredAndSortedArtists[index];
-            if (artist) handlePlayArtist(artist.id);
-          }}
-          onItemActivateSecondary={(index) => {
-            const artist = filteredAndSortedArtists[index];
-            if (artist) openArtistDetail(artist.id);
-          }}
-        />
+            )}
+            itemHeight={220}
+            emptyState={
+              searchQuery ? (
+                <EmptyState
+                  icon={Search}
+                  title="No matches found"
+                  description={`No artists match "${searchQuery}"`}
+                  action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+                />
+              ) : (
+                <EmptyState
+                  icon={Users}
+                  title="No artists found"
+                  description="Import music to see your artists here."
+                  action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
+                />
+              )
+            }
+            keyboardNav
+            onItemActivate={(index) => {
+              const artist = filteredAndSortedArtists[index];
+              if (artist) handlePlayArtist(artist.id);
+            }}
+            onItemActivateSecondary={(index) => {
+              const artist = filteredAndSortedArtists[index];
+              if (artist) openArtistDetail(artist.id);
+            }}
+          />
+        </>
       )}
     </PageLayout>
   );

@@ -170,47 +170,49 @@ export default memo(function AlbumsPage() {
       </PageHeader>
 
       {isLoading ? null : (
-        <VirtualizedGrid
-          items={filteredAndSortedAlbums}
-          renderItem={(album, index) => (
-            <AlbumGridCard
-              key={album.id}
-              album={album}
-              onOpenDetail={openAlbumDetail}
-              onPlay={handlePlayAlbum}
-              onPlayNext={handlePlayNext}
-              onAddToQueue={handleAddToQueue}
-              data-item-index={index}
-            />
-          )}
-          itemHeight={220}
-          emptyState={
-            searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No matches found"
-                description={`No albums match "${searchQuery}"`}
-                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+        <>
+          <VirtualizedGrid
+            items={filteredAndSortedAlbums}
+            renderItem={(album, index) => (
+              <AlbumGridCard
+                key={album.id}
+                album={album}
+                onOpenDetail={openAlbumDetail}
+                onPlay={handlePlayAlbum}
+                onPlayNext={handlePlayNext}
+                onAddToQueue={handleAddToQueue}
+                data-item-index={index}
               />
-            ) : (
-              <EmptyState
-                icon={Disc}
-                title="No albums found"
-                description="Import music to see your albums here."
-                action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
-              />
-            )
-          }
-          keyboardNav
-          onItemActivate={(index) => {
-            const album = filteredAndSortedAlbums[index];
-            if (album) handlePlayAlbum(album.id);
-          }}
-          onItemActivateSecondary={(index) => {
-            const album = filteredAndSortedAlbums[index];
-            if (album) openAlbumDetail(album.id);
-          }}
-        />
+            )}
+            itemHeight={220}
+            emptyState={
+              searchQuery ? (
+                <EmptyState
+                  icon={Search}
+                  title="No matches found"
+                  description={`No albums match "${searchQuery}"`}
+                  action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+                />
+              ) : (
+                <EmptyState
+                  icon={Disc}
+                  title="No albums found"
+                  description="Import music to see your albums here."
+                  action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
+                />
+              )
+            }
+            keyboardNav
+            onItemActivate={(index) => {
+              const album = filteredAndSortedAlbums[index];
+              if (album) handlePlayAlbum(album.id);
+            }}
+            onItemActivateSecondary={(index) => {
+              const album = filteredAndSortedAlbums[index];
+              if (album) openAlbumDetail(album.id);
+            }}
+          />
+        </>
       )}
     </PageLayout>
   );

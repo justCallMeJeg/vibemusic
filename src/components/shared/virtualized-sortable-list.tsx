@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, cloneElement, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
@@ -39,8 +39,6 @@ interface VirtualizedSortableListProps<T> {
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
-  /** Called when Shift+F10 or ContextMenu key on focused item */
-  onItemContextMenu?: (index: number) => void;
 }
 
 export function VirtualizedSortableList<T>({
@@ -57,7 +55,6 @@ export function VirtualizedSortableList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
-  onItemContextMenu,
 }: VirtualizedSortableListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +89,6 @@ export function VirtualizedSortableList<T>({
     direction: "vertical",
     onActivate: onItemActivate,
     onActivateSecondary: onItemActivateSecondary,
-    onContextMenu: onItemContextMenu,
     onIndexChange: (index) => {
       if (keyboardNav && index >= 0) {
         virtualizer.scrollToIndex(index, { align: "center" });
@@ -182,13 +178,7 @@ export function VirtualizedSortableList<T>({
                       role="listitem"
                       key={getItemId(item)}
                       data-index={virtualRow.index}
-                      data-item-index={virtualRow.index}
                       ref={virtualizer.measureElement}
-                      tabIndex={roving.getTabIndex(virtualRow.index)}
-                      className={cn(
-                        keyboardNav && "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                        keyboardNav && roving.activeIndex === virtualRow.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
-                      )}
                       style={{
                         position: "absolute",
                         top: 0,
@@ -198,7 +188,19 @@ export function VirtualizedSortableList<T>({
                         transform: `translateY(${virtualRow.start}px)`,
                       }}
                     >
-                      {renderItem(item, virtualRow.index)}
+                      {(() => {
+                        const rendered = renderItem(item, virtualRow.index);
+                        if (!keyboardNav || !isValidElement(rendered)) return rendered;
+                        return cloneElement(rendered, {
+                          'data-item-index': virtualRow.index,
+                          tabIndex: roving.getTabIndex(virtualRow.index),
+                          className: cn(
+                            (rendered.props as any)?.className,
+                            "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                            roving.activeIndex === virtualRow.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                          ),
+                        } as any);
+                      })()}
                     </div>
                   );
                 })}

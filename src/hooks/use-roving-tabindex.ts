@@ -8,7 +8,6 @@ interface RovingTabindexOptions {
   columns?: number;
   onActivate?: (index: number) => void;
   onActivateSecondary?: (index: number) => void;
-  onContextMenu?: (index: number) => void;
   onIndexChange?: (index: number) => void;
 }
 
@@ -31,7 +30,6 @@ export function useRovingTabindex({
   columns = 1,
   onActivate,
   onActivateSecondary,
-  onContextMenu,
   onIndexChange,
 }: RovingTabindexOptions) {
   const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -51,8 +49,6 @@ export function useRovingTabindex({
   onActivateRef.current = onActivate;
   const onActivateSecondaryRef = useRef(onActivateSecondary);
   onActivateSecondaryRef.current = onActivateSecondary;
-  const onContextMenuRef = useRef(onContextMenu);
-  onContextMenuRef.current = onContextMenu;
   const onIndexChangeRef = useRef(onIndexChange);
   onIndexChangeRef.current = onIndexChange;
 
@@ -141,22 +137,6 @@ export function useRovingTabindex({
             } else {
               onActivateRef.current?.(current);
             }
-          }
-          return;
-        }
-        case "F10": {
-          if (e.shiftKey && current >= 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            onContextMenuRef.current?.(current);
-          }
-          return;
-        }
-        case "ContextMenu": {
-          if (current >= 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            onContextMenuRef.current?.(current);
           }
           return;
         }

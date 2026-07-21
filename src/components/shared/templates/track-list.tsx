@@ -30,14 +30,12 @@ interface TrackListProps<T> {
 
   className?: string;
 
-  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  /** Enable keyboard navigation (arrow keys, Enter) */
   keyboardNav?: boolean;
   /** Called when Enter is pressed on focused item */
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
-  /** Called when Shift+F10 or ContextMenu key on focused item */
-  onItemContextMenu?: (index: number) => void;
 }
 
 export function TrackList<T>({
@@ -56,7 +54,6 @@ export function TrackList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
-  onItemContextMenu,
 }: TrackListProps<T>) {
   const onScroll = useDetailScroll();
 
@@ -87,7 +84,6 @@ export function TrackList<T>({
         keyboardNav={keyboardNav}
         onItemActivate={onItemActivate}
         onItemActivateSecondary={onItemActivateSecondary}
-        onItemContextMenu={onItemContextMenu}
       />
     );
   }
@@ -104,7 +100,6 @@ export function TrackList<T>({
       keyboardNav={keyboardNav}
       onItemActivate={onItemActivate}
       onItemActivateSecondary={onItemActivateSecondary}
-      onItemContextMenu={onItemContextMenu}
     />
   );
 }

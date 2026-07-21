@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, cloneElement, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
@@ -18,14 +18,12 @@ interface VirtualizedListProps<T> {
   header?: React.ReactNode;
   headerHeight?: number;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
-  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  /** Enable keyboard navigation (arrow keys, Enter) */
   keyboardNav?: boolean;
   /** Called when Enter is pressed on focused item */
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
-  /** Called when Shift+F10 or ContextMenu key on focused item */
-  onItemContextMenu?: (index: number) => void;
 }
 
 export function VirtualizedList<T>({
@@ -41,7 +39,6 @@ export function VirtualizedList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
-  onItemContextMenu,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +85,6 @@ export function VirtualizedList<T>({
     direction: "vertical",
     onActivate: onItemActivate,
     onActivateSecondary: onItemActivateSecondary,
-    onContextMenu: onItemContextMenu,
     onIndexChange: (index) => {
       if (keyboardNav && index >= 0) {
         const adjustedIndex = hasHeader ? index + 1 : index;
@@ -141,13 +137,9 @@ export function VirtualizedList<T>({
                   role="listitem"
                   key={virtualRow.index}
                   data-index={virtualRow.index}
-                  data-item-index={isHeaderRow ? undefined : itemIndex}
                   ref={virtualizer.measureElement}
-                  tabIndex={isHeaderRow ? undefined : roving.getTabIndex(itemIndex)}
                   className={cn(
                     "absolute top-0 left-0 w-full",
-                    keyboardNav && !isHeaderRow && "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                    keyboardNav && !isHeaderRow && roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
                   )}
                   style={{
                     position: "absolute",
@@ -159,8 +151,19 @@ export function VirtualizedList<T>({
                 >
                   {isHeaderRow
                     ? header
-                    : items[itemIndex] &&
-                      renderItem(items[itemIndex], itemIndex)}
+                    : items[itemIndex] && (() => {
+                        const rendered = renderItem(items[itemIndex], itemIndex);
+                        if (!keyboardNav || !isValidElement(rendered)) return rendered;
+                        return cloneElement(rendered, {
+                          'data-item-index': itemIndex,
+                          tabIndex: roving.getTabIndex(itemIndex),
+                          className: cn(
+                            (rendered.props as any)?.className,
+                            "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                            roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                          ),
+                        } as any);
+                      })()}
                 </div>
               );
             })}
