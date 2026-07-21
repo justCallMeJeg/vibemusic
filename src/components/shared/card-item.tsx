@@ -118,14 +118,14 @@ export const CardItem = memo(function CardItem({
     <button
       {...props}
       type="button"
-      tabIndex={rovingTabIndex}
+      onClick={onClick}
       data-item-index={dataItemIndex}
       className={cn(
         cardVariants({ variant, className }),
         isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
       )}
-      onClick={onClick}
+      {...(rovingTabIndex !== undefined ? { tabIndex: rovingTabIndex } : {})}
     >
       <div className={cn(imageVariants({ variant }), "overflow-visible")}>
         <div

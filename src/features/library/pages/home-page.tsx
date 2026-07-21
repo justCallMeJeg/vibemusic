@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useCallback } from "react";
+import { useState, memo, useMemo, useCallback, useRef } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import {
   useAudioStore,
@@ -17,6 +17,7 @@ import { ChevronRight, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaylistEditDialog } from "@features/playlists/components/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { useSectionKeyboardNav } from "@/hooks/use-section-keyboard-nav";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { useContentStore } from "@features/library/store/content-store";
@@ -40,6 +41,8 @@ const HomeTrackRow = memo(function HomeTrackRow({
   playNext,
   addToQueue,
   addToPlaylist,
+  tabIndex,
+  'data-section-item': dataSectionItem,
 }: {
   track: Track;
   currentTrackId?: number;
@@ -51,6 +54,8 @@ const HomeTrackRow = memo(function HomeTrackRow({
   playNext: (track: Track) => void;
   addToQueue: (track: Track) => void;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
+  tabIndex?: number;
+  'data-section-item'?: string;
 }) {
   const isActive = currentTrackId === track.id;
   const isCurrentlyPlaying = isActive && status === "playing";
@@ -119,6 +124,8 @@ const HomeTrackRow = memo(function HomeTrackRow({
       onClick={handleClick}
       trailing={trailing}
       menuActions={menuActions}
+      tabIndex={tabIndex}
+      data-section-item={dataSectionItem}
     />
   );
 });
@@ -129,12 +136,16 @@ const AlbumCardItem = memo(function AlbumCardItem({
   onPlayNext,
   onAddToQueue,
   onOpenDetail,
+  tabIndex,
+  'data-section-item': dataSectionItem,
 }: {
   album: Album;
   onPlay: (id: number, shuffle?: boolean) => Promise<void>;
   onPlayNext: (id: number) => Promise<void>;
   onAddToQueue: (id: number) => Promise<void>;
   onOpenDetail: (id: number) => void;
+  tabIndex?: number;
+  'data-section-item'?: string;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -156,6 +167,8 @@ const AlbumCardItem = memo(function AlbumCardItem({
       onClick={() => onOpenDetail(album.id)}
       onPlay={() => onPlay(album.id)}
       menuActions={menuActions}
+      tabIndex={tabIndex}
+      data-section-item={dataSectionItem}
     />
   );
 });
@@ -168,6 +181,8 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
   onOpenDetail,
   onEdit,
   onDelete,
+  tabIndex,
+  'data-section-item': dataSectionItem,
 }: {
   playlist: Playlist;
   onPlay: (id: number, shuffle?: boolean) => Promise<void>;
@@ -176,6 +191,8 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
   onOpenDetail: (id: number) => void;
   onEdit: (p: Playlist) => void;
   onDelete: (p: Playlist) => void;
+  tabIndex?: number;
+  'data-section-item'?: string;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -199,6 +216,8 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
       onClick={() => onOpenDetail(playlist.id)}
       onPlay={() => onPlay(playlist.id)}
       menuActions={menuActions}
+      tabIndex={tabIndex}
+      data-section-item={dataSectionItem}
     />
   );
 });
@@ -331,12 +350,11 @@ export default memo(function HomePage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const scrollRef = useScrollMask();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useScrollMask(24, scrollRef);
 
-  // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
 
-  // Derived state for display - memoized to prevent new array creation on each render
   const recentTracks = useMemo(() => tracks.slice(0, 20), [tracks]);
   const displayAlbums = useMemo(() => albums.slice(0, 10), [albums]);
   const displayPlaylists = useMemo(() => playlists.slice(0, 10), [playlists]);
@@ -346,6 +364,57 @@ export default memo(function HomePage() {
     displayAlbums.length === 0 &&
     displayPlaylists.length === 0 &&
     recentTracks.length === 0;
+
+  const sectionNav = useSectionKeyboardNav({
+    containerRef: scrollRef,
+    enabled: !isEmpty,
+    sections: [
+      ...(displayAlbums.length > 0
+        ? [
+            {
+              id: "albums",
+              itemCount: displayAlbums.length,
+              orientation: "horizontal" as const,
+              onActivate: (idx: number) => openAlbumDetail(displayAlbums[idx].id),
+              onActivateSecondary: (idx: number) => handlePlayAlbum(displayAlbums[idx].id),
+            },
+          ]
+        : []),
+      ...(displayPlaylists.length > 0
+        ? [
+            {
+              id: "playlists",
+              itemCount: displayPlaylists.length,
+              orientation: "horizontal" as const,
+              onActivate: (idx: number) => openPlaylistDetail(displayPlaylists[idx].id),
+              onActivateSecondary: (idx: number) => handlePlayPlaylist(displayPlaylists[idx].id),
+            },
+          ]
+        : []),
+      ...(recentTracks.length > 0
+        ? [
+            {
+              id: "tracks",
+              itemCount: recentTracks.length,
+              orientation: "vertical" as const,
+              onActivate: (idx: number) => {
+                const track = recentTracks[idx];
+                if (track) play(track);
+              },
+              onActivateSecondary: (idx: number) => {
+                const track = recentTracks[idx];
+                if (track) playNext(track);
+              },
+            },
+          ]
+        : []),
+    ],
+  });
+
+  let nextSectionIdx = 0;
+  const albumSectionIdx = displayAlbums.length > 0 ? nextSectionIdx++ : -1;
+  const playlistSectionIdx = displayPlaylists.length > 0 ? nextSectionIdx++ : -1;
+  const trackSectionIdx = recentTracks.length > 0 ? nextSectionIdx++ : -1;
 
   if (isLoading && albums.length === 0 && playlists.length === 0 && tracks.length === 0) {
     return null;
@@ -385,7 +454,7 @@ export default memo(function HomePage() {
             </div>
 
             <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
-              {displayAlbums.map((album) => (
+              {displayAlbums.map((album, idx) => (
                 <AlbumCardItem
                   key={album.id}
                   album={album}
@@ -393,6 +462,8 @@ export default memo(function HomePage() {
                   onPlayNext={handlePlayNextAlbum}
                   onAddToQueue={handleAddAlbumToQueue}
                   onOpenDetail={openAlbumDetail}
+                  tabIndex={sectionNav.getTabIndex(albumSectionIdx, idx)}
+                  data-section-item={`${albumSectionIdx}:${idx}`}
                 />
               ))}
             </div>
@@ -414,7 +485,7 @@ export default memo(function HomePage() {
             </div>
 
             <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
-              {displayPlaylists.map((p) => (
+              {displayPlaylists.map((p, idx) => (
                 <PlaylistCardItem
                   key={p.id}
                   playlist={p}
@@ -424,6 +495,8 @@ export default memo(function HomePage() {
                   onOpenDetail={openPlaylistDetail}
                   onEdit={setEditingPlaylist}
                   onDelete={handleDeleteRequest}
+                  tabIndex={sectionNav.getTabIndex(playlistSectionIdx, idx)}
+                  data-section-item={`${playlistSectionIdx}:${idx}`}
                 />
               ))}
             </div>
@@ -447,7 +520,7 @@ export default memo(function HomePage() {
             </div>
 
             <div className="flex flex-col gap-1">
-              {recentTracks.map((track) => (
+              {recentTracks.map((track, idx) => (
                 <HomeTrackRow
                   key={track.id}
                   track={track}
@@ -460,6 +533,8 @@ export default memo(function HomePage() {
                   playNext={playNext}
                   addToQueue={addToQueue}
                   addToPlaylist={addToPlaylist}
+                  tabIndex={sectionNav.getTabIndex(trackSectionIdx, idx)}
+                  data-section-item={`${trackSectionIdx}:${idx}`}
                 />
               ))}
             </div>

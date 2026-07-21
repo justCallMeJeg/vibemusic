@@ -82,6 +82,10 @@ export const ListItem = memo(function ListItem({
   const row = (
     <div
       {...props}
+      data-active={active}
+      data-item-index={dataItemIndex}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
       className={cn(
         rowVariants({ variant, active }),
         isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
@@ -89,11 +93,7 @@ export const ListItem = memo(function ListItem({
         onClick && "cursor-pointer",
         className,
       )}
-      tabIndex={rovingTabIndex}
-      data-active={active}
-      data-item-index={dataItemIndex}
-      onClick={onClick}
-      role={onClick ? "button" : undefined}
+      {...(rovingTabIndex !== undefined ? { tabIndex: rovingTabIndex } : {})}
     >
       {variant === "indexed" && (
         <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
