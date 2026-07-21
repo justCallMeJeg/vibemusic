@@ -12,9 +12,10 @@ interface SortableTrackItemProps {
   track: Track;
   index: number;
   onRemove: (e: React.MouseEvent) => void;
+  dataItemIndex?: number;
 }
 
-export function SortableTrackItem({ track, index, onRemove }: SortableTrackItemProps) {
+export function SortableTrackItem({ track, index, onRemove, dataItemIndex }: SortableTrackItemProps) {
   const currentTrack = useCurrentTrack();
   const play = useAudioStore((s) => s.play);
   const pause = useAudioStore((s) => s.pause);
@@ -104,6 +105,7 @@ export function SortableTrackItem({ track, index, onRemove }: SortableTrackItemP
             onPlayNext: () => playNext(track),
             onAddToQueue: () => addToQueue(track),
           }}
+          dataItemIndex={dataItemIndex}
         />
       </div>
     </div>

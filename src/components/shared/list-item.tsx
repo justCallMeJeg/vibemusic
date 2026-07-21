@@ -47,6 +47,11 @@ interface ListItemProps
   placeholderType?: "artist" | "track";
   onClick?: () => void;
   menuActions?: TrackMenuActions;
+
+  /**
+   * Index within the parent list for arrow-key sibling navigation.
+   */
+  dataItemIndex?: number;
 }
 
 export const ListItem = memo(function ListItem({
@@ -66,17 +71,9 @@ export const ListItem = memo(function ListItem({
   placeholderType,
   onClick,
   menuActions,
+  dataItemIndex,
   ...props
 }: ListItemProps) {
-  const handleKeyDown = onClick
-    ? (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }
-    : undefined;
-
   const row = (
     <div
       className={cn(
@@ -85,10 +82,9 @@ export const ListItem = memo(function ListItem({
         className,
       )}
       data-active={active}
+      data-item-index={dataItemIndex}
       onClick={onClick}
       role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={handleKeyDown}
       {...props}
     >
       {variant === "indexed" && (

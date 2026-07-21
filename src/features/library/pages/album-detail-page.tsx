@@ -28,6 +28,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   pause,
   resume,
   menuActions,
+  dataItemIndex,
 }: {
   track: Track;
   index: number;
@@ -50,6 +51,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
     onAddToPlaylist?: (playlistId: number) => void;
     playlists?: { id: number; name: string }[];
   };
+  dataItemIndex?: number;
 }) {
   return (
     <ListItem
@@ -88,6 +90,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
         }
       }}
       menuActions={menuActions}
+      dataItemIndex={dataItemIndex}
     />
   );
 });
@@ -199,6 +202,7 @@ export default memo(function AlbumDetailPage() {
           pause={pause}
           resume={resume}
           menuActions={menuActions}
+          dataItemIndex={index}
         />
       );
     },
@@ -248,6 +252,15 @@ export default memo(function AlbumDetailPage() {
             />
           ) : null
         }
+        keyboardNav
+        onItemActivate={(index) => {
+          const track = tracks[index];
+          if (track) play(track, tracks);
+        }}
+        onItemActivateSecondary={(index) => {
+          const track = tracks[index];
+          if (track) playNext(track);
+        }}
       />
     </DetailPageTemplate>
   );

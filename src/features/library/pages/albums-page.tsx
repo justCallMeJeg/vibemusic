@@ -25,12 +25,14 @@ const AlbumGridCard = memo(function AlbumGridCard({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  'data-item-index': dataItemIndex,
 }: {
   album: Album;
   onOpenDetail: (id: number) => void;
   onPlay: (id: number, shuffle?: boolean) => Promise<void>;
   onPlayNext: (id: number) => Promise<void>;
   onAddToQueue: (id: number) => Promise<void>;
+  'data-item-index'?: number;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -53,6 +55,7 @@ const AlbumGridCard = memo(function AlbumGridCard({
       onClick={() => onOpenDetail(album.id)}
       onPlay={() => onPlay(album.id)}
       menuActions={menuActions}
+      data-item-index={dataItemIndex}
     />
   );
 });
@@ -169,7 +172,7 @@ export default memo(function AlbumsPage() {
       {isLoading ? null : (
         <VirtualizedGrid
           items={filteredAndSortedAlbums}
-          renderItem={(album) => (
+          renderItem={(album, index) => (
             <AlbumGridCard
               key={album.id}
               album={album}
@@ -177,6 +180,7 @@ export default memo(function AlbumsPage() {
               onPlay={handlePlayAlbum}
               onPlayNext={handlePlayNext}
               onAddToQueue={handleAddToQueue}
+              data-item-index={index}
             />
           )}
           itemHeight={220}
@@ -197,6 +201,15 @@ export default memo(function AlbumsPage() {
               />
             )
           }
+          keyboardNav
+          onItemActivate={(index) => {
+            const album = filteredAndSortedAlbums[index];
+            if (album) handlePlayAlbum(album.id);
+          }}
+          onItemActivateSecondary={(index) => {
+            const album = filteredAndSortedAlbums[index];
+            if (album) openAlbumDetail(album.id);
+          }}
         />
       )}
     </PageLayout>

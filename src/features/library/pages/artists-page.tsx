@@ -23,12 +23,14 @@ const ArtistGridCard = memo(function ArtistGridCard({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  'data-item-index': dataItemIndex,
 }: {
   artist: Artist;
   onOpenDetail: (id: number) => void;
   onPlay: (id: number, shuffle?: boolean) => Promise<void>;
   onPlayNext: (id: number) => Promise<void>;
   onAddToQueue: (id: number) => Promise<void>;
+  'data-item-index'?: number;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -50,6 +52,7 @@ const ArtistGridCard = memo(function ArtistGridCard({
       onClick={() => onOpenDetail(artist.id)}
       onPlay={() => onPlay(artist.id, true)}
       menuActions={menuActions}
+      data-item-index={dataItemIndex}
     />
   );
 });
@@ -164,7 +167,7 @@ export default memo(function ArtistsPage() {
       {isLoading ? null : (
         <VirtualizedGrid
           items={filteredAndSortedArtists}
-          renderItem={(artist) => (
+          renderItem={(artist, index) => (
             <ArtistGridCard
               key={artist.id}
               artist={artist}
@@ -172,6 +175,7 @@ export default memo(function ArtistsPage() {
               onPlay={handlePlayArtist}
               onPlayNext={handlePlayNext}
               onAddToQueue={handleAddToQueue}
+              data-item-index={index}
             />
           )}
           itemHeight={220}
@@ -192,6 +196,15 @@ export default memo(function ArtistsPage() {
               />
             )
           }
+          keyboardNav
+          onItemActivate={(index) => {
+            const artist = filteredAndSortedArtists[index];
+            if (artist) handlePlayArtist(artist.id);
+          }}
+          onItemActivateSecondary={(index) => {
+            const artist = filteredAndSortedArtists[index];
+            if (artist) openArtistDetail(artist.id);
+          }}
         />
       )}
     </PageLayout>

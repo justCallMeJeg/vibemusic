@@ -31,6 +31,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue,
   onEdit,
   onDelete,
+  'data-item-index': dataItemIndex,
 }: {
   playlist: Playlist;
   onOpenDetail: (id: number) => void;
@@ -39,6 +40,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue: (id: number) => Promise<void>;
   onEdit: (p: Playlist) => void;
   onDelete: (p: Playlist) => void;
+  'data-item-index'?: number;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -62,6 +64,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
       onClick={() => onOpenDetail(playlist.id)}
       onPlay={() => onPlay(playlist.id)}
       menuActions={menuActions}
+      data-item-index={dataItemIndex}
     />
   );
 });
@@ -157,7 +160,6 @@ export default memo(function PlaylistsPage() {
     } catch (e) { logger.error("Failed to add playlist to queue", e); }
   }, [addToQueue]);
 
-
   const confirmDelete = async () => {
     if (!playlistToDelete) return;
     setIsDeleting(true);
@@ -237,7 +239,7 @@ export default memo(function PlaylistsPage() {
       ) : (
         <VirtualizedGrid
           items={filteredAndSortedPlaylists}
-          renderItem={(playlist) => (
+          renderItem={(playlist, index) => (
             <PlaylistGridCard
               key={playlist.id}
               playlist={playlist}
@@ -247,6 +249,7 @@ export default memo(function PlaylistsPage() {
               onAddToQueue={handleAddToQueue}
               onEdit={setEditingPlaylist}
               onDelete={handleDeleteRequest}
+              data-item-index={index}
             />
           )}
           itemHeight={220}
@@ -267,6 +270,15 @@ export default memo(function PlaylistsPage() {
               />
             )
           }
+          keyboardNav
+          onItemActivate={(index) => {
+            const playlist = filteredAndSortedPlaylists[index];
+            if (playlist) handlePlayPlaylist(playlist.id);
+          }}
+          onItemActivateSecondary={(index) => {
+            const playlist = filteredAndSortedPlaylists[index];
+            if (playlist) openPlaylistDetail(playlist.id);
+          }}
         />
       )}
 

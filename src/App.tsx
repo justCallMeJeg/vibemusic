@@ -3,7 +3,10 @@ import "./styles/globals.css";
 import MusicController from "@features/player/components/music-controller";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
-import { useKeyboardShortcuts, useGlobalKeydownListener } from "@/hooks/use-keyboard-shortcuts";
+import {
+  useKeyboardShortcuts,
+  useGlobalKeydownListener,
+} from "@/hooks/use-keyboard-shortcuts";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
@@ -35,9 +38,9 @@ import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { logger } from "@/lib/logger";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
 
-
-
-const SidePanelContent = lazy(() => import("@features/shell/components/side-panel-content"));
+const SidePanelContent = lazy(
+  () => import("@features/shell/components/side-panel-content"),
+);
 const GlobalSearch = lazy(() =>
   import("@features/search/components/global-search").then((m) => ({
     default: m.GlobalSearch,
@@ -56,8 +59,9 @@ export default function App() {
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
 
-
-  useRefreshInterceptor(isPlaying, () => useDialogStore.getState().setIsRefreshWarningOpen(true));
+  useRefreshInterceptor(isPlaying, () =>
+    useDialogStore.getState().setIsRefreshWarningOpen(true),
+  );
 
   const handleConfirmRefresh = async () => {
     await useAudioStore.getState().stop();
@@ -68,7 +72,9 @@ export default function App() {
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
   const profilesMap = useProfileStore((s) => s.profilesMap);
-  const activeProfile = activeProfileId ? profilesMap.get(activeProfileId) : undefined;
+  const activeProfile = activeProfileId
+    ? profilesMap.get(activeProfileId)
+    : undefined;
 
   useProfileTheme();
 
@@ -102,7 +108,6 @@ export default function App() {
 
   useAppInit();
 
-
   const hasDoneInitialScan = useRef(false);
 
   useEffect(() => {
@@ -124,7 +129,7 @@ export default function App() {
           .finally(() => setIsScanning(false));
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfileId]);
 
   const handleQuitApp = async () => {
@@ -173,11 +178,13 @@ export default function App() {
       getDominantColor(src).then((color) => {
         if (!cancelled) setGradientColor(color);
       });
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     } else {
       setGradientColor("transparent");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.id, isPlaybackActive]);
 
   // Initialize audio event listeners
@@ -240,7 +247,9 @@ export default function App() {
             data-region="main"
             tabIndex={-1}
             className="flex-1 min-w-0 min-h-0"
-            onFocus={() => useFocusRegionStore.getState().setActiveRegion("main")}
+            onFocus={() =>
+              useFocusRegionStore.getState().setActiveRegion("main")
+            }
           >
             <MainContent />
           </div>
@@ -253,7 +262,9 @@ export default function App() {
             className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
               sidePanel !== "none" ? "w-96 p-px" : "w-0 p-0"
             } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
-            onFocus={() => useFocusRegionStore.getState().setActiveRegion("sidepanel")}
+            onFocus={() =>
+              useFocusRegionStore.getState().setActiveRegion("sidepanel")
+            }
           >
             <Suspense fallback={null}>
               <SidePanelContent />

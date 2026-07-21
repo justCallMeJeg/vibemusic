@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useCallback, useDeferredValue } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useDeferredValue, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -13,6 +13,7 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +53,7 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue,
   addToPlaylist,
   playlists,
+  dataItemIndex,
 }: {
   track: Track;
   status: string;
@@ -63,6 +65,7 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue: (track: Track) => void;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   playlists: { id: number; name: string }[];
+  dataItemIndex?: number;
 }) {
   const isCurrent = currentTrackId === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
@@ -131,6 +134,7 @@ const SongListMenu = memo(function SongListMenu({
       onClick={handleClick}
       trailing={trailing}
       menuActions={menuActions}
+      dataItemIndex={dataItemIndex}
     />
   );
 });
@@ -219,12 +223,52 @@ export default memo(function SongsPage() {
     count: displayedTracks.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ITEM_HEIGHT,
-    overscan: 5, // Render 5 extra items above/below viewport
+    overscan: 5,
   });
+
+  // Store tracks in a ref for menu callbacks
+  const tracksRef = useRef(displayedTracks);
+  tracksRef.current = displayedTracks;
 
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = isPlayerVisible ? 156 : 24;
+
+  // Roving tabindex keyboard navigation
+  const roving = useRovingTabindex({
+    containerRef: parentRef,
+    itemCount: displayedTracks.length,
+    enabled: displayedTracks.length > 0,
+    direction: "vertical",
+    onActivate: (index) => {
+      const track = displayedTracks[index];
+      if (track) play(track);
+    },
+    onActivateSecondary: (index) => {
+      const track = displayedTracks[index];
+      if (track) playNext(track);
+    },
+    onIndexChange: (index) => {
+      if (index >= 0) {
+        virtualizer.scrollToIndex(index, { align: "center" });
+      }
+    },
+  });
+
+  // Re-focus after scroll
+  useEffect(() => {
+    if (roving.activeIndex >= 0) {
+      virtualizer.scrollToIndex(roving.activeIndex, { align: "center" });
+    }
+  }, [roving.activeIndex, virtualizer]);
+
+  // Auto-focus first item on mount
+  useEffect(() => {
+    if (displayedTracks.length > 0 && roving.activeIndex < 0) {
+      roving.setActiveIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedTracks.length]);
 
   return (
     <PageLayout overflowHidden>
@@ -337,7 +381,13 @@ export default memo(function SongsPage() {
               return (
                 <div
                   key={track.id}
-                  className="absolute top-0 left-0 w-full"
+                  data-item-index={virtualItem.index}
+                  tabIndex={roving.getTabIndex(virtualItem.index)}
+                  className={cn(
+                    "absolute top-0 left-0 w-full",
+                    "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                    roving.activeIndex === virtualItem.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                  )}
                   style={{
                     height: `${virtualItem.size}px`,
                     transform: `translateY(${virtualItem.start}px)`,
@@ -354,6 +404,7 @@ export default memo(function SongsPage() {
                     addToQueue={addToQueue}
                     addToPlaylist={addToPlaylist}
                     playlists={playlists}
+                    dataItemIndex={virtualItem.index}
                   />
                 </div>
               );

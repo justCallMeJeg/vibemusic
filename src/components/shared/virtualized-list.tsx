@@ -1,21 +1,31 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
+import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
+import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
-  itemHeight?: number; // Approximate height of an item
+  itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string; // Override dynamic padding if provided
+  paddingBottom?: string;
   className?: string;
   header?: React.ReactNode;
   headerHeight?: number;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  keyboardNav?: boolean;
+  /** Called when Enter is pressed on focused item */
+  onItemActivate?: (index: number) => void;
+  /** Called when Shift+Enter is pressed on focused item */
+  onItemActivateSecondary?: (index: number) => void;
+  /** Called when Shift+F10 or ContextMenu key on focused item */
+  onItemContextMenu?: (index: number) => void;
 }
 
 export function VirtualizedList<T>({
@@ -28,6 +38,10 @@ export function VirtualizedList<T>({
   header,
   headerHeight = 300,
   onScroll,
+  keyboardNav = false,
+  onItemActivate,
+  onItemActivateSecondary,
+  onItemContextMenu,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +80,38 @@ export function VirtualizedList<T>({
     overscan: 5,
   });
 
+  // Roving tabindex keyboard navigation
+  const roving = useRovingTabindex({
+    containerRef: parentRef,
+    itemCount: keyboardNav ? items.length : 0,
+    enabled: !!keyboardNav,
+    direction: "vertical",
+    onActivate: onItemActivate,
+    onActivateSecondary: onItemActivateSecondary,
+    onContextMenu: onItemContextMenu,
+    onIndexChange: (index) => {
+      if (keyboardNav && index >= 0) {
+        const adjustedIndex = hasHeader ? index + 1 : index;
+        virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
+      }
+    },
+  });
+
+  // Re-focus after scroll to ensure the focused element is in the DOM
+  useEffect(() => {
+    if (!keyboardNav || roving.activeIndex < 0) return;
+    const adjustedIndex = hasHeader ? roving.activeIndex + 1 : roving.activeIndex;
+    virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
+  }, [roving.activeIndex, keyboardNav, virtualizer, hasHeader]);
+
+  // Auto-focus first item when keyboard nav is enabled
+  useEffect(() => {
+    if (keyboardNav && items.length > 0 && roving.activeIndex < 0) {
+      roving.setActiveIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyboardNav, items.length]);
+
   return (
     <div
       ref={parentRef}
@@ -95,7 +141,14 @@ export function VirtualizedList<T>({
                   role="listitem"
                   key={virtualRow.index}
                   data-index={virtualRow.index}
+                  data-item-index={isHeaderRow ? undefined : itemIndex}
                   ref={virtualizer.measureElement}
+                  tabIndex={isHeaderRow ? undefined : roving.getTabIndex(itemIndex)}
+                  className={cn(
+                    "absolute top-0 left-0 w-full",
+                    keyboardNav && !isHeaderRow && "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                    keyboardNav && !isHeaderRow && roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                  )}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -108,7 +161,6 @@ export function VirtualizedList<T>({
                     ? header
                     : items[itemIndex] &&
                       renderItem(items[itemIndex], itemIndex)}
-                  {/* Check items[itemIndex] existence to be safe, though virtualization logic should align */}
                 </div>
               );
             })}

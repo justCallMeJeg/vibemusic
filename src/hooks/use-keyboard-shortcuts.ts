@@ -217,7 +217,13 @@ export function useKeyboardShortcuts() {
         "focus-content",
         {
           combo: { key: "l", ctrl: true },
-          handler: () => useFocusRegionStore.getState().focusRegion("main"),
+          handler: () => {
+            useFocusRegionStore.getState().focusRegion("main");
+            setTimeout(() => {
+              const firstItem = document.querySelector<HTMLElement>('[data-region="main"] [data-item-index="0"]');
+              firstItem?.focus();
+            }, 0);
+          },
           description: "Focus main content area",
           preventDefault: true,
           skipWhenDialogOpen: true,

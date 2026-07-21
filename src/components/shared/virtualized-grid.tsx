@@ -5,15 +5,24 @@ import { debounce, cn } from "@/lib/utils";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
+import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
   items: T[];
-  renderItem: (item: T) => React.ReactNode;
-  itemHeight?: number; // Approximate height of a row
+  renderItem: (item: T, index: number) => React.ReactNode;
+  itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string; // Override dynamic padding if provided
+  paddingBottom?: string;
   className?: string;
+  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  keyboardNav?: boolean;
+  /** Called when Enter is pressed on focused item */
+  onItemActivate?: (index: number) => void;
+  /** Called when Shift+Enter is pressed on focused item */
+  onItemActivateSecondary?: (index: number) => void;
+  /** Called when Shift+F10 or ContextMenu key on focused item */
+  onItemContextMenu?: (index: number) => void;
 }
 
 // Helper hook to calculate grid columns based on window width (matching Tailwind breakpoints)
@@ -58,6 +67,10 @@ export function VirtualizedGrid<T>({
   emptyState,
   paddingBottom,
   className = "",
+  keyboardNav = false,
+  onItemActivate,
+  onItemActivateSecondary,
+  onItemContextMenu,
 }: VirtualizedGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +102,39 @@ export function VirtualizedGrid<T>({
     estimateSize,
     overscan: 3,
   });
+
+  // Roving tabindex keyboard navigation
+  const roving = useRovingTabindex({
+    containerRef: parentRef,
+    itemCount: keyboardNav ? items.length : 0,
+    enabled: !!keyboardNav,
+    direction: "grid",
+    columns,
+    onActivate: onItemActivate,
+    onActivateSecondary: onItemActivateSecondary,
+    onContextMenu: onItemContextMenu,
+    onIndexChange: (index) => {
+      if (keyboardNav && index >= 0) {
+        const rowIndex = Math.floor(index / columns);
+        virtualizer.scrollToIndex(rowIndex, { align: "center" });
+      }
+    },
+  });
+
+  // Re-focus after scroll to ensure the focused element is in the DOM
+  useEffect(() => {
+    if (!keyboardNav || roving.activeIndex < 0) return;
+    const rowIndex = Math.floor(roving.activeIndex / columns);
+    virtualizer.scrollToIndex(rowIndex, { align: "center" });
+  }, [roving.activeIndex, keyboardNav, virtualizer, columns]);
+
+  // Auto-focus first item when keyboard nav is enabled
+  useEffect(() => {
+    if (keyboardNav && items.length > 0 && roving.activeIndex < 0) {
+      roving.setActiveIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyboardNav, items.length]);
 
   return (
     <div
@@ -131,7 +177,10 @@ export function VirtualizedGrid<T>({
                 }}
                 className="grid gap-4"
               >
-                {rowItems.map(renderItem)}
+                {rowItems.map((item, colIdx) => {
+                  const itemIndex = startIndex + colIdx;
+                  return renderItem(item, itemIndex);
+                })}
               </div>
             );
           })}

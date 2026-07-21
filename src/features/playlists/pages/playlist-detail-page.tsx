@@ -147,6 +147,7 @@ export default memo(function PlaylistDetailPage() {
       key={track.id}
       track={track}
       index={index}
+      dataItemIndex={index}
       onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
     />
   ), [handleRemoveTrack]);

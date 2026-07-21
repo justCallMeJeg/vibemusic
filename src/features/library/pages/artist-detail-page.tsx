@@ -37,6 +37,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
   pause,
   resume,
   menuActions,
+  dataItemIndex,
 }: {
   track: Track;
   index: number;
@@ -59,6 +60,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
     onAddToPlaylist?: (playlistId: number) => void;
     playlists?: { id: number; name: string }[];
   };
+  dataItemIndex?: number;
 }) {
   const isCurrentTrack = currentTrackId === track.id;
   return (
@@ -99,6 +101,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
         }
       }}
       menuActions={menuActions}
+      dataItemIndex={dataItemIndex}
     />
   );
 });
@@ -201,6 +204,7 @@ export default memo(function ArtistDetailPage() {
           pause={pause}
           resume={resume}
           menuActions={menuActions}
+          dataItemIndex={index}
         />
       );
     },
@@ -375,6 +379,15 @@ export default memo(function ArtistDetailPage() {
           </>
         }
         renderItem={renderItem}
+        keyboardNav
+        onItemActivate={(index) => {
+          const track = tracks[index];
+          if (track) play(track, tracks);
+        }}
+        onItemActivateSecondary={(index) => {
+          const track = tracks[index];
+          if (track) playNext(track);
+        }}
       />
     </DetailPageTemplate>
   );

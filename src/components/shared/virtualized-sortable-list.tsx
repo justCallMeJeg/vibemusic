@@ -1,9 +1,11 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
+import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
+import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 import {
   DndContext,
@@ -31,6 +33,14 @@ interface VirtualizedSortableListProps<T> {
   className?: string;
   header?: React.ReactNode;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  keyboardNav?: boolean;
+  /** Called when Enter is pressed on focused item */
+  onItemActivate?: (index: number) => void;
+  /** Called when Shift+Enter is pressed on focused item */
+  onItemActivateSecondary?: (index: number) => void;
+  /** Called when Shift+F10 or ContextMenu key on focused item */
+  onItemContextMenu?: (index: number) => void;
 }
 
 export function VirtualizedSortableList<T>({
@@ -44,6 +54,10 @@ export function VirtualizedSortableList<T>({
   className = "",
   header,
   onScroll,
+  keyboardNav = false,
+  onItemActivate,
+  onItemActivateSecondary,
+  onItemContextMenu,
 }: VirtualizedSortableListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +83,36 @@ export function VirtualizedSortableList<T>({
     estimateSize,
     overscan: 5,
   });
+
+  // Roving tabindex keyboard navigation
+  const roving = useRovingTabindex({
+    containerRef: parentRef,
+    itemCount: keyboardNav ? items.length : 0,
+    enabled: !!keyboardNav,
+    direction: "vertical",
+    onActivate: onItemActivate,
+    onActivateSecondary: onItemActivateSecondary,
+    onContextMenu: onItemContextMenu,
+    onIndexChange: (index) => {
+      if (keyboardNav && index >= 0) {
+        virtualizer.scrollToIndex(index, { align: "center" });
+      }
+    },
+  });
+
+  // Re-focus after scroll to ensure the focused element is in the DOM
+  useEffect(() => {
+    if (!keyboardNav || roving.activeIndex < 0) return;
+    virtualizer.scrollToIndex(roving.activeIndex, { align: "center" });
+  }, [roving.activeIndex, keyboardNav, virtualizer]);
+
+  // Auto-focus first item when keyboard nav is enabled
+  useEffect(() => {
+    if (keyboardNav && items.length > 0 && roving.activeIndex < 0) {
+      roving.setActiveIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyboardNav, items.length]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -138,7 +182,13 @@ export function VirtualizedSortableList<T>({
                       role="listitem"
                       key={getItemId(item)}
                       data-index={virtualRow.index}
+                      data-item-index={virtualRow.index}
                       ref={virtualizer.measureElement}
+                      tabIndex={roving.getTabIndex(virtualRow.index)}
+                      className={cn(
+                        keyboardNav && "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
+                        keyboardNav && roving.activeIndex === virtualRow.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+                      )}
                       style={{
                         position: "absolute",
                         top: 0,
