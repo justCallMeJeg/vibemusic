@@ -7,6 +7,7 @@ import { Play, Pause } from "lucide-react";
 import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
 import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
 import type { TrackMenuActions } from "@/components/shared/context-menu-types";
+import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
 
 const rowVariants = cva(
   "mx-0.5 group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
@@ -74,18 +75,25 @@ export const ListItem = memo(function ListItem({
   dataItemIndex,
   ...props
 }: ListItemProps) {
+  const roving = useRovingTabindexContext();
+  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
+  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+
   const row = (
     <div
+      {...props}
       className={cn(
         rowVariants({ variant, active }),
+        isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
         onClick && "cursor-pointer",
         className,
       )}
+      tabIndex={rovingTabIndex}
       data-active={active}
       data-item-index={dataItemIndex}
       onClick={onClick}
       role={onClick ? "button" : undefined}
-      {...props}
     >
       {variant === "indexed" && (
         <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">

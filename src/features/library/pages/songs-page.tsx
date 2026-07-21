@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useCallback, useDeferredValue, useEffect, cloneElement } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useDeferredValue } from "react";
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -13,7 +13,7 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -237,42 +237,6 @@ export default memo(function SongsPage() {
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = isPlayerVisible ? 156 : 24;
 
-  // Roving tabindex keyboard navigation
-  const roving = useRovingTabindex({
-    containerRef: parentRef,
-    itemCount: displayedTracks.length,
-    enabled: displayedTracks.length > 0,
-    direction: "vertical",
-    onActivate: (index) => {
-      const track = displayedTracks[index];
-      if (track) play(track);
-    },
-    onActivateSecondary: (index) => {
-      const track = displayedTracks[index];
-      if (track) playNext(track);
-    },
-    onIndexChange: (index) => {
-      if (index >= 0) {
-        virtualizer.scrollToIndex(index, { align: "center" });
-      }
-    },
-  });
-
-  // Re-focus after scroll
-  useEffect(() => {
-    if (roving.activeIndex >= 0) {
-      virtualizer.scrollToIndex(roving.activeIndex, { align: "center" });
-    }
-  }, [roving.activeIndex, virtualizer]);
-
-  // Auto-focus first item on mount
-  useEffect(() => {
-    if (displayedTracks.length > 0 && roving.activeIndex < 0) {
-      roving.setActiveIndex(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedTracks.length]);
-
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Songs">
@@ -373,52 +337,60 @@ export default memo(function SongsPage() {
             />
           )
         ) : (
-          <div
-            className="relative w-full"
-            style={{
-              height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+          <RovingTabindexProvider
+            containerRef={parentRef}
+            itemCount={displayedTracks.length}
+            enabled={displayedTracks.length > 0}
+            direction="vertical"
+            onActivate={(index: number) => {
+              const track = displayedTracks[index];
+              if (track) play(track);
+            }}
+            onActivateSecondary={(index: number) => {
+              const track = displayedTracks[index];
+              if (track) playNext(track);
+            }}
+            onIndexChange={(index: number) => {
+              if (index >= 0) {
+                virtualizer.scrollToIndex(index, { align: "center" });
+              }
             }}
           >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const track = displayedTracks[virtualItem.index];
-              return (
-                <div
-                  key={track.id}
-                  className="absolute top-0 left-0 w-full"
-                  style={{
-                    height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
-                  }}
-                >
-                  {(() => {
-                    const rendered = (
-                      <SongListMenu
-                        track={track}
-                        status={status}
-                        currentTrackId={currentTrack?.id}
-                        pause={pause}
-                        resume={resume}
-                        play={play}
-                        playNext={playNext}
-                        addToQueue={addToQueue}
-                        addToPlaylist={addToPlaylist}
-                        playlists={playlists}
-                      />
-                    );
-                    return cloneElement(rendered, {
-                      'data-item-index': virtualItem.index,
-                      tabIndex: roving.getTabIndex(virtualItem.index),
-                      className: cn(
-                        (rendered.props as any)?.className,
-                        "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                        roving.activeIndex === virtualItem.index && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
-                      ),
-                    } as any);
-                  })()}
-                </div>
-              );
-            })}
-          </div>
+            <div
+              className="relative w-full"
+              style={{
+                height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const track = displayedTracks[virtualItem.index];
+                return (
+                  <div
+                    key={track.id}
+                    className="absolute top-0 left-0 w-full"
+                    style={{
+                      height: `${virtualItem.size}px`,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <SongListMenu
+                      track={track}
+                      status={status}
+                      currentTrackId={currentTrack?.id}
+                      pause={pause}
+                      resume={resume}
+                      play={play}
+                      playNext={playNext}
+                      addToQueue={addToQueue}
+                      addToPlaylist={addToPlaylist}
+                      playlists={playlists}
+                      data-item-index={virtualItem.index}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </RovingTabindexProvider>
         )}
       </div>
     </PageLayout>

@@ -1,11 +1,11 @@
-import { useRef, useState, useEffect, useMemo, useCallback, cloneElement, isValidElement } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { debounce, cn } from "@/lib/utils";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
-import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
@@ -102,38 +102,6 @@ export function VirtualizedGrid<T>({
     overscan: 3,
   });
 
-  // Roving tabindex keyboard navigation
-  const roving = useRovingTabindex({
-    containerRef: parentRef,
-    itemCount: keyboardNav ? items.length : 0,
-    enabled: !!keyboardNav,
-    direction: "grid",
-    columns,
-    onActivate: onItemActivate,
-    onActivateSecondary: onItemActivateSecondary,
-    onIndexChange: (index) => {
-      if (keyboardNav && index >= 0) {
-        const rowIndex = Math.floor(index / columns);
-        virtualizer.scrollToIndex(rowIndex, { align: "center" });
-      }
-    },
-  });
-
-  // Re-focus after scroll to ensure the focused element is in the DOM
-  useEffect(() => {
-    if (!keyboardNav || roving.activeIndex < 0) return;
-    const rowIndex = Math.floor(roving.activeIndex / columns);
-    virtualizer.scrollToIndex(rowIndex, { align: "center" });
-  }, [roving.activeIndex, keyboardNav, virtualizer, columns]);
-
-  // Auto-focus first item when keyboard nav is enabled
-  useEffect(() => {
-    if (keyboardNav && items.length > 0 && roving.activeIndex < 0) {
-      roving.setActiveIndex(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyboardNav, items.length]);
-
   return (
     <div
       ref={parentRef}
@@ -148,51 +116,59 @@ export function VirtualizedGrid<T>({
       {items.length === 0 ? (
         emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
       ) : (
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-            width: "100%",
-            position: "relative",
+        <RovingTabindexProvider
+          containerRef={parentRef}
+          itemCount={keyboardNav ? items.length : 0}
+          enabled={!!keyboardNav}
+          direction="grid"
+          columns={columns}
+          onActivate={onItemActivate}
+          onActivateSecondary={onItemActivateSecondary}
+          onIndexChange={(index: number) => {
+            if (keyboardNav && index >= 0) {
+              const rowIndex = Math.floor(index / columns);
+              virtualizer.scrollToIndex(rowIndex, { align: "center" });
+            }
           }}
         >
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const startIndex = virtualRow.index * columns;
-            const rowItems = items.slice(startIndex, startIndex + columns);
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const startIndex = virtualRow.index * columns;
+              const rowItems = items.slice(startIndex, startIndex + columns);
 
-            return (
-              <div
-                role="listitem"
-                key={virtualRow.index}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                }}
-                className="grid gap-4"
-              >
-                {rowItems.map((item, colIdx) => {
-                  const itemIndex = startIndex + colIdx;
-                  const rendered = renderItem(item, itemIndex);
-                  if (!keyboardNav || !isValidElement(rendered)) return rendered;
-                  return cloneElement(rendered, {
-                    'data-item-index': itemIndex,
-                    tabIndex: roving.getTabIndex(itemIndex),
-                    className: cn(
-                      (rendered.props as any)?.className,
-                      "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                      roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
-                    ),
-                  } as any);
-                })}
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <div
+                  role="listitem"
+                  key={virtualRow.index}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                  }}
+                  className="grid gap-4"
+                >
+                  {rowItems.map((item, colIdx) => {
+                    const itemIndex = startIndex + colIdx;
+                    const rendered = renderItem(item, itemIndex);
+                    if (!isValidElement(rendered)) return rendered;
+                    return rendered;
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </RovingTabindexProvider>
       )}
     </div>
   );

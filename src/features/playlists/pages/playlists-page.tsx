@@ -31,7 +31,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue,
   onEdit,
   onDelete,
-  'data-item-index': dataItemIndex,
+  dataItemIndex,
 }: {
   playlist: Playlist;
   onOpenDetail: (id: number) => void;
@@ -40,7 +40,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue: (id: number) => Promise<void>;
   onEdit: (p: Playlist) => void;
   onDelete: (p: Playlist) => void;
-  'data-item-index'?: number;
+  dataItemIndex?: number;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -64,7 +64,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
       onClick={() => onOpenDetail(playlist.id)}
       onPlay={() => onPlay(playlist.id)}
       menuActions={menuActions}
-      data-item-index={dataItemIndex}
+      dataItemIndex={dataItemIndex}
     />
   );
 });
@@ -249,7 +249,7 @@ export default memo(function PlaylistsPage() {
               onAddToQueue={handleAddToQueue}
               onEdit={setEditingPlaylist}
               onDelete={handleDeleteRequest}
-              data-item-index={index}
+                dataItemIndex={index}
             />
           )}
           itemHeight={220}

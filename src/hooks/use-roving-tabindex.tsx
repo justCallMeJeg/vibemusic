@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 interface RovingTabindexOptions {
   containerRef: React.RefObject<HTMLElement | null>;
@@ -66,7 +67,6 @@ export function useRovingTabindex({
     [itemCount, containerRef],
   );
 
-  // Capture-phase keydown: attached ONCE, reads refs at handler call time
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!enabledRef.current) return;
@@ -153,7 +153,6 @@ export function useRovingTabindex({
     return () => document.removeEventListener("keydown", handler, { capture: true });
   }, []);
 
-  // Capture-phase focusin: attached ONCE, reads containerRef at handler call time
   useEffect(() => {
     const handler = (e: FocusEvent) => {
       const container = containerRef.current;
@@ -197,4 +196,67 @@ export function useRovingTabindex({
     setActiveIndex: activate,
     getTabIndex,
   };
+}
+
+// --- Context-based API ---
+
+interface RovingTabindexContextValue {
+  activeIndex: number;
+  getTabIndex: (index: number) => 0 | -1 | undefined;
+  setActiveIndex: (index: number) => void;
+}
+
+const RovingTabindexContext = createContext<RovingTabindexContextValue | null>(null);
+
+export function useRovingTabindexContext(): RovingTabindexContextValue | null {
+  return useContext(RovingTabindexContext);
+}
+
+interface RovingTabindexProviderProps {
+  children: ReactNode;
+  containerRef: React.RefObject<HTMLElement | null>;
+  itemCount: number;
+  enabled?: boolean;
+  direction?: "vertical" | "grid";
+  columns?: number;
+  onActivate?: (index: number) => void;
+  onActivateSecondary?: (index: number) => void;
+  onIndexChange?: (index: number) => void;
+  autoFocus?: boolean;
+}
+
+export function RovingTabindexProvider({
+  children,
+  containerRef,
+  itemCount,
+  enabled = true,
+  direction = "vertical",
+  columns = 1,
+  onActivate,
+  onActivateSecondary,
+  onIndexChange,
+  autoFocus = true,
+}: RovingTabindexProviderProps) {
+  const roving = useRovingTabindex({
+    containerRef,
+    itemCount,
+    enabled,
+    direction,
+    columns,
+    onActivate,
+    onActivateSecondary,
+    onIndexChange,
+  });
+
+  useEffect(() => {
+    if (autoFocus && enabled && itemCount > 0 && roving.activeIndex < 0) {
+      roving.setActiveIndex(0);
+    }
+  }, [autoFocus, enabled, itemCount, roving.activeIndex, roving.setActiveIndex]);
+
+  return (
+    <RovingTabindexContext.Provider value={roving}>
+      {children}
+    </RovingTabindexContext.Provider>
+  );
 }

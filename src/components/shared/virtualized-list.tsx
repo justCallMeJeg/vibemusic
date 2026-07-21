@@ -1,10 +1,10 @@
-import { useRef, useCallback, useEffect, cloneElement, isValidElement } from "react";
+import { useRef, useCallback, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
-import { useRovingTabindex } from "@/hooks/use-roving-tabindex";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
@@ -77,37 +77,6 @@ export function VirtualizedList<T>({
     overscan: 5,
   });
 
-  // Roving tabindex keyboard navigation
-  const roving = useRovingTabindex({
-    containerRef: parentRef,
-    itemCount: keyboardNav ? items.length : 0,
-    enabled: !!keyboardNav,
-    direction: "vertical",
-    onActivate: onItemActivate,
-    onActivateSecondary: onItemActivateSecondary,
-    onIndexChange: (index) => {
-      if (keyboardNav && index >= 0) {
-        const adjustedIndex = hasHeader ? index + 1 : index;
-        virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
-      }
-    },
-  });
-
-  // Re-focus after scroll to ensure the focused element is in the DOM
-  useEffect(() => {
-    if (!keyboardNav || roving.activeIndex < 0) return;
-    const adjustedIndex = hasHeader ? roving.activeIndex + 1 : roving.activeIndex;
-    virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
-  }, [roving.activeIndex, keyboardNav, virtualizer, hasHeader]);
-
-  // Auto-focus first item when keyboard nav is enabled
-  useEffect(() => {
-    if (keyboardNav && items.length > 0 && roving.activeIndex < 0) {
-      roving.setActiveIndex(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyboardNav, items.length]);
-
   return (
     <div
       ref={parentRef}
@@ -117,57 +86,64 @@ export function VirtualizedList<T>({
         items.length === 0 && !hasHeader && isPlayerVisible ? "pb-player-bar" : ""
       }`}
     >
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-          width: "100%",
-          position: "relative",
+      <RovingTabindexProvider
+        containerRef={parentRef}
+        itemCount={keyboardNav ? items.length : 0}
+        enabled={!!keyboardNav}
+        direction="vertical"
+        onActivate={onItemActivate}
+        onActivateSecondary={onItemActivateSecondary}
+        onIndexChange={(index: number) => {
+          if (keyboardNav && index >= 0) {
+            const adjustedIndex = hasHeader ? index + 1 : index;
+            virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
+          }
         }}
       >
-        {items.length === 0 && !hasHeader
-          ? emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
-          : virtualizer.getVirtualItems().map((virtualRow) => {
-              const isHeaderRow = hasHeader && virtualRow.index === 0;
-              const itemIndex = hasHeader
-                ? virtualRow.index - 1
-                : virtualRow.index;
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {items.length === 0 && !hasHeader
+            ? emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
+            : virtualizer.getVirtualItems().map((virtualRow) => {
+                const isHeaderRow = hasHeader && virtualRow.index === 0;
+                const itemIndex = hasHeader
+                  ? virtualRow.index - 1
+                  : virtualRow.index;
 
-              return (
-                <div
-                  role="listitem"
-                  key={virtualRow.index}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  className={cn(
-                    "absolute top-0 left-0 w-full",
-                  )}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {isHeaderRow
-                    ? header
-                    : items[itemIndex] && (() => {
-                        const rendered = renderItem(items[itemIndex], itemIndex);
-                        if (!keyboardNav || !isValidElement(rendered)) return rendered;
-                        return cloneElement(rendered, {
-                          'data-item-index': itemIndex,
-                          tabIndex: roving.getTabIndex(itemIndex),
-                          className: cn(
-                            (rendered.props as any)?.className,
-                            "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring rounded-md",
-                            roving.activeIndex === itemIndex && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
-                          ),
-                        } as any);
-                      })()}
-                </div>
-              );
-            })}
-      </div>
+                return (
+                  <div
+                    role="listitem"
+                    key={virtualRow.index}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    className={cn(
+                      "absolute top-0 left-0 w-full",
+                    )}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {isHeaderRow
+                      ? header
+                      : items[itemIndex] && (() => {
+                          const rendered = renderItem(items[itemIndex], itemIndex);
+                          if (!isValidElement(rendered)) return rendered;
+                          return rendered;
+                        })()}
+                  </div>
+                );
+              })}
+        </div>
+      </RovingTabindexProvider>
     </div>
   );
 }

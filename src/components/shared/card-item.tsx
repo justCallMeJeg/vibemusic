@@ -6,6 +6,7 @@ import { ArtworkImage } from "@/components/shared/artwork-image";
 import { MediaContextMenu } from "@/components/shared/media-context-menu";
 import { Button } from "@/components/ui/button";
 import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
+import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
 
 const cardVariants = cva(
   "flex flex-col cursor-pointer transition-colors group relative",
@@ -59,6 +60,8 @@ interface CardItemProps
     onEdit?: () => void;
     onDelete?: () => void;
   };
+  /** Index within a keyboard-navigable list/grid. Consumed by RovingTabindexContext. */
+  dataItemIndex?: number;
 }
 
 export const CardItem = memo(function CardItem({
@@ -73,8 +76,12 @@ export const CardItem = memo(function CardItem({
   onPlay,
   onClick,
   menuActions,
+  dataItemIndex,
   ...props
 }: CardItemProps) {
+  const roving = useRovingTabindexContext();
+  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
+  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
   const isCircle = variant === "circle";
   const isCompact = variant === "compact";
 
@@ -109,10 +116,16 @@ export const CardItem = memo(function CardItem({
 
   const CardContent = (
     <button
-      type="button"
-      className={cn(cardVariants({ variant, className }))}
-      onClick={onClick}
       {...props}
+      type="button"
+      tabIndex={rovingTabIndex}
+      data-item-index={dataItemIndex}
+      className={cn(
+        cardVariants({ variant, className }),
+        isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
+      )}
+      onClick={onClick}
     >
       <div className={cn(imageVariants({ variant }), "overflow-visible")}>
         <div

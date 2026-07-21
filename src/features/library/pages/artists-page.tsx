@@ -23,14 +23,14 @@ const ArtistGridCard = memo(function ArtistGridCard({
   onPlay,
   onPlayNext,
   onAddToQueue,
-  'data-item-index': dataItemIndex,
+  dataItemIndex,
 }: {
   artist: Artist;
   onOpenDetail: (id: number) => void;
   onPlay: (id: number, shuffle?: boolean) => Promise<void>;
   onPlayNext: (id: number) => Promise<void>;
   onAddToQueue: (id: number) => Promise<void>;
-  'data-item-index'?: number;
+  dataItemIndex?: number;
 }) {
   const menuActions = useMemo(
     () => ({
@@ -52,7 +52,7 @@ const ArtistGridCard = memo(function ArtistGridCard({
       onClick={() => onOpenDetail(artist.id)}
       onPlay={() => onPlay(artist.id, true)}
       menuActions={menuActions}
-      data-item-index={dataItemIndex}
+      dataItemIndex={dataItemIndex}
     />
   );
 });
@@ -176,7 +176,7 @@ export default memo(function ArtistsPage() {
                 onPlay={handlePlayArtist}
                 onPlayNext={handlePlayNext}
                 onAddToQueue={handleAddToQueue}
-                data-item-index={index}
+                dataItemIndex={index}
               />
             )}
             itemHeight={220}
