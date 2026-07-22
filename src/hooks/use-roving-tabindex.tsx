@@ -272,7 +272,7 @@ export function RovingTabindexProvider({
   onActivate,
   onActivateSecondary,
   onIndexChange,
-  autoFocus = true,
+  autoFocus = false,
 }: RovingTabindexProviderProps) {
   const roving = useRovingTabindex({
     containerRef,

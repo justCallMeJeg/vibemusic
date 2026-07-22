@@ -89,6 +89,18 @@ export function KeyboardShortcutsOverlay() {
     {
       label: "Settings Page",
       shortcuts: [
+        { keys: "↑/↓ or ←/→", description: "Navigate between sections" },
+        { keys: "Enter", description: "Open selected section" },
+        { keys: "Home / End", description: "Jump to first / last section" },
+        { keys: "Escape", description: "Return to previous page" },
+      ],
+    },
+    {
+      label: "Insights Page",
+      shortcuts: [
+        { keys: "↑/↓", description: "Navigate top tracks, artists, albums" },
+        { keys: "Enter", description: "Play track / Open artist or album" },
+        { keys: "Shift+Enter", description: "Play artist top tracks / Play album" },
         { keys: "Escape", description: "Return to previous page" },
       ],
     },

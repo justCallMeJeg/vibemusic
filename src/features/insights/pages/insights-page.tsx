@@ -1,8 +1,10 @@
 import { useEffect, useRef, memo } from "react";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useStatsStore, type TimeRange } from "@/stores/stats-store";
-import { useNavigationStore, useCurrentPage } from "@/stores/navigation-store";
+import { useNavigationStore, useCurrentPage, useGoBack } from "@/stores/navigation-store";
 import { useAudioStore, useIsPlayerVisible } from "@/stores/audio-store";
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { getAlbumTracks, getArtistTracks } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { PageHeader } from "@/components/shared/page-header";
@@ -122,11 +124,13 @@ function TimeRangeSelector({
 }
 
 const ITEMS_VISIBLE = 5;
+const SCOPE = "page:insights";
 
 export default memo(function InsightsPage() {
   const { data, isLoading, fetchStats, timeRange, setTimeRange } =
     useStatsStore();
   const { openAlbumDetail, openArtistDetail } = useNavigationStore();
+  const goBack = useGoBack();
   const currentPage = useCurrentPage();
   const play = useAudioStore((s) => s.play);
   const addToQueue = useAudioStore((s) => s.addToQueue);
@@ -134,6 +138,21 @@ export default memo(function InsightsPage() {
   const isPlayerVisible = useIsPlayerVisible();
   const insightsScrollRef = useScrollMask();
   const hasLoadedOnce = useRef(false);
+
+  const tracksRef = useRef<HTMLDivElement>(null);
+  const artistsRef = useRef<HTMLDivElement>(null);
+  const albumsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => goBack(),
+      description: "Return to previous page",
+      preventDefault: true,
+    }, SCOPE);
+    return () => clearScope(SCOPE);
+  }, [goBack]);
 
   useEffect(() => {
     if (currentPage === "insights") {
@@ -256,177 +275,262 @@ export default memo(function InsightsPage() {
                   </>
                 ) : (
                   <>
-                    <div className="bg-card/30 border border-border/50 rounded-xl p-3">
-                      <h3 className="text-sm font-bold mb-2 px-1">Top Tracks</h3>
-                      <div className="flex flex-col gap-0.5">
-                        {showSkeleton
-                          ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
-                              <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
-                                <Skeleton className="h-8 w-8 rounded-md shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <Skeleton className="h-3 w-3/4 mb-1" />
-                                  <Skeleton className="h-2.5 w-1/2" />
+                    <RovingTabindexProvider
+                      containerRef={tracksRef}
+                      itemCount={rankedTracks.length}
+                      enabled={rankedTracks.length > 0}
+                      direction="vertical"
+                      onActivate={(idx: number) => {
+                        const t = rankedTracks[idx];
+                        if (t) {
+                          play({
+                            id: t.id, title: t.title, artist: t.artist,
+                            artwork_path: t.cover_image, duration_ms: t.duration_ms,
+                            file_path: t.file_path, album: "", album_id: null,
+                            artist_id: null, artist_ids: [], artist_names: [],
+                            artist_roles: [], track_number: null,
+                          });
+                        }
+                      }}
+                      onActivateSecondary={(idx: number) => {
+                        const t = rankedTracks[idx];
+                        if (t) {
+                          playNext({
+                            id: t.id, title: t.title, artist: t.artist,
+                            artwork_path: t.cover_image, duration_ms: t.duration_ms,
+                            file_path: t.file_path, album: "", album_id: null,
+                            artist_id: null, artist_ids: [], artist_names: [],
+                            artist_roles: [], track_number: null,
+                          });
+                        }
+                      }}
+                    >
+                      <div ref={tracksRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
+                        <h3 className="text-sm font-bold mb-2 px-1">Top Tracks</h3>
+                        <div className="flex flex-col gap-0.5">
+                          {showSkeleton
+                            ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
+                                  <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <Skeleton className="h-3 w-3/4 mb-1" />
+                                    <Skeleton className="h-2.5 w-1/2" />
+                                  </div>
+                                  <Skeleton className="h-3 w-6 shrink-0" />
                                 </div>
-                                <Skeleton className="h-3 w-6 shrink-0" />
-                              </div>
-                            ))
-                          : rankedTracks.map((track, i) => {
-                              const trackObj = {
-                                id: track.id,
-                                title: track.title,
-                                artist: track.artist,
-                                artwork_path: track.cover_image,
-                                duration_ms: track.duration_ms,
-                                file_path: track.file_path,
-                                album: "",
-                                album_id: null,
-                                artist_id: null,
-                                artist_ids: [],
-                                artist_names: [],
-                                artist_roles: [],
-                                track_number: null,
-                              };
-                              return (
+                              ))
+                            : rankedTracks.map((track, i) => {
+                                const trackObj = {
+                                  id: track.id,
+                                  title: track.title,
+                                  artist: track.artist,
+                                  artwork_path: track.cover_image,
+                                  duration_ms: track.duration_ms,
+                                  file_path: track.file_path,
+                                  album: "",
+                                  album_id: null,
+                                  artist_id: null,
+                                  artist_ids: [],
+                                  artist_names: [],
+                                  artist_roles: [],
+                                  track_number: null,
+                                };
+                                return (
+                                  <ListItem
+                                    key={track.id}
+                                    title={track.title}
+                                    subtitle={track.artist}
+                                    artworkSrc={track.cover_image ?? undefined}
+                                    index={i + 1}
+                                    dataItemIndex={i}
+                                    trailing={<span className="tabular-nums text-xs">{track.play_count}</span>}
+                                    variant="compact"
+                                    showArtwork
+                                    onClick={() => play(trackObj)}
+                                    menuActions={{
+                                      onPlay: () => play(trackObj),
+                                      onPlayNext: () => playNext(trackObj),
+                                      onAddToQueue: () => addToQueue(trackObj),
+                                    }}
+                                  />
+                                );
+                              })}
+                          {!showSkeleton && rankedTracks.length === 0 && (
+                            <div className="text-xs text-muted-foreground px-2 py-4 text-center">
+                              No tracks played yet
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </RovingTabindexProvider>
+
+                    <RovingTabindexProvider
+                      containerRef={artistsRef}
+                      itemCount={rankedArtists.length}
+                      enabled={rankedArtists.length > 0}
+                      direction="vertical"
+                      onActivate={(idx: number) => {
+                        const a = rankedArtists[idx];
+                        if (a) openArtistDetail(a.id);
+                      }}
+                      onActivateSecondary={async (idx: number) => {
+                        const a = rankedArtists[idx];
+                        if (a) {
+                          try {
+                            const artistTracks = await getArtistTracks(a.id);
+                            if (artistTracks.length > 0) {
+                              play(artistTracks[0], artistTracks);
+                            }
+                          } catch (err) {
+                            logger.error("Failed to play artist tracks", err);
+                          }
+                        }
+                      }}
+                    >
+                      <div ref={artistsRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
+                        <h3 className="text-sm font-bold mb-2 px-1">Top Artists</h3>
+                        <div className="flex flex-col gap-0.5">
+                          {showSkeleton
+                            ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
+                                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <Skeleton className="h-3 w-3/4 mb-1" />
+                                    <Skeleton className="h-2.5 w-1/2" />
+                                  </div>
+                                  <Skeleton className="h-3 w-6 shrink-0" />
+                                </div>
+                              ))
+                            : rankedArtists.map((artist, i) => (
                                 <ListItem
-                                  key={track.id}
-                                  title={track.title}
-                                  subtitle={track.artist}
-                                  artworkSrc={track.cover_image ?? undefined}
+                                  key={artist.id}
+                                  title={artist.name}
+                                  subtitle={`${artist.play_count} plays`}
+                                  artworkSrc={artist.cover_image ?? undefined}
+                                  artworkCircular
+                                  placeholderType="artist"
                                   index={i + 1}
-                                  trailing={<span className="tabular-nums text-xs">{track.play_count}</span>}
+                                  dataItemIndex={i}
                                   variant="compact"
                                   showArtwork
-                                  onClick={() => play(trackObj)}
+                                  onClick={() => openArtistDetail(artist.id)}
                                   menuActions={{
-                                    onPlay: () => play(trackObj),
-                                    onPlayNext: () => playNext(trackObj),
-                                    onAddToQueue: () => addToQueue(trackObj),
-                                  }}
-                                />
-                              );
-                            })}
-                        {!showSkeleton && rankedTracks.length === 0 && (
-                          <div className="text-xs text-muted-foreground px-2 py-4 text-center">
-                            No tracks played yet
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-card/30 border border-border/50 rounded-xl p-3">
-                      <h3 className="text-sm font-bold mb-2 px-1">Top Artists</h3>
-                      <div className="flex flex-col gap-0.5">
-                        {showSkeleton
-                          ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
-                              <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
-                                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <Skeleton className="h-3 w-3/4 mb-1" />
-                                  <Skeleton className="h-2.5 w-1/2" />
-                                </div>
-                                <Skeleton className="h-3 w-6 shrink-0" />
-                              </div>
-                            ))
-                          : rankedArtists.map((artist, i) => (
-                              <ListItem
-                                key={artist.id}
-                                title={artist.name}
-                                subtitle={`${artist.play_count} plays`}
-                                artworkSrc={artist.cover_image ?? undefined}
-                                artworkCircular
-                                placeholderType="artist"
-                                index={i + 1}
-                                variant="compact"
-                                showArtwork
-                                onClick={() => openArtistDetail(artist.id)}
-                                menuActions={{
-                                  onPlay: async () => {
-                                    try {
-                                      const artistTracks = await getArtistTracks(artist.id);
-                                      if (artistTracks.length > 0) {
-                                        play(artistTracks[0], artistTracks);
+                                    onPlay: async () => {
+                                      try {
+                                        const artistTracks = await getArtistTracks(artist.id);
+                                        if (artistTracks.length > 0) {
+                                          play(artistTracks[0], artistTracks);
+                                        }
+                                      } catch (err) {
+                                        logger.error("Failed to play artist tracks", err);
                                       }
-                                    } catch (err) {
-                                      logger.error("Failed to play artist tracks", err);
-                                    }
-                                  },
-                                  onGoToArtist: () => openArtistDetail(artist.id),
-                                }}
-                              />
-                            ))}
-                        {!showSkeleton && rankedArtists.length === 0 && (
-                          <div className="text-xs text-muted-foreground px-2 py-4 text-center">
-                            No artists played yet
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-card/30 border border-border/50 rounded-xl p-3">
-                      <h3 className="text-sm font-bold mb-2 px-1">Top Albums</h3>
-                      <div className="flex flex-col gap-0.5">
-                        {showSkeleton
-                          ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
-                              <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
-                                <Skeleton className="h-8 w-8 rounded-md shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <Skeleton className="h-3 w-3/4 mb-1" />
-                                  <Skeleton className="h-2.5 w-1/2" />
-                                </div>
-                                <Skeleton className="h-3 w-6 shrink-0" />
-                              </div>
-                            ))
-                          : rankedAlbums.map((album, i) => {
-                              const handlePlayAlbum = async () => {
-                                try {
-                                  const albumTracks = await getAlbumTracks(album.id);
-                                  if (albumTracks.length > 0) {
-                                    const sorted = albumTracks.sort(
-                                      (a, b) => (a.track_number || 0) - (b.track_number || 0),
-                                    );
-                                    play(sorted[0], sorted);
-                                  }
-                                } catch (err) {
-                                  logger.error("Failed to play album", err);
-                                }
-                              };
-                              const handleShuffleAlbum = async () => {
-                                try {
-                                  const albumTracks = await getAlbumTracks(album.id);
-                                  if (albumTracks.length > 0) {
-                                    const shuffled = [...albumTracks].sort(() => Math.random() - 0.5);
-                                    play(shuffled[0], shuffled);
-                                  }
-                                } catch (err) {
-                                  logger.error("Failed to shuffle album", err);
-                                }
-                              };
-                              return (
-                                <ListItem
-                                  key={album.id}
-                                  title={album.title}
-                                  subtitle={album.artist}
-                                  artworkSrc={album.cover_image ?? undefined}
-                                  index={i + 1}
-                                  trailing={<span className="tabular-nums text-xs">{album.play_count}</span>}
-                                  variant="compact"
-                                  showArtwork
-                                  onClick={() => openAlbumDetail(album.id)}
-                                  menuActions={{
-                                    onPlay: handlePlayAlbum,
-                                    onShuffle: handleShuffleAlbum,
-                                    onGoToAlbum: () => openAlbumDetail(album.id),
+                                    },
+                                    onGoToArtist: () => openArtistDetail(artist.id),
                                   }}
                                 />
-                              );
-                            })}
-                        {!showSkeleton && rankedAlbums.length === 0 && (
-                          <div className="text-xs text-muted-foreground px-2 py-4 text-center">
-                            No albums played yet
-                          </div>
-                        )}
+                              ))}
+                          {!showSkeleton && rankedArtists.length === 0 && (
+                            <div className="text-xs text-muted-foreground px-2 py-4 text-center">
+                              No artists played yet
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </RovingTabindexProvider>
+
+                    <RovingTabindexProvider
+                      containerRef={albumsRef}
+                      itemCount={rankedAlbums.length}
+                      enabled={rankedAlbums.length > 0}
+                      direction="vertical"
+                      onActivate={(idx: number) => {
+                        const a = rankedAlbums[idx];
+                        if (a) openAlbumDetail(a.id);
+                      }}
+                      onActivateSecondary={async (idx: number) => {
+                        const a = rankedAlbums[idx];
+                        if (a) {
+                          try {
+                            const albumTracks = await getAlbumTracks(a.id);
+                            if (albumTracks.length > 0) {
+                              const sorted = albumTracks.sort(
+                                (a, b) => (a.track_number || 0) - (b.track_number || 0),
+                              );
+                              play(sorted[0], sorted);
+                            }
+                          } catch (err) {
+                            logger.error("Failed to play album", err);
+                          }
+                        }
+                      }}
+                    >
+                      <div ref={albumsRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
+                        <h3 className="text-sm font-bold mb-2 px-1">Top Albums</h3>
+                        <div className="flex flex-col gap-0.5">
+                          {showSkeleton
+                            ? Array.from({ length: ITEMS_VISIBLE }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-2.5 py-1.5 px-1 animate-pulse">
+                                  <Skeleton className="h-8 w-8 rounded-md shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <Skeleton className="h-3 w-3/4 mb-1" />
+                                    <Skeleton className="h-2.5 w-1/2" />
+                                  </div>
+                                  <Skeleton className="h-3 w-6 shrink-0" />
+                                </div>
+                              ))
+                            : rankedAlbums.map((album, i) => {
+                                const handlePlayAlbum = async () => {
+                                  try {
+                                    const albumTracks = await getAlbumTracks(album.id);
+                                    if (albumTracks.length > 0) {
+                                      const sorted = albumTracks.sort(
+                                        (a, b) => (a.track_number || 0) - (b.track_number || 0),
+                                      );
+                                      play(sorted[0], sorted);
+                                    }
+                                  } catch (err) {
+                                    logger.error("Failed to play album", err);
+                                  }
+                                };
+                                const handleShuffleAlbum = async () => {
+                                  try {
+                                    const albumTracks = await getAlbumTracks(album.id);
+                                    if (albumTracks.length > 0) {
+                                      const shuffled = [...albumTracks].sort(() => Math.random() - 0.5);
+                                      play(shuffled[0], shuffled);
+                                    }
+                                  } catch (err) {
+                                    logger.error("Failed to shuffle album", err);
+                                  }
+                                };
+                                return (
+                                  <ListItem
+                                    key={album.id}
+                                    title={album.title}
+                                    subtitle={album.artist}
+                                    artworkSrc={album.cover_image ?? undefined}
+                                    index={i + 1}
+                                    dataItemIndex={i}
+                                    trailing={<span className="tabular-nums text-xs">{album.play_count}</span>}
+                                    variant="compact"
+                                    showArtwork
+                                    onClick={() => openAlbumDetail(album.id)}
+                                    menuActions={{
+                                      onPlay: handlePlayAlbum,
+                                      onShuffle: handleShuffleAlbum,
+                                      onGoToAlbum: () => openAlbumDetail(album.id),
+                                    }}
+                                  />
+                                );
+                              })}
+                          {!showSkeleton && rankedAlbums.length === 0 && (
+                            <div className="text-xs text-muted-foreground px-2 py-4 text-center">
+                              No albums played yet
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </RovingTabindexProvider>
                   </>
                 )}
               </div>
