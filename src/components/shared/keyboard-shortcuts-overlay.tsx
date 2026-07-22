@@ -65,10 +65,31 @@ export function KeyboardShortcutsOverlay() {
       ],
     },
     {
+      label: "Context Menu",
+      shortcuts: [
+        { keys: "Shift+F10", description: "Open context menu for focused item" },
+        { keys: "ContextMenu", description: "Open context menu for focused item" },
+      ],
+    },
+    {
       label: "System",
       shortcuts: [
         { keys: "?", description: "Show keyboard shortcuts" },
         { keys: "Ctrl+Shift+Q", description: "Quit app" },
+      ],
+    },
+    {
+      label: "Songs Page",
+      shortcuts: [
+        { keys: "Escape", description: "Clear search / Exit batch mode" },
+        { keys: "Ctrl+F", description: "Focus search input" },
+        { keys: "Ctrl+A", description: "Select all visible tracks" },
+      ],
+    },
+    {
+      label: "Settings Page",
+      shortcuts: [
+        { keys: "Escape", description: "Return to previous page" },
       ],
     },
   ];
