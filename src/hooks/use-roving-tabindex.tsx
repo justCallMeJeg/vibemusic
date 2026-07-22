@@ -212,6 +212,21 @@ export function useRovingTabindex({
       document.removeEventListener("focusin", handler, { capture: true });
   }, [containerRef]);
 
+  // Reset activeIndex when focus exits the container (e.g., cross-column nav, tab to next region)
+  useEffect(() => {
+    const handler = (e: FocusEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const relatedTarget = e.relatedTarget as HTMLElement | null;
+      if (relatedTarget && !container.contains(relatedTarget)) {
+        setActiveIndex(-1);
+      }
+    };
+    document.addEventListener("focusout", handler, { capture: true });
+    return () =>
+      document.removeEventListener("focusout", handler, { capture: true });
+  }, [containerRef]);
+
   useEffect(() => {
     if (itemCount === 0) {
       setActiveIndex(-1);
