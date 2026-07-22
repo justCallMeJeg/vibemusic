@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
@@ -8,8 +8,12 @@ interface ShortcutGroup {
   shortcuts: { keys: string; description: string }[];
 }
 
+const noop = () => {};
+
 export function KeyboardShortcutsOverlay() {
   const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   const setDialogOpen = useKeybindsStore((s) => s.setDialogOpen);
 
   useEffect(() => {
@@ -18,13 +22,13 @@ export function KeyboardShortcutsOverlay() {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape" && openRef.current) {
         setOpen(false);
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     setDialogOpen(open);
@@ -83,7 +87,7 @@ export function KeyboardShortcutsOverlay() {
                   <CommandItem
                     key={shortcut.keys}
                     className="flex items-center justify-between"
-                    onSelect={() => {}}
+                    onSelect={noop}
                   >
                     <span className="text-sm">{shortcut.description}</span>
                     <kbd className="ml-auto text-xs tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded">

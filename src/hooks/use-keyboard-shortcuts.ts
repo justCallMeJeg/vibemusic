@@ -1,5 +1,9 @@
 import { useEffect } from "react";
-import { useKeybindsStore, type KeybindEntry } from "@/stores/keybinds-store";
+import {
+  useKeybindsStore,
+  eventToCombo,
+  type KeybindEntry,
+} from "@/stores/keybinds-store";
 import {
   useNavigationStore,
   type Page,
@@ -320,33 +324,14 @@ export function useGlobalKeydownListener() {
         return;
       }
 
-      const bindings = useKeybindsStore.getState().bindings;
-      const dialogOpen = useKeybindsStore.getState().dialogOpen;
+      const comboStr = eventToCombo(e);
+      const { dialogOpen, getBindingByCombo } = useKeybindsStore.getState();
+      const binding = getBindingByCombo(comboStr);
 
-      // Build combo string from event
-      const parts: string[] = [];
-      if (e.ctrlKey || e.metaKey) parts.push("Ctrl");
-      if (e.shiftKey) parts.push("Shift");
-      if (e.altKey) parts.push("Alt");
-      parts.push(e.key.toLowerCase());
-      const comboStr = parts.join("+");
-
-      for (const [, entry] of bindings) {
-        // Build entry combo string
-        const entryParts: string[] = [];
-        if (entry.combo.ctrl || entry.combo.meta) entryParts.push("Ctrl");
-        if (entry.combo.shift) entryParts.push("Shift");
-        if (entry.combo.alt) entryParts.push("Alt");
-        entryParts.push(entry.combo.key.toLowerCase());
-        const entryComboStr = entryParts.join("+");
-
-        if (entryComboStr === comboStr) {
-          if (entry.skipWhenDialogOpen && dialogOpen) continue;
-          if (entry.preventDefault) e.preventDefault();
-          entry.handler(e);
-          return;
-        }
-      }
+      if (!binding) return;
+      if (binding.skipWhenDialogOpen && dialogOpen) return;
+      if (binding.preventDefault) e.preventDefault();
+      binding.handler(e);
     };
 
     document.addEventListener("keydown", handler);

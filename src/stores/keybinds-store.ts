@@ -20,15 +20,21 @@ export interface KeybindEntry {
   skipWhenDialogOpen?: boolean;
 }
 
+interface StoredBinding {
+  entry: KeybindEntry;
+  scopeId: string;
+}
+
 interface KeybindsState {
-  bindings: Map<string, KeybindEntry>;
+  bindings: Map<string, StoredBinding>;
   dialogOpen: boolean;
 }
 
 interface KeybindsActions {
   register: (id: string, entry: KeybindEntry, scope?: string) => void;
   unregister: (id: string, scope?: string) => void;
-  getHandler: (combo: KeyCombo, scope?: string) => ShortcutHandler | undefined;
+  getHandler: (combo: KeyCombo) => ShortcutHandler | undefined;
+  getBindingByCombo: (comboStr: string) => KeybindEntry | undefined;
   setDialogOpen: (open: boolean) => void;
   clearScope: (scope: string) => void;
 }
@@ -45,12 +51,13 @@ function comboToString(combo: KeyCombo): string {
 }
 
 function eventToCombo(e: KeyboardEvent): string {
-  const parts: string[] = [];
-  if (e.ctrlKey || e.metaKey) parts.push("Ctrl");
-  if (e.shiftKey) parts.push("Shift");
-  if (e.altKey) parts.push("Alt");
-  parts.push(e.key.toLowerCase());
-  return parts.join("+");
+  return comboToString({
+    key: e.key,
+    ctrl: e.ctrlKey,
+    meta: e.metaKey,
+    shift: e.shiftKey,
+    alt: e.altKey,
+  });
 }
 
 export const useKeybindsStore = create<KeybindsStore>((set, get) => ({
@@ -58,32 +65,36 @@ export const useKeybindsStore = create<KeybindsStore>((set, get) => ({
   dialogOpen: false,
 
   register: (id: string, entry: KeybindEntry, scope?: string) => {
-    const key = scope ? `${scope}:${id}` : id;
+    const comboStr = comboToString(entry.combo);
+    const scopeId = scope ? `${scope}:${id}` : id;
     set((state) => {
       const next = new Map(state.bindings);
-      next.set(key, entry);
+      next.set(comboStr, { entry, scopeId });
       return { bindings: next };
     });
   },
 
   unregister: (id: string, scope?: string) => {
-    const key = scope ? `${scope}:${id}` : id;
+    const scopeId = scope ? `${scope}:${id}` : id;
     set((state) => {
       const next = new Map(state.bindings);
-      next.delete(key);
+      for (const [key, value] of next) {
+        if (value.scopeId === scopeId) {
+          next.delete(key);
+          break;
+        }
+      }
       return { bindings: next };
     });
   },
 
   getHandler: (combo: KeyCombo) => {
     const comboStr = comboToString(combo);
-    const state = get();
-    for (const [, entry] of state.bindings) {
-      if (comboToString(entry.combo) === comboStr) {
-        return entry.handler;
-      }
-    }
-    return undefined;
+    return get().bindings.get(comboStr)?.entry.handler;
+  },
+
+  getBindingByCombo: (comboStr: string) => {
+    return get().bindings.get(comboStr)?.entry;
   },
 
   setDialogOpen: (open: boolean) => {
@@ -91,10 +102,11 @@ export const useKeybindsStore = create<KeybindsStore>((set, get) => ({
   },
 
   clearScope: (scope: string) => {
+    const prefix = `${scope}:`;
     set((state) => {
       const next = new Map(state.bindings);
-      for (const key of next.keys()) {
-        if (key.startsWith(`${scope}:`)) {
+      for (const [key, value] of next) {
+        if (value.scopeId.startsWith(prefix)) {
           next.delete(key);
         }
       }

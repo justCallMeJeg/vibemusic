@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { useSettingsStore } from "./settings-store";
+import {
+  getVisibleRegions,
+  focusElement,
+  setRegionActive,
+} from "./focus-region-utils";
 
 export type FocusRegion = "sidebar" | "main" | "player" | "sidepanel";
-
-const REGION_ORDER: FocusRegion[] = ["sidebar", "main", "player", "sidepanel"];
-const ALL_REGIONS = REGION_ORDER;
 
 interface FocusRegionState {
   activeRegion: FocusRegion | null;
@@ -19,49 +21,22 @@ interface FocusRegionActions {
 
 type FocusRegionStore = FocusRegionState & FocusRegionActions;
 
-function getVisibleRegions(): FocusRegion[] {
-  return REGION_ORDER.filter((r) => {
-    const el = document.querySelector<HTMLElement>(`[data-region="${r}"]`);
-    return el !== null && el.dataset.regionVisible !== "false";
-  });
-}
-
-function focusElement(region: FocusRegion): void {
-  const el = document.querySelector<HTMLElement>(`[data-region="${region}"]`);
-  if (el) {
-    el.focus({ preventScroll: true });
-  }
-}
-
-function setRegionActiveAttribute(region: FocusRegion | null): void {
-  const showIndicator =
-    useSettingsStore.getState().experimentalFeatures.showFocusIndicator;
-  for (const r of ALL_REGIONS) {
-    const el = document.querySelector<HTMLElement>(`[data-region="${r}"]`);
-    if (el) {
-      if (r === region && showIndicator) {
-        el.dataset.regionActive = "true";
-        el.classList.add("region-active");
-      } else {
-        delete el.dataset.regionActive;
-        el.classList.remove("region-active");
-      }
-    }
-  }
-}
-
 export const useFocusRegionStore = create<FocusRegionStore>((set, get) => ({
   activeRegion: null,
 
   setActiveRegion: (region) => {
+    const showIndicator =
+      useSettingsStore.getState().experimentalFeatures.showFocusIndicator;
     set({ activeRegion: region });
-    setRegionActiveAttribute(region);
+    setRegionActive(region, showIndicator);
   },
 
   focusRegion: (region) => {
+    const showIndicator =
+      useSettingsStore.getState().experimentalFeatures.showFocusIndicator;
     focusElement(region);
     set({ activeRegion: region });
-    setRegionActiveAttribute(region);
+    setRegionActive(region, showIndicator);
   },
 
   cycleForward: () => {
@@ -72,10 +47,12 @@ export const useFocusRegionStore = create<FocusRegionStore>((set, get) => ({
     const currentIndex = activeRegion ? visible.indexOf(activeRegion) : -1;
     const nextIndex = (currentIndex + 1) % visible.length;
     const next = visible[nextIndex];
+    const showIndicator =
+      useSettingsStore.getState().experimentalFeatures.showFocusIndicator;
 
     focusElement(next);
     set({ activeRegion: next });
-    setRegionActiveAttribute(next);
+    setRegionActive(next, showIndicator);
   },
 
   cycleBackward: () => {
@@ -87,9 +64,11 @@ export const useFocusRegionStore = create<FocusRegionStore>((set, get) => ({
     const prevIndex =
       currentIndex <= 0 ? visible.length - 1 : currentIndex - 1;
     const prev = visible[prevIndex];
+    const showIndicator =
+      useSettingsStore.getState().experimentalFeatures.showFocusIndicator;
 
     focusElement(prev);
     set({ activeRegion: prev });
-    setRegionActiveAttribute(prev);
+    setRegionActive(prev, showIndicator);
   },
 }));
