@@ -4,6 +4,7 @@ import { useStatsStore, type TimeRange } from "@/stores/stats-store";
 import { useNavigationStore, useCurrentPage, useGoBack } from "@/stores/navigation-store";
 import { useAudioStore, useIsPlayerVisible } from "@/stores/audio-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { getAlbumTracks, getArtistTracks } from "@/lib/api";
 import { logger } from "@/lib/logger";
@@ -186,6 +187,47 @@ export default memo(function InsightsPage() {
   const rankedArtists = data?.top_artists.slice(0, ITEMS_VISIBLE) ?? [];
   const rankedAlbums = data?.top_albums.slice(0, ITEMS_VISIBLE) ?? [];
 
+  // Cross-column arrow navigation: ←/→ between Tracks ↔ Artists ↔ Albums
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const active = document.activeElement;
+      if (!active) return;
+
+      if (e.key === "ArrowRight") {
+        if (tracksRef.current?.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          const first = artistsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
+          first?.focus();
+        } else if (artistsRef.current?.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          const first = albumsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
+          first?.focus();
+        }
+      } else {
+        if (albumsRef.current?.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          const last = rankedArtists.length - 1;
+          const target = artistsRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
+          target?.focus();
+        } else if (artistsRef.current?.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          const last = rankedTracks.length - 1;
+          const target = tracksRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
+          target?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handler, { capture: true });
+    return () => document.removeEventListener("keydown", handler, { capture: true });
+  }, [rankedTracks.length, rankedArtists.length, rankedAlbums.length]);
+
   return (
     <PageLayout overflowHidden>
       <div className="flex flex-col shrink-0">
@@ -279,6 +321,7 @@ export default memo(function InsightsPage() {
                       containerRef={tracksRef}
                       itemCount={rankedTracks.length}
                       enabled={rankedTracks.length > 0}
+                      autoFocus={rankedTracks.length > 0 && useInteractionStore.getState().focusSource === "keyboard"}
                       direction="vertical"
                       onActivate={(idx: number) => {
                         const t = rankedTracks[idx];

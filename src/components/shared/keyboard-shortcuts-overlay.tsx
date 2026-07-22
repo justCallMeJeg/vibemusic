@@ -98,7 +98,8 @@ export function KeyboardShortcutsOverlay() {
     {
       label: "Insights Page",
       shortcuts: [
-        { keys: "↑/↓", description: "Navigate top tracks, artists, albums" },
+        { keys: "↑/↓", description: "Navigate within column (tracks, artists, albums)" },
+        { keys: "←/→", description: "Move between columns" },
         { keys: "Enter", description: "Play track / Open artist or album" },
         { keys: "Shift+Enter", description: "Play artist top tracks / Play album" },
         { keys: "Escape", description: "Return to previous page" },
