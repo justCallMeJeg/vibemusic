@@ -20,10 +20,8 @@ export function setRegionActive(region: FocusRegion | null, showIndicator: boole
     const el = document.querySelector<HTMLElement>(`[data-region="${r}"]`);
     if (!el) continue;
     delete el.dataset.regionActive;
-    el.classList.remove("region-active");
     if (r === region && showIndicator) {
       el.dataset.regionActive = "true";
-      el.classList.add("region-active");
     }
   }
 }

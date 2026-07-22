@@ -152,10 +152,15 @@
   outline: 1px solid red;
 }
 
-[data-region][data-region-active="true"] {
-  outline: 1px solid color-mix(in oklch, var(--accent) 100%, transparent);
-  outline-offset: -1px;
+/* Focus region indicator */
+[data-region] {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
   transition: outline-color 0.15s ease;
+}
+
+[data-region][data-region-active="true"] {
+  outline-color: var(--accent);
 }
 
 /* Custom Scrollbar */
