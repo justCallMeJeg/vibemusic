@@ -42,6 +42,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
 import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { useSelectionStore } from "@/stores/selection-store";
 
 import { formatDuration } from "@/lib/format";
@@ -436,6 +437,7 @@ export default memo(function SongsPage() {
             containerRef={parentRef}
             itemCount={displayedTracks.length}
             enabled={displayedTracks.length > 0}
+            autoFocus={displayedTracks.length > 0 && useInteractionStore.getState().focusSource === "keyboard"}
             direction="vertical"
             onActivate={(index: number) => {
               const track = displayedTracks[index];
