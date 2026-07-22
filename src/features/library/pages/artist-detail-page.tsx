@@ -26,6 +26,9 @@ import { DetailPageTemplate } from "@/components/shared/templates/detail-page-te
 import { TrackList } from "@/components/shared/templates/track-list";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 
 const ArtistTrackRow = memo(function ArtistTrackRow({
   track,
@@ -121,6 +124,38 @@ export default memo(function ArtistDetailPage() {
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
 
+  const SCOPE = "page:artist-detail";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => {
+        const sel = useSelectionStore.getState();
+        if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
+          sel.clearSelection();
+          sel.disableCheckboxMode();
+        } else {
+          goBack();
+        }
+      },
+      description: "Clear selection or return to artists",
+      preventDefault: true,
+    }, SCOPE);
+    register("backspace", {
+      combo: { key: "Backspace" },
+      handler: () => goBack(),
+      description: "Return to artists",
+      preventDefault: true,
+    }, SCOPE);
+    register("ctrl+a", {
+      combo: { key: "a", ctrl: true },
+      handler: () => useSelectionStore.getState().selectAll(),
+      description: "Select all tracks",
+      preventDefault: true,
+    }, SCOPE);
+    return () => clearScope(SCOPE);
+  }, [goBack]);
+
   const [artist, setArtist] = useState<Artist | null>(() => {
     if (detailView?.type !== "artist" || !detailView.id) return null;
     return useContentStore.getState().artists.find((a) => a.id === detailView.id) ?? null;
@@ -177,6 +212,89 @@ export default memo(function ArtistDetailPage() {
       cancelled = true;
     };
   }, [detailView, updateBreadcrumbLabel]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (useInteractionStore.getState().focusSource !== "keyboard") return;
+    if (tracks.length === 0 && albums.length === 0) return;
+    requestAnimationFrame(() => {
+      if (albums.length > 0) {
+        const firstAlbumBtn = document.querySelector<HTMLElement>('[data-album-index="0"] button');
+        firstAlbumBtn?.focus({ preventScroll: true });
+      } else {
+        const el = document.querySelector<HTMLElement>('[data-item-index="0"]');
+        el?.focus({ preventScroll: true });
+      }
+    });
+  }, [isLoading, tracks.length, albums.length]);
+
+  // Cross-section keyboard nav: albums ↔ tracks + albums left/right
+  const focusedAlbumIdxRef = useRef(-1);
+  useEffect(() => {
+    if (albums.length === 0) return;
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      if (e.key === "ArrowLeft") {
+        const inAlbums = target.closest('[data-album-index]');
+        if (!inAlbums) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const current = focusedAlbumIdxRef.current >= 0 ? focusedAlbumIdxRef.current : 0;
+        const next = Math.max(0, current - 1);
+        const btn = document.querySelector<HTMLElement>(`[data-album-index="${next}"] button`);
+        btn?.focus({ preventScroll: true });
+        focusedAlbumIdxRef.current = next;
+        return;
+      }
+
+      if (e.key === "ArrowRight") {
+        const inAlbums = target.closest('[data-album-index]');
+        if (!inAlbums) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const current = focusedAlbumIdxRef.current >= 0 ? focusedAlbumIdxRef.current : 0;
+        const next = Math.min(albums.length - 1, current + 1);
+        const btn = document.querySelector<HTMLElement>(`[data-album-index="${next}"] button`);
+        btn?.focus({ preventScroll: true });
+        focusedAlbumIdxRef.current = next;
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        const firstTrack = target.closest('[data-item-index="0"]');
+        if (firstTrack && albums.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          const lastAlbumBtn = document.querySelector<HTMLElement>(
+            `[data-album-index="${albums.length - 1}"] button`,
+          );
+          lastAlbumBtn?.focus({ preventScroll: true });
+          focusedAlbumIdxRef.current = albums.length - 1;
+          const el = document.getElementById('artist-albums-section');
+          if (el) {
+            const scrollable = el.closest<HTMLElement>('[class*="overflow-y-auto"]');
+            scrollable?.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          return;
+        }
+      }
+
+      if (e.key === "ArrowDown") {
+        const inAlbums = target.closest('[data-album-index]');
+        const inTracks = target.closest('[data-item-index]');
+        if (inAlbums && !inTracks && tracks.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          const firstTrack = document.querySelector<HTMLElement>('[data-item-index="0"]');
+          firstTrack?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handler, { capture: true });
+    return () => document.removeEventListener("keydown", handler, { capture: true });
+  }, [albums.length, tracks.length]);
 
   const renderItem = useCallback(
     (track: Track, index: number) => {
@@ -267,6 +385,7 @@ export default memo(function ArtistDetailPage() {
     >
       <TrackList
         tracks={tracks}
+        autoFocus={false}
         headerContent={
           artist ? (
           <div className="flex gap-6 mb-8">
@@ -313,7 +432,7 @@ export default memo(function ArtistDetailPage() {
         headerExtras={
           <>
             {albums.length > 0 && (
-              <section className="pb-8">
+              <section id="artist-albums-section" className="pb-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                     Albums
@@ -340,8 +459,8 @@ export default memo(function ArtistDetailPage() {
                   ref={albumsScrollRef}
                   className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
                 >
-                  {albums.map((album) => (
-                    <div key={album.id} className="w-40 min-w-40">
+                  {albums.map((album, idx) => (
+                    <div key={album.id} className="w-40 min-w-40" data-album-index={idx}>
                       <CardItem
                         title={album.title}
                         subtitle={

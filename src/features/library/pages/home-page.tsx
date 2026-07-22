@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useCallback, useRef } from "react";
+import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import { useNavigationStore } from "@/stores/navigation-store";
 import {
   useAudioStore,
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { PlaylistEditDialog } from "@features/playlists/components/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useSectionKeyboardNav } from "@/hooks/use-section-keyboard-nav";
+import { useInteractionStore } from "@/stores/interaction-store";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { useContentStore } from "@features/library/store/content-store";
@@ -409,12 +410,27 @@ export default memo(function HomePage() {
           ]
         : []),
     ],
+    onFocusChange: (_sectionIdx: number, _itemIdx: number) => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-section-item="${_sectionIdx}:${_itemIdx}"]`,
+      );
+      el?.scrollIntoView({ block: "center", behavior: "auto" });
+    },
   });
 
   let nextSectionIdx = 0;
   const albumSectionIdx = displayAlbums.length > 0 ? nextSectionIdx++ : -1;
   const playlistSectionIdx = displayPlaylists.length > 0 ? nextSectionIdx++ : -1;
   const trackSectionIdx = recentTracks.length > 0 ? nextSectionIdx++ : -1;
+
+  useEffect(() => {
+    if (isEmpty) return;
+    if (useInteractionStore.getState().focusSource !== "keyboard") return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>('[data-section-item="0:0"]');
+      el?.focus({ preventScroll: true });
+    });
+  }, [isEmpty]);
 
   if (isLoading && albums.length === 0 && playlists.length === 0 && tracks.length === 0) {
     return null;

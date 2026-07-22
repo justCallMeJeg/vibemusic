@@ -1,4 +1,12 @@
-import { memo, useMemo, useRef, useState, useCallback, useDeferredValue } from "react";
+import {
+  memo,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+} from "react";
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
@@ -33,6 +41,8 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSelectionStore } from "@/stores/selection-store";
 
 import { formatDuration } from "@/lib/format";
 
@@ -53,8 +63,7 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue,
   addToPlaylist,
   playlists,
-  'data-item-index': dataItemIndex,
-  tabIndex,
+  dataItemIndex,
 }: {
   track: Track;
   status: string;
@@ -66,8 +75,7 @@ const SongListMenu = memo(function SongListMenu({
   addToQueue: (track: Track) => void;
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   playlists: { id: number; name: string }[];
-  'data-item-index'?: number;
-  tabIndex?: number;
+  dataItemIndex?: number;
 }) {
   const isCurrent = currentTrackId === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
@@ -100,7 +108,13 @@ const SongListMenu = memo(function SongListMenu({
         fallbackId={track.artist_id}
       />
     ),
-    [track.artist_names, track.artist_ids, track.artist_roles, track.artist, track.artist_id],
+    [
+      track.artist_names,
+      track.artist_ids,
+      track.artist_roles,
+      track.artist,
+      track.artist_id,
+    ],
   );
 
   const menuActions = useMemo(
@@ -122,7 +136,18 @@ const SongListMenu = memo(function SongListMenu({
         name: p.name,
       })),
     }),
-    [isCurrent, status, pause, resume, play, track, playNext, addToQueue, addToPlaylist, playlists],
+    [
+      isCurrent,
+      status,
+      pause,
+      resume,
+      play,
+      track,
+      playNext,
+      addToQueue,
+      addToPlaylist,
+      playlists,
+    ],
   );
 
   return (
@@ -137,7 +162,6 @@ const SongListMenu = memo(function SongListMenu({
       trailing={trailing}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
-      tabIndex={tabIndex}
     />
   );
 });
@@ -166,6 +190,7 @@ export default memo(function SongsPage() {
 
   // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Apply visual scroll mask using the same ref
   useScrollMask(24, parentRef);
@@ -184,10 +209,10 @@ export default memo(function SongsPage() {
           t.title.toLowerCase().includes(query) ||
           (t.artist && t.artist.toLowerCase().includes(query)) ||
           (t.album && t.album.toLowerCase().includes(query)),
-  );
-  };
+      );
+    }
 
-  // Sort
+    // Sort
     result.sort((a, b) => {
       let valA: string | number | undefined;
       let valB: string | number | undefined;
@@ -237,18 +262,77 @@ export default memo(function SongsPage() {
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = isPlayerVisible ? 156 : 24;
 
+  const SCOPE = "page:songs";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register(
+      "escape",
+      {
+        combo: { key: "Escape" },
+        handler: () => {
+          const sel = useSelectionStore.getState();
+          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
+            sel.clearSelection();
+            sel.disableCheckboxMode();
+          } else if (searchQuery) {
+            setSearchQuery("");
+          }
+        },
+        description: "Clear search or exit batch mode",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "ctrl+f",
+      {
+        combo: { key: "f", ctrl: true },
+        handler: () => {
+          searchInputRef.current?.focus();
+        },
+        description: "Focus search",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "ctrl+a",
+      {
+        combo: { key: "a", ctrl: true },
+        handler: () => useSelectionStore.getState().selectAll(),
+        description: "Select all visible tracks",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    return () => clearScope(SCOPE);
+  }, [searchQuery]);
+
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Songs">
         {/* Toolbar */}
         <div className="flex items-center gap-2">
-          <div className={cn("relative w-64", isLoading && "pointer-events-none opacity-50")}>
+          <div
+            className={cn(
+              "relative w-64",
+              isLoading && "pointer-events-none opacity-50",
+            )}
+          >
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Filter songs..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setSearchQuery("");
+                  e.preventDefault();
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
               autoComplete="off"
               disabled={isLoading}
             />
@@ -317,7 +401,10 @@ export default memo(function SongsPage() {
         className={cn(
           "flex-1 overflow-y-auto px-2 scroll-mask-y",
           !isLoading && displayedTracks.length === 0 && "flex flex-col gap-1",
-          !isLoading && displayedTracks.length === 0 && isPlayerVisible && "pb-player-bar",
+          !isLoading &&
+            displayedTracks.length === 0 &&
+            isPlayerVisible &&
+            "pb-player-bar",
         )}
       >
         {isLoading ? null : displayedTracks.length === 0 ? (
@@ -326,14 +413,22 @@ export default memo(function SongsPage() {
               icon={Search}
               title="No matches found"
               description={`No songs match "${searchQuery}"`}
-              action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+              action={
+                <Button variant="ghost" onClick={() => setSearchQuery("")}>
+                  Clear search
+                </Button>
+              }
             />
           ) : (
             <EmptyState
               icon={Music2}
               title="No songs found"
               description="Import music using the sidebar button to get started."
-              action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
+              action={
+                <Button onClick={() => setPage("settings")}>
+                  Add Music Folder
+                </Button>
+              }
             />
           )
         ) : (
@@ -384,7 +479,7 @@ export default memo(function SongsPage() {
                       addToQueue={addToQueue}
                       addToPlaylist={addToPlaylist}
                       playlists={playlists}
-                      data-item-index={virtualItem.index}
+                      dataItemIndex={virtualItem.index}
                     />
                   </div>
                 );

@@ -1,4 +1,4 @@
-import { useMemo, useState, memo, useCallback, useDeferredValue } from "react";
+import { useMemo, useState, memo, useCallback, useDeferredValue, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useContentStore } from "@features/library/store/content-store";
 import { useAudioStore } from "@/stores/audio-store";
@@ -16,6 +16,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/shared/page-layout";
+
+import { useKeybindsStore } from "@/stores/keybinds-store";
 
 const ArtistGridCard = memo(function ArtistGridCard({
   artist,
@@ -71,6 +73,24 @@ export default memo(function ArtistsPage() {
   const play = useAudioStore((s) => s.play);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const SCOPE = "page:artists";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => { if (searchQuery) setSearchQuery(""); },
+      description: "Clear search",
+    }, SCOPE);
+    register("ctrl+f", {
+      combo: { key: "f", ctrl: true },
+      handler: () => searchInputRef.current?.focus(),
+      description: "Focus search",
+      preventDefault: true,
+    }, SCOPE);
+    return () => clearScope(SCOPE);
+  }, [searchQuery]);
 
   const handlePlayArtist = useCallback(async (artistId: number, shuffle = false) => {
     try {
@@ -142,10 +162,12 @@ export default memo(function ArtistsPage() {
         <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             placeholder="Filter artists..."
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setSearchQuery(""); e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
             autoComplete="off"
             disabled={isLoading}
           />

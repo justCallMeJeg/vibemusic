@@ -17,6 +17,9 @@ import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailHero } from "@features/library/components/detail-hero";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 
 const AlbumTrackRow = memo(function AlbumTrackRow({
   track,
@@ -111,6 +114,58 @@ export default memo(function AlbumDetailPage() {
   const playNext = useAudioStore((s) => s.playNext);
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
+  const SCOPE = "page:album-detail";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register(
+      "escape",
+      {
+        combo: { key: "Escape" },
+        handler: () => goBack(),
+        description: "Return to albums",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "backspace",
+      {
+        combo: { key: "Backspace" },
+        handler: () => goBack(),
+        description: "Return to albums",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "escape-selection",
+      {
+        combo: { key: "Escape" },
+        handler: () => {
+          const sel = useSelectionStore.getState();
+          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
+            sel.clearSelection();
+            sel.disableCheckboxMode();
+          }
+        },
+        description: "Clear selection in track list",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "ctrl+a",
+      {
+        combo: { key: "a", ctrl: true },
+        handler: () => useSelectionStore.getState().selectAll(),
+        description: "Select all tracks",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    return () => clearScope(SCOPE);
+  }, [goBack]);
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -118,7 +173,9 @@ export default memo(function AlbumDetailPage() {
 
   const [album, setAlbum] = useState<Album | null>(() => {
     if (!albumId) return null;
-    return useContentStore.getState().albums.find((a) => a.id === albumId) ?? null;
+    return (
+      useContentStore.getState().albums.find((a) => a.id === albumId) ?? null
+    );
   });
 
   useEffect(() => {
@@ -162,6 +219,19 @@ export default memo(function AlbumDetailPage() {
     };
   }, [albumId, updateBreadcrumbLabel]);
 
+  useEffect(() => {
+    if (!isLoading && tracks.length > 0 && useInteractionStore.getState().focusSource === "keyboard") {
+      requestAnimationFrame(() => {
+        const firstItem = document.querySelector<HTMLElement>(
+          '[data-item-index="0"]',
+        );
+        if (firstItem && document.activeElement !== firstItem) {
+          firstItem.focus();
+        }
+      });
+    }
+  }, [isLoading, tracks.length]);
+
   const handlePlay = () => {
     if (tracks.length === 0) return;
     play(tracks[0], tracks);
@@ -177,7 +247,10 @@ export default memo(function AlbumDetailPage() {
     (track: Track, index: number) => {
       const menuActions = {
         onPlay: () => play(track, tracks),
-        onPause: currentTrack?.id === track.id && status === "playing" ? () => pause() : undefined,
+        onPause:
+          currentTrack?.id === track.id && status === "playing"
+            ? () => pause()
+            : undefined,
         onShuffle: () => {
           const shuffled = [...tracks].sort(() => Math.random() - 0.5);
           play(shuffled[0], shuffled);
@@ -206,7 +279,17 @@ export default memo(function AlbumDetailPage() {
         />
       );
     },
-    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openArtistDetail],
+    [
+      currentTrack?.id,
+      status,
+      tracks,
+      play,
+      pause,
+      resume,
+      addToQueue,
+      playNext,
+      openArtistDetail,
+    ],
   );
 
   if (!album && !isLoading) {
@@ -215,7 +298,11 @@ export default memo(function AlbumDetailPage() {
         icon={SearchX}
         title="Album not found"
         description="The album you're looking for doesn't exist or has been removed."
-        action={<Button variant="ghost" onClick={goBack}>Go back</Button>}
+        action={
+          <Button variant="ghost" onClick={goBack}>
+            Go back
+          </Button>
+        }
       />
     );
   }
@@ -223,7 +310,11 @@ export default memo(function AlbumDetailPage() {
   return (
     <DetailPageTemplate
       title={album?.title ?? ""}
-      subtitle={album?.album_artist_names?.length ? album.album_artist_names.join(", ") : (album?.artist_name ?? undefined)}
+      subtitle={
+        album?.album_artist_names?.length
+          ? album.album_artist_names.join(", ")
+          : (album?.artist_name ?? undefined)
+      }
       artworkPath={album?.artwork_path}
       onBack={goBack}
       onPlay={tracks.length > 0 ? handlePlay : undefined}
@@ -234,7 +325,11 @@ export default memo(function AlbumDetailPage() {
         headerContent={
           <DetailHero
             title={album?.title ?? ""}
-            subtitle={album?.album_artist_names?.length ? album.album_artist_names.join(", ") : (album?.artist_name ?? "Unknown Artist")}
+            subtitle={
+              album?.album_artist_names?.length
+                ? album.album_artist_names.join(", ")
+                : (album?.artist_name ?? "Unknown Artist")
+            }
             tertiaryText={album ? formatDuration(album.total_duration_ms) : ""}
             artworkPath={album?.artwork_path}
             placeholderType="track"

@@ -8,6 +8,7 @@ import {
   useGlobalKeydownListener,
 } from "@/hooks/use-keyboard-shortcuts";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
 import MainContent from "@features/shell/components/main-content";
@@ -87,6 +88,24 @@ export default function App() {
     const handler = (e: MouseEvent) => e.preventDefault();
     document.addEventListener("contextmenu", handler);
     return () => document.removeEventListener("contextmenu", handler);
+  }, []);
+
+  // Track interaction source for keyboard-aware focus behavior
+  useEffect(() => {
+    const onMouseDown = () => useInteractionStore.getState().setFocusSource("mouse");
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
+      const navKeys = ["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " ", "Home", "End"];
+      if (navKeys.includes(e.key)) {
+        useInteractionStore.getState().setFocusSource("keyboard");
+      }
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";

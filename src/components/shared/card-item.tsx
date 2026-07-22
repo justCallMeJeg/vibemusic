@@ -7,6 +7,7 @@ import { MediaContextMenu } from "@/components/shared/media-context-menu";
 import { Button } from "@/components/ui/button";
 import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
 import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
 
 const cardVariants = cva(
   "flex flex-col cursor-pointer transition-colors group relative",
@@ -82,6 +83,10 @@ export const CardItem = memo(function CardItem({
   const roving = useRovingTabindexContext();
   const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
   const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const focusSource = useInteractionStore((s) => s.focusSource);
+  const resolvedTabIndex = rovingTabIndex !== undefined
+    ? rovingTabIndex
+    : (dataItemIndex !== undefined && !!roving ? -1 : undefined);
   const isCircle = variant === "circle";
   const isCompact = variant === "compact";
 
@@ -122,10 +127,10 @@ export const CardItem = memo(function CardItem({
       data-item-index={dataItemIndex}
       className={cn(
         cardVariants({ variant, className }),
-        isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        isRovingActive && focusSource === "keyboard" && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
       )}
-      {...(rovingTabIndex !== undefined ? { tabIndex: rovingTabIndex } : {})}
+      {...(resolvedTabIndex !== undefined ? { tabIndex: resolvedTabIndex } : {})}
     >
       <div className={cn(imageVariants({ variant }), "overflow-visible")}>
         <div

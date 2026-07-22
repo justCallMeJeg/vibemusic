@@ -1,4 +1,11 @@
-import { useRef, useState, useEffect, useMemo, useCallback, isValidElement } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  isValidElement,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { debounce, cn } from "@/lib/utils";
@@ -6,6 +13,7 @@ import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
@@ -120,6 +128,7 @@ export function VirtualizedGrid<T>({
           containerRef={parentRef}
           itemCount={keyboardNav ? items.length : 0}
           enabled={!!keyboardNav}
+          autoFocus={keyboardNav && useInteractionStore.getState().focusSource === "keyboard"}
           direction="grid"
           columns={columns}
           onActivate={onItemActivate}

@@ -1,5 +1,13 @@
-import { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 interface RovingTabindexOptions {
   containerRef: React.RefObject<HTMLElement | null>;
@@ -14,13 +22,18 @@ interface RovingTabindexOptions {
 
 const DATA_INDEX_ATTR = "data-item-index";
 
-function getItemElement(container: HTMLElement, index: number): HTMLElement | null {
-  return container.querySelector<HTMLElement>(`[${DATA_INDEX_ATTR}="${index}"]`);
+function getItemElement(
+  container: HTMLElement,
+  index: number,
+): HTMLElement | null {
+  return container.querySelector<HTMLElement>(
+    `[${DATA_INDEX_ATTR}="${index}"]`,
+  );
 }
 
 function focusItem(container: HTMLElement, index: number): void {
   const el = getItemElement(container, index);
-  el?.focus();
+  el?.focus({ preventScroll: true });
 }
 
 export function useRovingTabindex({
@@ -55,7 +68,11 @@ export function useRovingTabindex({
 
   const activate = useCallback(
     (index: number) => {
-      if (index < 0 || index >= itemCount) return;
+      if (index < 0) {
+        setActiveIndex(-1);
+        return;
+      }
+      if (index >= itemCount) return;
       setActiveIndex(index);
       onIndexChangeRef.current?.(index);
       requestAnimationFrame(() => {
@@ -66,6 +83,9 @@ export function useRovingTabindex({
     },
     [itemCount, containerRef],
   );
+
+  const activateRef = useRef(activate);
+  activateRef.current = activate;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,7 +103,8 @@ export function useRovingTabindex({
         case "ArrowDown": {
           e.preventDefault();
           e.stopPropagation();
-          newIndex = current < 0 ? 0 : Math.min(current + 1, itemCountRef.current - 1);
+          newIndex =
+            current < 0 ? 0 : Math.min(current + 1, itemCountRef.current - 1);
           break;
         }
         case "ArrowUp": {
@@ -99,7 +120,10 @@ export function useRovingTabindex({
           const c = columnsRef.current;
           if (current < 0) {
             newIndex = 0;
-          } else if (current % c < c - 1 && current + 1 < itemCountRef.current) {
+          } else if (
+            current % c < c - 1 &&
+            current + 1 < itemCountRef.current
+          ) {
             newIndex = current + 1;
           }
           break;
@@ -145,24 +169,34 @@ export function useRovingTabindex({
       }
 
       if (newIndex !== current) {
-        activate(newIndex);
+        activateRef.current(newIndex);
       }
     };
 
     document.addEventListener("keydown", handler, { capture: true });
-    return () => document.removeEventListener("keydown", handler, { capture: true });
-  }, []);
+    return () =>
+      document.removeEventListener("keydown", handler, { capture: true });
+  }, [containerRef]);
 
   useEffect(() => {
     const handler = (e: FocusEvent) => {
       const container = containerRef.current;
       if (!container) return;
       const target = e.target as HTMLElement;
+      if (!container.contains(target)) {
+        logger.debug(`[roving] focusin: target outside container, skipping`, (target as HTMLElement).tagName, (target as HTMLElement).className?.slice(0, 40));
+        return;
+      }
       let el: HTMLElement | null = target;
       while (el && el !== container) {
         const index = el.getAttribute(DATA_INDEX_ATTR);
         if (index !== null) {
           const parsed = parseInt(index, 10);
+          const focusedTag = target.tagName;
+          const focusedText = target.textContent?.slice(0, 30);
+          const focusedClass = target.className?.slice(0, 40);
+          const hasFocus = document.activeElement === target;
+          logger.debug(`[roving] focusin: idx=${parsed}, current=${activeIndexRef.current}, target=${focusedTag}.${focusedClass}, text="${focusedText}", hasFocus=${hasFocus}, related=${(e.relatedTarget as HTMLElement)?.tagName}`);
           if (parsed !== activeIndexRef.current) {
             setActiveIndex(parsed);
             onIndexChangeRef.current?.(parsed);
@@ -174,8 +208,9 @@ export function useRovingTabindex({
     };
 
     document.addEventListener("focusin", handler, { capture: true });
-    return () => document.removeEventListener("focusin", handler, { capture: true });
-  }, []);
+    return () =>
+      document.removeEventListener("focusin", handler, { capture: true });
+  }, [containerRef]);
 
   useEffect(() => {
     if (itemCount === 0) {
@@ -206,7 +241,9 @@ interface RovingTabindexContextValue {
   setActiveIndex: (index: number) => void;
 }
 
-const RovingTabindexContext = createContext<RovingTabindexContextValue | null>(null);
+const RovingTabindexContext = createContext<RovingTabindexContextValue | null>(
+  null,
+);
 
 export function useRovingTabindexContext(): RovingTabindexContextValue | null {
   return useContext(RovingTabindexContext);
@@ -248,14 +285,25 @@ export function RovingTabindexProvider({
     onIndexChange,
   });
 
+  const contextValue = enabled ? roving : null;
+
   useEffect(() => {
+    logger.debug(`[roving] autoFocus effect: autoFocus=${autoFocus}, enabled=${enabled}, itemCount=${itemCount}, activeIndex=${roving.activeIndex}`);
     if (autoFocus && enabled && itemCount > 0 && roving.activeIndex < 0) {
+      logger.debug("[roving] autoFocus: calling setActiveIndex(0)");
       roving.setActiveIndex(0);
     }
-  }, [autoFocus, enabled, itemCount, roving.activeIndex, roving.setActiveIndex]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoFocus,
+    enabled,
+    itemCount,
+    roving.activeIndex,
+    roving.setActiveIndex,
+  ]);
 
   return (
-    <RovingTabindexContext.Provider value={roving}>
+    <RovingTabindexContext.Provider value={contextValue}>
       {children}
     </RovingTabindexContext.Provider>
   );

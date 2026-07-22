@@ -36,6 +36,8 @@ interface TrackListProps<T> {
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
+  /** Override default auto-focus behavior */
+  autoFocus?: boolean;
 }
 
 export function TrackList<T>({
@@ -54,6 +56,7 @@ export function TrackList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
+  autoFocus,
 }: TrackListProps<T>) {
   const onScroll = useDetailScroll();
 
@@ -84,6 +87,7 @@ export function TrackList<T>({
         keyboardNav={keyboardNav}
         onItemActivate={onItemActivate}
         onItemActivateSecondary={onItemActivateSecondary}
+        autoFocus={autoFocus}
       />
     );
   }
@@ -100,6 +104,7 @@ export function TrackList<T>({
       keyboardNav={keyboardNav}
       onItemActivate={onItemActivate}
       onItemActivateSecondary={onItemActivateSecondary}
+      autoFocus={autoFocus}
     />
   );
 }

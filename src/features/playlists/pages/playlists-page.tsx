@@ -1,4 +1,12 @@
-import { useState, useMemo, memo, useCallback, useDeferredValue } from "react";
+import {
+  useState,
+  useMemo,
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useRef,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -22,6 +30,8 @@ import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { Input } from "@/components/ui/input";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
+
+import { useKeybindsStore } from "@/stores/keybinds-store";
 
 const PlaylistGridCard = memo(function PlaylistGridCard({
   playlist,
@@ -76,7 +86,9 @@ export default memo(function PlaylistsPage() {
   const deletePlaylist = usePlaylistStore((s) => s.deletePlaylist);
 
   const playlistsSortKey = useSettingsStore((s) => s.playlistsSortKey);
-  const playlistsSortDirection = useSettingsStore((s) => s.playlistsSortDirection);
+  const playlistsSortDirection = useSettingsStore(
+    (s) => s.playlistsSortDirection,
+  );
   const setPlaylistsSort = useSettingsStore((s) => s.setPlaylistsSort);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,7 +135,7 @@ export default memo(function PlaylistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(
-    null
+    null,
   );
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -133,32 +145,90 @@ export default memo(function PlaylistsPage() {
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
 
-  const handlePlayPlaylist = useCallback(async (playlistId: number, shuffle = false) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) { toast.error("Playlist is empty"); return; }
-      const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
-      play(queue[0], queue);
-    } catch (e) { logger.error("Failed to play playlist", e); }
-  }, [play]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const SCOPE = "page:playlists";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register(
+      "escape",
+      {
+        combo: { key: "Escape" },
+        handler: () => {
+          if (searchQuery) setSearchQuery("");
+        },
+        description: "Clear search",
+      },
+      SCOPE,
+    );
+    register(
+      "ctrl+f",
+      {
+        combo: { key: "f", ctrl: true },
+        handler: () => searchInputRef.current?.focus(),
+        description: "Focus search",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "n",
+      {
+        combo: { key: "n" },
+        handler: () => setIsDialogOpen(true),
+        description: "Create new playlist",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    return () => clearScope(SCOPE);
+  }, [searchQuery]);
 
-  const handlePlayNext = useCallback(async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-      [...tracks].reverse().forEach((track) => playNext(track));
-      toast.success("Playing playlist next");
-    } catch (e) { logger.error("Failed to play playlist next", e); }
-  }, [playNext]);
+  const handlePlayPlaylist = useCallback(
+    async (playlistId: number, shuffle = false) => {
+      try {
+        const tracks = await getPlaylistTracks(playlistId);
+        if (tracks.length === 0) {
+          toast.error("Playlist is empty");
+          return;
+        }
+        const queue = shuffle
+          ? [...tracks].sort(() => Math.random() - 0.5)
+          : tracks;
+        play(queue[0], queue);
+      } catch (e) {
+        logger.error("Failed to play playlist", e);
+      }
+    },
+    [play],
+  );
 
-  const handleAddToQueue = useCallback(async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-      tracks.forEach((track) => addToQueue(track));
-      toast.success("Added playlist to queue");
-    } catch (e) { logger.error("Failed to add playlist to queue", e); }
-  }, [addToQueue]);
+  const handlePlayNext = useCallback(
+    async (playlistId: number) => {
+      try {
+        const tracks = await getPlaylistTracks(playlistId);
+        if (tracks.length === 0) return;
+        [...tracks].reverse().forEach((track) => playNext(track));
+        toast.success("Playing playlist next");
+      } catch (e) {
+        logger.error("Failed to play playlist next", e);
+      }
+    },
+    [playNext],
+  );
+
+  const handleAddToQueue = useCallback(
+    async (playlistId: number) => {
+      try {
+        const tracks = await getPlaylistTracks(playlistId);
+        if (tracks.length === 0) return;
+        tracks.forEach((track) => addToQueue(track));
+        toast.success("Added playlist to queue");
+      } catch (e) {
+        logger.error("Failed to add playlist to queue", e);
+      }
+    },
+    [addToQueue],
+  );
 
   const confirmDelete = async () => {
     if (!playlistToDelete) return;
@@ -184,29 +254,42 @@ export default memo(function PlaylistsPage() {
       <PageHeader title="Playlists">
         <div className="flex items-center justify-center gap-4">
           <div className="flex items-center">
-            <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
+            <div
+              className={cn(
+                "relative w-64 mr-2",
+                isLoading && "pointer-events-none opacity-50",
+              )}
+            >
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 placeholder="Filter playlists..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearchQuery("");
+                    e.preventDefault();
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 autoComplete="off"
                 disabled={isLoading}
               />
             </div>
             <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
               <SortDropdown
-              sortKey={playlistsSortKey}
-              sortDirection={playlistsSortDirection}
-              onSortChange={(k, d) => setPlaylistsSort(k, d)}
-              options={[
-                { label: "Name", value: "name" },
-                { label: "Track Count", value: "track_count" },
-                { label: "Date Created", value: "created_at" },
-              ]}
-            />
-          </div>
+                sortKey={playlistsSortKey}
+                sortDirection={playlistsSortDirection}
+                onSortChange={(k, d) => setPlaylistsSort(k, d)}
+                options={[
+                  { label: "Name", value: "name" },
+                  { label: "Track Count", value: "track_count" },
+                  { label: "Date Created", value: "created_at" },
+                ]}
+              />
+            </div>
           </div>
           <Button className="gap-2" onClick={() => setIsDialogOpen(true)}>
             <Plus size={16} />
@@ -249,7 +332,7 @@ export default memo(function PlaylistsPage() {
               onAddToQueue={handleAddToQueue}
               onEdit={setEditingPlaylist}
               onDelete={handleDeleteRequest}
-                dataItemIndex={index}
+              dataItemIndex={index}
             />
           )}
           itemHeight={220}
@@ -259,14 +342,22 @@ export default memo(function PlaylistsPage() {
                 icon={Search}
                 title="No matches found"
                 description={`No playlists match "${searchQuery}"`}
-                action={<Button variant="ghost" onClick={() => setSearchQuery("")}>Clear search</Button>}
+                action={
+                  <Button variant="ghost" onClick={() => setSearchQuery("")}>
+                    Clear search
+                  </Button>
+                }
               />
             ) : (
               <EmptyState
                 icon={ListMusic}
                 title="No playlists created"
                 description="Create your first playlist to organize your music."
-                action={<Button onClick={() => setIsDialogOpen(true)}>Create Playlist</Button>}
+                action={
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    Create Playlist
+                  </Button>
+                }
               />
             )
           }

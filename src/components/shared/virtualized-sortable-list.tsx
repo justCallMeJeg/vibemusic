@@ -5,6 +5,7 @@ import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { ListMusic } from "lucide-react";
 import {
   DndContext,
@@ -38,6 +39,8 @@ interface VirtualizedSortableListProps<T> {
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
+  /** Override default auto-focus behavior */
+  autoFocus?: boolean;
 }
 
 export function VirtualizedSortableList<T>({
@@ -54,8 +57,10 @@ export function VirtualizedSortableList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
+  autoFocus,
 }: VirtualizedSortableListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
@@ -80,11 +85,12 @@ export function VirtualizedSortableList<T>({
     overscan: 5,
   });
 
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    ...(keyboardNav ? [] : [keyboardSensor]),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -113,7 +119,7 @@ export function VirtualizedSortableList<T>({
           flexDirection: "column",
         }}
       >
-        {header && <div>{header}</div>}
+        {header && <div ref={headerRef}>{header}</div>}
 
         {items.length === 0 ? (
           emptyState || <EmptyPanel icon={ListMusic} title="No items" />
@@ -131,12 +137,18 @@ export function VirtualizedSortableList<T>({
                 containerRef={parentRef}
                 itemCount={keyboardNav ? items.length : 0}
                 enabled={!!keyboardNav}
+                autoFocus={autoFocus ?? (keyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
                 direction="vertical"
                 onActivate={onItemActivate}
                 onActivateSecondary={onItemActivateSecondary}
                 onIndexChange={(index: number) => {
                   if (keyboardNav && index >= 0) {
-                    virtualizer.scrollToIndex(index, { align: "center" });
+                    const container = parentRef.current;
+                    if (!container) return;
+                    const headerHeight = headerRef.current?.offsetHeight ?? 0;
+                    const itemOffset = index * itemHeight + headerHeight;
+                    const viewportHeight = container.clientHeight;
+                    container.scrollTop = Math.max(0, itemOffset - viewportHeight / 2 + itemHeight / 2);
                   }
                 }}
               >

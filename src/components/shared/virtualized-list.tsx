@@ -5,6 +5,7 @@ import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
@@ -24,6 +25,8 @@ interface VirtualizedListProps<T> {
   onItemActivate?: (index: number) => void;
   /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
+  /** Override default auto-focus behavior */
+  autoFocus?: boolean;
 }
 
 export function VirtualizedList<T>({
@@ -39,6 +42,7 @@ export function VirtualizedList<T>({
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
+  autoFocus,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -83,13 +87,16 @@ export function VirtualizedList<T>({
       onScroll={onScroll}
       role="list"
       className={`flex-1 overflow-y-auto ${className} scroll-mask-y ${
-        items.length === 0 && !hasHeader && isPlayerVisible ? "pb-player-bar" : ""
+        items.length === 0 && !hasHeader && isPlayerVisible
+          ? "pb-player-bar"
+          : ""
       }`}
     >
       <RovingTabindexProvider
         containerRef={parentRef}
         itemCount={keyboardNav ? items.length : 0}
         enabled={!!keyboardNav}
+        autoFocus={autoFocus ?? (keyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
         direction="vertical"
         onActivate={onItemActivate}
         onActivateSecondary={onItemActivateSecondary}
@@ -108,7 +115,9 @@ export function VirtualizedList<T>({
           }}
         >
           {items.length === 0 && !hasHeader
-            ? emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
+            ? emptyState || (
+                <EmptyPanel icon={ListMusic} title="No items found" />
+              )
             : virtualizer.getVirtualItems().map((virtualRow) => {
                 const isHeaderRow = hasHeader && virtualRow.index === 0;
                 const itemIndex = hasHeader
@@ -121,9 +130,7 @@ export function VirtualizedList<T>({
                     key={virtualRow.index}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
-                    className={cn(
-                      "absolute top-0 left-0 w-full",
-                    )}
+                    className={cn("absolute top-0 left-0 w-full")}
                     style={{
                       position: "absolute",
                       top: 0,
@@ -134,8 +141,12 @@ export function VirtualizedList<T>({
                   >
                     {isHeaderRow
                       ? header
-                      : items[itemIndex] && (() => {
-                          const rendered = renderItem(items[itemIndex], itemIndex);
+                      : items[itemIndex] &&
+                        (() => {
+                          const rendered = renderItem(
+                            items[itemIndex],
+                            itemIndex,
+                          );
                           if (!isValidElement(rendered)) return rendered;
                           return rendered;
                         })()}

@@ -9,6 +9,9 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 import { SearchX, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -23,7 +26,6 @@ import { DetailPageTemplate } from "@/components/shared/templates/detail-page-te
 import { TrackList } from "@/components/shared/templates/track-list";
 import { PlaylistHero } from "@features/playlists/components/playlist-hero";
 
-
 import { SortableTrackItem } from "@features/playlists/components/sortable-track-item";
 
 export default memo(function PlaylistDetailPage() {
@@ -33,12 +35,15 @@ export default memo(function PlaylistDetailPage() {
     (s) => s.updateBreadcrumbLabel,
   );
   const play = useAudioStore((s) => s.play);
+  const playNext = useAudioStore((s) => s.playNext);
   const reorderPlaylist = usePlaylistStore((s) => s.reorderPlaylist);
   const refreshPlaylists = usePlaylistStore((s) => s.refreshPlaylists);
   const [playlist, setPlaylist] = useState<Playlist | null>(() => {
     const id = detailView?.type === "playlist" ? detailView.id : null;
     if (!id) return null;
-    return usePlaylistStore.getState().playlists.find((p) => p.id === id) ?? null;
+    return (
+      usePlaylistStore.getState().playlists.find((p) => p.id === id) ?? null
+    );
   });
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +53,50 @@ export default memo(function PlaylistDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const playlistId = detailView?.type === "playlist" ? detailView.id : null;
+
+  const SCOPE = "page:playlist-detail";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register(
+      "escape",
+      {
+        combo: { key: "Escape" },
+        handler: () => {
+          const sel = useSelectionStore.getState();
+          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
+            sel.clearSelection();
+            sel.disableCheckboxMode();
+          } else {
+            goBack();
+          }
+        },
+        description: "Clear selection or return to playlists",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "backspace",
+      {
+        combo: { key: "Backspace" },
+        handler: () => goBack(),
+        description: "Return to playlists",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    register(
+      "ctrl+a",
+      {
+        combo: { key: "a", ctrl: true },
+        handler: () => useSelectionStore.getState().selectAll(),
+        description: "Select all tracks",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
+    return () => clearScope(SCOPE);
+  }, [goBack]);
 
   const loadData = useCallback(async () => {
     if (!playlistId) return;
@@ -74,6 +123,19 @@ export default memo(function PlaylistDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!isLoading && tracks.length > 0 && useInteractionStore.getState().focusSource === "keyboard") {
+      requestAnimationFrame(() => {
+        const firstItem = document.querySelector<HTMLElement>(
+          '[data-item-index="0"]',
+        );
+        if (firstItem && document.activeElement !== firstItem) {
+          firstItem.focus();
+        }
+      });
+    }
+  }, [isLoading, tracks.length]);
 
   const handlePlay = () => {
     if (tracks.length > 0) {
@@ -105,52 +167,68 @@ export default memo(function PlaylistDetailPage() {
     }
   };
 
-  const handleRemoveTrack = useCallback(async (trackId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!playlistId) return;
+  const handleRemoveTrack = useCallback(
+    async (trackId: number, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!playlistId) return;
 
-    try {
-      await removeTrackFromPlaylist(playlistId, trackId);
-      toast.success("Track removed");
-      const newTracks = tracks.filter((t) => t.id !== trackId);
-      setTracks(newTracks);
-    } catch (e) {
-      logger.error("Failed to remove track", e);
-      toast.error("Failed to remove track");
-    }
-  }, [playlistId, tracks]);
-
-  const totalDurationMs = useMemo(() => tracks.reduce((acc, t) => acc + t.duration_ms, 0), [tracks]);
-  const existingTrackIds = useMemo(() => new Set(tracks.map((t) => t.id)), [tracks]);
-
-  const handleReorder = useCallback(async (activeId: string | number, overId: string | number) => {
-    let oldIdx = -1, newIdx = -1;
-    for (let i = 0; i < tracks.length; i++) {
-      if (tracks[i].id === activeId) oldIdx = i;
-      if (tracks[i].id === overId) newIdx = i;
-    }
-    if (oldIdx === -1 || newIdx === -1) return;
-    const newOrder = arrayMove(tracks, oldIdx, newIdx);
-    setTracks(newOrder);
-    const trackIds = newOrder.map((t) => t.id);
-    if (playlistId) {
       try {
-        await reorderPlaylist(playlistId, trackIds);
-      } catch {
-        loadData();
+        await removeTrackFromPlaylist(playlistId, trackId);
+        toast.success("Track removed");
+        const newTracks = tracks.filter((t) => t.id !== trackId);
+        setTracks(newTracks);
+      } catch (e) {
+        logger.error("Failed to remove track", e);
+        toast.error("Failed to remove track");
       }
-    }
-  }, [tracks, playlistId, reorderPlaylist, loadData]);
+    },
+    [playlistId, tracks],
+  );
 
-  const handleRenderItem = useCallback((track: Track, index: number) => (
-    <SortableTrackItem
-      key={track.id}
-      track={track}
-      index={index}
-      dataItemIndex={index}
-      onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
-    />
-  ), [handleRemoveTrack]);
+  const totalDurationMs = useMemo(
+    () => tracks.reduce((acc, t) => acc + t.duration_ms, 0),
+    [tracks],
+  );
+  const existingTrackIds = useMemo(
+    () => new Set(tracks.map((t) => t.id)),
+    [tracks],
+  );
+
+  const handleReorder = useCallback(
+    async (activeId: string | number, overId: string | number) => {
+      let oldIdx = -1,
+        newIdx = -1;
+      for (let i = 0; i < tracks.length; i++) {
+        if (tracks[i].id === activeId) oldIdx = i;
+        if (tracks[i].id === overId) newIdx = i;
+      }
+      if (oldIdx === -1 || newIdx === -1) return;
+      const newOrder = arrayMove(tracks, oldIdx, newIdx);
+      setTracks(newOrder);
+      const trackIds = newOrder.map((t) => t.id);
+      if (playlistId) {
+        try {
+          await reorderPlaylist(playlistId, trackIds);
+        } catch {
+          loadData();
+        }
+      }
+    },
+    [tracks, playlistId, reorderPlaylist, loadData],
+  );
+
+  const handleRenderItem = useCallback(
+    (track: Track, index: number) => (
+      <SortableTrackItem
+        key={track.id}
+        track={track}
+        index={index}
+        dataItemIndex={index}
+        onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
+      />
+    ),
+    [handleRemoveTrack],
+  );
 
   if (!playlist && !isLoading) {
     return (
@@ -158,7 +236,11 @@ export default memo(function PlaylistDetailPage() {
         icon={SearchX}
         title="Playlist not found"
         description="The playlist you're looking for doesn't exist or has been removed."
-        action={<Button variant="ghost" onClick={goBack}>Go back</Button>}
+        action={
+          <Button variant="ghost" onClick={goBack}>
+            Go back
+          </Button>
+        }
       />
     );
   }
@@ -177,6 +259,15 @@ export default memo(function PlaylistDetailPage() {
         getItemId={(item: Track) => item.id}
         onReorder={handleReorder}
         renderItem={handleRenderItem}
+        keyboardNav
+        onItemActivate={(index) => {
+          const track = tracks[index];
+          if (track) play(track, tracks);
+        }}
+        onItemActivateSecondary={(index) => {
+          const track = tracks[index];
+          if (track) playNext(track);
+        }}
         trackListHeaderProps={{
           showDuration: true,
           indexWidth: "w-8",
@@ -221,14 +312,14 @@ export default memo(function PlaylistDetailPage() {
             />
 
             {playlist && (
-            <PlaylistEditDialog
-              playlist={playlist}
-              open={isEditOpen}
-              onOpenChange={(open) => {
-                setIsEditOpen(open);
-                if (!open) loadData();
-              }}
-            />
+              <PlaylistEditDialog
+                playlist={playlist}
+                open={isEditOpen}
+                onOpenChange={(open) => {
+                  setIsEditOpen(open);
+                  if (!open) loadData();
+                }}
+              />
             )}
 
             {playlistId && (

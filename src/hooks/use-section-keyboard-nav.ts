@@ -14,6 +14,7 @@ interface UseSectionKeyboardNavOptions {
   containerRef: React.RefObject<HTMLElement | null>;
   sections: SectionNavSection[];
   enabled?: boolean;
+  onFocusChange?: (sectionIndex: number, itemIndex: number) => void;
 }
 
 interface UseSectionKeyboardNavResult {
@@ -56,6 +57,7 @@ export function useSectionKeyboardNav({
   containerRef,
   sections,
   enabled = true,
+  onFocusChange,
 }: UseSectionKeyboardNavOptions): UseSectionKeyboardNavResult {
   const [activeSection, setActiveSection] = useState(-1);
   const [activeItemIndex, setActiveItemIndex] = useState(-1);
@@ -68,6 +70,8 @@ export function useSectionKeyboardNav({
   enabledRef.current = enabled;
   const sectionsRef = useRef(sections);
   sectionsRef.current = sections;
+  const onFocusChangeRef = useRef(onFocusChange);
+  onFocusChangeRef.current = onFocusChange;
 
   const focusItem = useCallback(
     (sectionIndex: number, itemIndex: number) => {
@@ -75,8 +79,9 @@ export function useSectionKeyboardNav({
       setActiveItemIndex(itemIndex);
       requestAnimationFrame(() => {
         if (containerRef.current) {
+          onFocusChangeRef.current?.(sectionIndex, itemIndex);
           const el = getSectionItemElement(containerRef.current, sectionIndex, itemIndex);
-          el?.focus();
+          el?.focus({ preventScroll: true });
         }
       });
     },

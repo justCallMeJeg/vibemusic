@@ -1,9 +1,14 @@
 import { useEffect } from "react";
 import { useKeybindsStore, type KeybindEntry } from "@/stores/keybinds-store";
-import { useNavigationStore, type Page, PAGE_LABELS } from "@/stores/navigation-store";
+import {
+  useNavigationStore,
+  type Page,
+  PAGE_LABELS,
+} from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { useSettingsStore } from "@/stores/settings-store";
+import { useInteractionStore } from "@/stores/interaction-store";
 
 const SCOPE = "app";
 
@@ -34,7 +39,10 @@ export function useKeyboardShortcuts() {
         `nav-${page}`,
         {
           combo: { key, ctrl: true },
-          handler: () => setPage(page as Page),
+          handler: () => {
+            useInteractionStore.getState().setFocusSource("keyboard");
+            setPage(page as Page);
+          },
           description: `Go to ${PAGE_LABELS[page as Page]}`,
           preventDefault: true,
         },
@@ -162,13 +170,61 @@ export function useKeyboardShortcuts() {
       },
     ]);
 
+    // Context menu key
+    entries.push([
+      "context-menu",
+      {
+        combo: { key: "F10", shift: true },
+        handler: () => {
+          const el = document.activeElement;
+          if (el && el.hasAttribute("data-item-index")) {
+            const rect = el.getBoundingClientRect();
+            el.dispatchEvent(
+              new MouseEvent("contextmenu", {
+                bubbles: true,
+                cancelable: true,
+                clientX: rect.left,
+                clientY: rect.top + rect.height / 2,
+              }),
+            );
+          }
+        },
+        description: "Open context menu for focused item",
+        preventDefault: true,
+      },
+    ]);
+    entries.push([
+      "context-menu-key",
+      {
+        combo: { key: "ContextMenu" },
+        handler: () => {
+          const el = document.activeElement;
+          if (el && el.hasAttribute("data-item-index")) {
+            const rect = el.getBoundingClientRect();
+            el.dispatchEvent(
+              new MouseEvent("contextmenu", {
+                bubbles: true,
+                cancelable: true,
+                clientX: rect.left,
+                clientY: rect.top + rect.height / 2,
+              }),
+            );
+          }
+        },
+        description: "Open context menu for focused item",
+        preventDefault: true,
+      },
+    ]);
+
     // System: Quit
     entries.push([
       "quit",
       {
         combo: { key: "q", ctrl: true, shift: true },
         handler: () => {
-          import("@tauri-apps/api/core").then(({ invoke }) => invoke("quit_app"));
+          import("@tauri-apps/api/core").then(({ invoke }) =>
+            invoke("quit_app"),
+          );
         },
         description: "Quit app",
         preventDefault: true,
@@ -187,7 +243,9 @@ export function useKeyboardShortcuts() {
   }, [register, unregister]);
 
   // Focus region shortcuts — only registered when feature is enabled
-  const focusRegionsOn = useSettingsStore((s) => s.experimentalFeatures.focusRegions);
+  const focusRegionsOn = useSettingsStore(
+    (s) => s.experimentalFeatures.focusRegions,
+  );
 
   useEffect(() => {
     if (!focusRegionsOn) return;
@@ -218,9 +276,14 @@ export function useKeyboardShortcuts() {
         {
           combo: { key: "l", ctrl: true },
           handler: () => {
+            useInteractionStore.getState().setFocusSource("keyboard");
             useFocusRegionStore.getState().focusRegion("main");
             setTimeout(() => {
-              const firstItem = document.querySelector<HTMLElement>('[data-region="main"] [data-item-index="0"]');
+              const mainRegion = document.querySelector('[data-region="main"]');
+              if (!mainRegion) return;
+              const firstItem =
+                mainRegion.querySelector<HTMLElement>('[data-album-index="0"] button') ||
+                mainRegion.querySelector<HTMLElement>('[data-item-index="0"]');
               firstItem?.focus();
             }, 0);
           },
@@ -249,7 +312,11 @@ export function useGlobalKeydownListener() {
     const handler = (e: KeyboardEvent) => {
       // Skip if user is typing in an input
       const target = e.target as HTMLElement;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable) {
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable
+      ) {
         return;
       }
 

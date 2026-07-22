@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useCurrentPage } from "@/stores/navigation-store";
+import { useCurrentPage, useGoBack } from "@/stores/navigation-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { cn } from "@/lib/utils";
+import { useKeybindsStore } from "@/stores/keybinds-store";
 import { SettingsNav, type SettingsSectionId } from "./settings/settings-nav";
 import { SettingsGeneral } from "./settings/settings-general";
 import { SettingsAppearance } from "./settings/settings-appearance";
@@ -72,6 +73,19 @@ export default function SettingsPage() {
       }
     }
   }, [currentPage]);
+
+  const goBack = useGoBack();
+  const SCOPE = "page:settings";
+  useEffect(() => {
+    const { register, clearScope } = useKeybindsStore.getState();
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => goBack(),
+      description: "Return to previous page",
+      preventDefault: true,
+    }, SCOPE);
+    return () => clearScope(SCOPE);
+  }, [goBack]);
 
   const handleNavigate = (id: SettingsSectionId) => {
     const el = sectionRefs.current.get(id);
