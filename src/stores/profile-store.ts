@@ -124,6 +124,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         // Fetch library for the active profile on app startup
         if (activeProfileId) {
           await useContentStore.getState().fetchContent();
+          await usePlaylistStore.getState().fetchPlaylists();
         }
       }
     } catch (e) {
