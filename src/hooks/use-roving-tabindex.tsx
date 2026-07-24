@@ -212,7 +212,7 @@ export function useRovingTabindex({
       document.removeEventListener("focusin", handler, { capture: true });
   }, [containerRef]);
 
-  // Reset activeIndex when focus exits the container (e.g., cross-column nav, tab to next region)
+  // Reset activeIndex when focus exits the container (cross-column nav, tab between regions)
   useEffect(() => {
     const handler = (e: FocusEvent) => {
       const container = containerRef.current;
@@ -313,7 +313,6 @@ export function RovingTabindexProvider({
     autoFocus,
     enabled,
     itemCount,
-    roving.activeIndex,
     roving.setActiveIndex,
   ]);
 

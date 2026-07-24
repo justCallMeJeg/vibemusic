@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useCallback } from "react";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useStatsStore, type TimeRange } from "@/stores/stats-store";
 import { useNavigationStore, useCurrentPage, useGoBack } from "@/stores/navigation-store";
@@ -143,6 +143,13 @@ export default memo(function InsightsPage() {
   const tracksRef = useRef<HTMLDivElement>(null);
   const artistsRef = useRef<HTMLDivElement>(null);
   const albumsRef = useRef<HTMLDivElement>(null);
+  const hasInteractedRef = useRef(false);
+
+  const scrollItemIntoView = useCallback((container: HTMLElement | null, index: number) => {
+    if (!container || !hasInteractedRef.current) return;
+    const item = container.querySelector<HTMLElement>(`[data-item-index="${index}"]`);
+    item?.scrollIntoView({ block: "center" });
+  }, []);
 
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
@@ -157,6 +164,7 @@ export default memo(function InsightsPage() {
 
   useEffect(() => {
     if (currentPage === "insights") {
+      insightsScrollRef.current?.scrollTo(0, 0);
       fetchStats();
     }
   }, [currentPage, fetchStats]);
@@ -199,27 +207,35 @@ export default memo(function InsightsPage() {
         if (tracksRef.current?.contains(active)) {
           e.preventDefault();
           e.stopPropagation();
+          hasInteractedRef.current = true;
           const first = artistsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
-          first?.focus();
+          first?.focus({ preventScroll: true });
+          first?.scrollIntoView({ block: "center" });
         } else if (artistsRef.current?.contains(active)) {
           e.preventDefault();
           e.stopPropagation();
+          hasInteractedRef.current = true;
           const first = albumsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
-          first?.focus();
+          first?.focus({ preventScroll: true });
+          first?.scrollIntoView({ block: "center" });
         }
       } else {
         if (albumsRef.current?.contains(active)) {
           e.preventDefault();
           e.stopPropagation();
+          hasInteractedRef.current = true;
           const last = rankedArtists.length - 1;
           const target = artistsRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
-          target?.focus();
+          target?.focus({ preventScroll: true });
+          target?.scrollIntoView({ block: "center" });
         } else if (artistsRef.current?.contains(active)) {
           e.preventDefault();
           e.stopPropagation();
+          hasInteractedRef.current = true;
           const last = rankedTracks.length - 1;
           const target = tracksRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
-          target?.focus();
+          target?.focus({ preventScroll: true });
+          target?.scrollIntoView({ block: "center" });
         }
       }
     };
@@ -347,6 +363,7 @@ export default memo(function InsightsPage() {
                           });
                         }
                       }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(tracksRef.current, idx); hasInteractedRef.current = true; }}
                     >
                       <div ref={tracksRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
                         <h3 className="text-sm font-bold mb-2 px-1">Top Tracks</h3>
@@ -429,6 +446,7 @@ export default memo(function InsightsPage() {
                           }
                         }
                       }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(artistsRef.current, idx); hasInteractedRef.current = true; }}
                     >
                       <div ref={artistsRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
                         <h3 className="text-sm font-bold mb-2 px-1">Top Artists</h3>
@@ -506,6 +524,7 @@ export default memo(function InsightsPage() {
                           }
                         }
                       }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(albumsRef.current, idx); hasInteractedRef.current = true; }}
                     >
                       <div ref={albumsRef} className="bg-card/30 border border-border/50 rounded-xl p-3">
                         <h3 className="text-sm font-bold mb-2 px-1">Top Albums</h3>
