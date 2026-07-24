@@ -18,30 +18,45 @@ export function SettingsExperimental() {
       description="Work-in-progress features. Disabled by default and subject to change or removal."
     >
       <SettingsGroup
-        title="Focus Region Navigation"
-        description="Tab and Shift+Tab cycle between Sidebar, Main Content, Player, and Side Panel regions. Ctrl+L jumps to main content."
+        title="Keyboard Navigation"
+        description="Arrow keys in lists and grids, app-wide shortcuts (Ctrl+1-8, Space, etc.), section and cross-column navigation, and context menu key. Disable to restore pure mouse/Tab interaction."
         headerAction={
           <Switch
-            checked={experimentalFeatures.focusRegions}
+            checked={experimentalFeatures.keyboardNav}
             onCheckedChange={(checked) =>
-              setExperimentalFeature("focusRegions", checked)
+              setExperimentalFeature("keyboardNav", checked)
             }
           />
         }
       >
-        {experimentalFeatures.focusRegions && (
-          <SettingsRow
-            label="Show Focus Region Indicator"
-            description="Display a subtle outline on the currently active focus region."
-            variant="nested"
+        {experimentalFeatures.keyboardNav && (
+          <SettingsGroup
+            title="Focus Region Navigation"
+            description="Tab and Shift+Tab cycle between Sidebar, Main Content, Player, and Side Panel regions. Ctrl+L jumps to main content."
+            headerAction={
+              <Switch
+                checked={experimentalFeatures.focusRegions}
+                onCheckedChange={(checked) =>
+                  setExperimentalFeature("focusRegions", checked)
+                }
+              />
+            }
           >
-            <Switch
-              checked={experimentalFeatures.showFocusIndicator}
-              onCheckedChange={(checked) =>
-                setExperimentalFeature("showFocusIndicator", checked)
-              }
-            />
-          </SettingsRow>
+            {experimentalFeatures.focusRegions && (
+              <SettingsRow
+                label="Show Focus Region Indicator"
+                description="Display a subtle outline on the currently active focus region."
+                variant="nested"
+              >
+                <Switch
+                  checked={experimentalFeatures.showFocusIndicator}
+                  onCheckedChange={(checked) =>
+                    setExperimentalFeature("showFocusIndicator", checked)
+                  }
+                />
+              </SettingsRow>
+            )}
+          </SettingsGroup>
         )}
       </SettingsGroup>
     </SettingsSection>

@@ -1,5 +1,6 @@
 import { useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings-store";
 import { Button } from "@/components/ui/button";
 import {
   Settings,
@@ -32,6 +33,7 @@ export function SettingsNav({ activeSection, onNavigate }: SettingsNavProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
     const nav = navRef.current;
     if (!nav) return;
     const buttons = Array.from(nav.querySelectorAll<HTMLButtonElement>("button"));

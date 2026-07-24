@@ -21,6 +21,7 @@ export interface SidebarItem {
 }
 
 export interface ExperimentalFeatures {
+  keyboardNav: boolean;
   focusRegions: boolean;
   showFocusIndicator: boolean;
 }
@@ -158,6 +159,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     miniPlayerPosition: "bottom-right",
     enableMediaKeys: true,
     experimentalFeatures: {
+      keyboardNav: false,
       focusRegions: false,
       showFocusIndicator: false,
     },
@@ -514,6 +516,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
           miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
           enableMediaKeys: enableMediaKeys ?? true,
           experimentalFeatures: experimentalFeatures ?? {
+            keyboardNav: false,
             focusRegions: false,
             showFocusIndicator: false,
           },

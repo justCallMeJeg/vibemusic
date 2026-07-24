@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 
@@ -15,8 +16,13 @@ export function KeyboardShortcutsOverlay() {
   const openRef = useRef(open);
   openRef.current = open;
   const setDialogOpen = useKeybindsStore((s) => s.setDialogOpen);
+  const keyboardNavOn = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
 
   useEffect(() => {
+    if (!keyboardNavOn) return;
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "?" || (e.ctrlKey && e.key === "/")) {
         e.preventDefault();
@@ -28,7 +34,7 @@ export function KeyboardShortcutsOverlay() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [keyboardNavOn]);
 
   useEffect(() => {
     setDialogOpen(open);

@@ -9,6 +9,7 @@ import {
 } from "@/hooks/use-keyboard-shortcuts";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
 import MainContent from "@features/shell/components/main-content";
@@ -26,7 +27,6 @@ import {
 } from "@/hooks/use-app-init";
 import type { CloseAction } from "@/hooks/use-app-init";
 import { useFolderImport } from "@features/settings/hooks/use-folder-import";
-import { useSettingsStore } from "@/stores/settings-store";
 
 import { TitleBar } from "@features/shell/components/titlebar";
 import { useProfileStore } from "@/stores/profile-store";
@@ -79,7 +79,7 @@ export default function App() {
 
   useProfileTheme();
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — gated via experimental features inside the hooks
   useKeyboardShortcuts();
   useGlobalKeydownListener();
 

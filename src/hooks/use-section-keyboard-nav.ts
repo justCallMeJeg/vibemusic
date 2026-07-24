@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSettingsStore } from "@/stores/settings-store";
 
 const SECTION_ITEM_ATTR = "data-section-item";
 
@@ -90,6 +91,7 @@ export function useSectionKeyboardNav({
 
   useEffect(() => {
     if (!enabled) return;
+    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
 
     const handler = (e: KeyboardEvent) => {
       if (!enabledRef.current) return;
@@ -228,6 +230,7 @@ export function useSectionKeyboardNav({
 
   useEffect(() => {
     if (!enabled) return;
+    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
 
     const handler = (e: FocusEvent) => {
       const container = containerRef.current;

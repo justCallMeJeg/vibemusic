@@ -14,6 +14,7 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
@@ -81,6 +82,11 @@ export function VirtualizedGrid<T>({
 }: VirtualizedGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
+  const keyboardNavSetting = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
+  const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
+
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = paddingBottom
@@ -126,15 +132,15 @@ export function VirtualizedGrid<T>({
       ) : (
         <RovingTabindexProvider
           containerRef={parentRef}
-          itemCount={keyboardNav ? items.length : 0}
-          enabled={!!keyboardNav}
-          autoFocus={keyboardNav && useInteractionStore.getState().focusSource === "keyboard"}
+          itemCount={effectiveKeyboardNav ? items.length : 0}
+          enabled={!!effectiveKeyboardNav}
+          autoFocus={effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard"}
           direction="grid"
           columns={columns}
           onActivate={onItemActivate}
           onActivateSecondary={onItemActivateSecondary}
           onIndexChange={(index: number) => {
-            if (keyboardNav && index >= 0) {
+            if (effectiveKeyboardNav && index >= 0) {
               const rowIndex = Math.floor(index / columns);
               virtualizer.scrollToIndex(rowIndex, { align: "center" });
             }

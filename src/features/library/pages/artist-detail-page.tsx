@@ -28,6 +28,7 @@ import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useSelectionStore } from "@/stores/selection-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { useInteractionStore } from "@/stores/interaction-store";
 
 const ArtistTrackRow = memo(function ArtistTrackRow({
@@ -232,6 +233,7 @@ export default memo(function ArtistDetailPage() {
   const focusedAlbumIdxRef = useRef(-1);
   useEffect(() => {
     if (albums.length === 0) return;
+    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
 

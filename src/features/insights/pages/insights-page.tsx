@@ -5,6 +5,7 @@ import { useNavigationStore, useCurrentPage, useGoBack } from "@/stores/navigati
 import { useAudioStore, useIsPlayerVisible } from "@/stores/audio-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { getAlbumTracks, getArtistTracks } from "@/lib/api";
 import { logger } from "@/lib/logger";
@@ -197,6 +198,8 @@ export default memo(function InsightsPage() {
 
   // Cross-column arrow navigation: ←/→ between Tracks ↔ Artists ↔ Albums
   useEffect(() => {
+    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
+
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;

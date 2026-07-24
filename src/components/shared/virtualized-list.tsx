@@ -6,6 +6,7 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
@@ -45,6 +46,11 @@ export function VirtualizedList<T>({
   autoFocus,
 }: VirtualizedListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
+
+  const keyboardNavSetting = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
+  const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
 
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
@@ -94,14 +100,14 @@ export function VirtualizedList<T>({
     >
       <RovingTabindexProvider
         containerRef={parentRef}
-        itemCount={keyboardNav ? items.length : 0}
-        enabled={!!keyboardNav}
-        autoFocus={autoFocus ?? (keyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
+        itemCount={effectiveKeyboardNav ? items.length : 0}
+        enabled={!!effectiveKeyboardNav}
+        autoFocus={autoFocus ?? (effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
         direction="vertical"
         onActivate={onItemActivate}
         onActivateSecondary={onItemActivateSecondary}
         onIndexChange={(index: number) => {
-          if (keyboardNav && index >= 0) {
+          if (effectiveKeyboardNav && index >= 0) {
             const adjustedIndex = hasHeader ? index + 1 : index;
             virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
           }

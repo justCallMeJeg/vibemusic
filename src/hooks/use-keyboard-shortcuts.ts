@@ -28,10 +28,14 @@ const PAGE_KEYS: Record<string, Page> = {
 };
 
 export function useKeyboardShortcuts() {
+  const keyboardNavOn = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
   const register = useKeybindsStore((s) => s.register);
   const unregister = useKeybindsStore((s) => s.unregister);
 
   useEffect(() => {
+    if (!keyboardNavOn) return;
     const setPage = useNavigationStore.getState().setPage;
     const audio = useAudioStore.getState;
 
@@ -244,7 +248,7 @@ export function useKeyboardShortcuts() {
         unregister(id, SCOPE);
       }
     };
-  }, [register, unregister]);
+  }, [keyboardNavOn, register, unregister]);
 
   // Focus region shortcuts — only registered when feature is enabled
   const focusRegionsOn = useSettingsStore(
@@ -312,7 +316,13 @@ export function useKeyboardShortcuts() {
 
 // Global keydown listener
 export function useGlobalKeydownListener() {
+  const keyboardNavOn = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
+
   useEffect(() => {
+    if (!keyboardNavOn) return;
+
     const handler = (e: KeyboardEvent) => {
       // Skip if user is typing in an input
       const target = e.target as HTMLElement;
@@ -336,5 +346,5 @@ export function useGlobalKeydownListener() {
 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [keyboardNavOn]);
 }

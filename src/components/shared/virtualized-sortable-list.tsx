@@ -6,6 +6,7 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { ListMusic } from "lucide-react";
 import {
   DndContext,
@@ -62,6 +63,11 @@ export function VirtualizedSortableList<T>({
   const parentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
+  const keyboardNavSetting = useSettingsStore(
+    (s) => s.experimentalFeatures.keyboardNav,
+  );
+  const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
+
   // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = paddingBottom
@@ -90,7 +96,7 @@ export function VirtualizedSortableList<T>({
   });
   const sensors = useSensors(
     useSensor(PointerSensor),
-    ...(keyboardNav ? [] : [keyboardSensor]),
+    ...(effectiveKeyboardNav ? [] : [keyboardSensor]),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -135,14 +141,14 @@ export function VirtualizedSortableList<T>({
             >
               <RovingTabindexProvider
                 containerRef={parentRef}
-                itemCount={keyboardNav ? items.length : 0}
-                enabled={!!keyboardNav}
-                autoFocus={autoFocus ?? (keyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
+                itemCount={effectiveKeyboardNav ? items.length : 0}
+                enabled={!!effectiveKeyboardNav}
+                autoFocus={autoFocus ?? (effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
                 direction="vertical"
                 onActivate={onItemActivate}
                 onActivateSecondary={onItemActivateSecondary}
                 onIndexChange={(index: number) => {
-                  if (keyboardNav && index >= 0) {
+                  if (effectiveKeyboardNav && index >= 0) {
                     const container = parentRef.current;
                     if (!container) return;
                     const headerHeight = headerRef.current?.offsetHeight ?? 0;
