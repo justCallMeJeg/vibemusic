@@ -10,7 +10,9 @@ import {
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
-import { useSelectionStore } from "@/stores/selection-store";
+import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
+import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useInteractionStore } from "@/stores/interaction-store";
 import { SearchX, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,7 +37,6 @@ export default memo(function PlaylistDetailPage() {
     (s) => s.updateBreadcrumbLabel,
   );
   const play = useAudioStore((s) => s.play);
-  const playNext = useAudioStore((s) => s.playNext);
   const reorderPlaylist = usePlaylistStore((s) => s.reorderPlaylist);
   const refreshPlaylists = usePlaylistStore((s) => s.refreshPlaylists);
   const [playlist, setPlaylist] = useState<Playlist | null>(() => {
@@ -57,46 +58,22 @@ export default memo(function PlaylistDetailPage() {
   const SCOPE = "page:playlist-detail";
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
-    register(
-      "escape",
-      {
-        combo: { key: "Escape" },
-        handler: () => {
-          const sel = useSelectionStore.getState();
-          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
-            sel.clearSelection();
-            sel.disableCheckboxMode();
-          } else {
-            goBack();
-          }
-        },
-        description: "Clear selection or return to playlists",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "backspace",
-      {
-        combo: { key: "Backspace" },
-        handler: () => goBack(),
-        description: "Return to playlists",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "ctrl+a",
-      {
-        combo: { key: "a", ctrl: true },
-        handler: () => useSelectionStore.getState().selectAll(),
-        description: "Select all tracks",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => goBack(),
+      description: "Return to playlists",
+      preventDefault: true,
+    }, SCOPE);
+    register("backspace", {
+      combo: { key: "Backspace" },
+      handler: () => goBack(),
+      description: "Return to playlists",
+      preventDefault: true,
+    }, SCOPE);
+    registerSelectAllAndCleanup(register, clearScope, SCOPE);
     return () => clearScope(SCOPE);
   }, [goBack]);
+  useSelectionEscapeKeybind(goBack, SCOPE);
 
   const loadData = useCallback(async () => {
     if (!playlistId) return;
@@ -230,6 +207,8 @@ export default memo(function PlaylistDetailPage() {
     [handleRemoveTrack],
   );
 
+  const activationHandlers = useTrackActivationHandlers(tracks);
+
   if (!playlist && !isLoading) {
     return (
       <EmptyState
@@ -259,15 +238,7 @@ export default memo(function PlaylistDetailPage() {
         getItemId={(item: Track) => item.id}
         onReorder={handleReorder}
         renderItem={handleRenderItem}
-        keyboardNav
-        onItemActivate={(index) => {
-          const track = tracks[index];
-          if (track) play(track, tracks);
-        }}
-        onItemActivateSecondary={(index) => {
-          const track = tracks[index];
-          if (track) playNext(track);
-        }}
+        {...activationHandlers}
         trackListHeaderProps={{
           showDuration: true,
           indexWidth: "w-8",

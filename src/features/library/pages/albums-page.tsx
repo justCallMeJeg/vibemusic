@@ -1,11 +1,9 @@
-import { useMemo, useState, memo, useCallback, useDeferredValue, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { useMemo, useState, memo, useCallback, useDeferredValue, useRef } from "react";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { useContentStore } from "@features/library/store/content-store";
 import { useSettingsStore } from "@/stores/settings-store";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { getAlbumTracks, Album } from "@/lib/api";
@@ -14,10 +12,10 @@ import { useNavigationStore } from "@/stores/navigation-store";
 import { CardItem } from "@/components/shared/card-item";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
-import { SortDropdown } from "@/components/shared/sort-dropdown";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
+import { PageSearchAndSort } from "@/components/shared/page-search-and-sort";
 
 
 
@@ -79,21 +77,7 @@ export default memo(function AlbumsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:albums";
-  useEffect(() => {
-    const { register, clearScope } = useKeybindsStore.getState();
-    register("escape", {
-      combo: { key: "Escape" },
-      handler: () => { if (searchQuery) setSearchQuery(""); },
-      description: "Clear search",
-    }, SCOPE);
-    register("ctrl+f", {
-      combo: { key: "f", ctrl: true },
-      handler: () => searchInputRef.current?.focus(),
-      description: "Focus search",
-      preventDefault: true,
-    }, SCOPE);
-    return () => clearScope(SCOPE);
-  }, [searchQuery]);
+  useSearchKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
 
   const handlePlayAlbum = useCallback(async (albumId: number, shuffle = false) => {
     try {
@@ -164,31 +148,21 @@ export default memo(function AlbumsPage() {
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Albums">
-        <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            placeholder="Filter albums..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setSearchQuery(""); e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-            autoComplete="off"
-            disabled={isLoading}
-          />
-        </div>
-        <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
-          <SortDropdown
-            sortKey={albumsSortKey}
-            sortDirection={albumsSortDirection}
-            onSortChange={(k, d) => setAlbumsSort(k, d)}
-            options={[
-              { label: "Title", value: "title" },
-              { label: "Artist", value: "artist" },
-              { label: "Year", value: "year" },
-            ]}
-          />
-        </div>
+        <PageSearchAndSort
+          searchPlaceholder="Filter albums..."
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchInputRef={searchInputRef}
+          isLoading={isLoading}
+          sortKey={albumsSortKey}
+          sortDirection={albumsSortDirection as "asc" | "desc"}
+          onSortChange={(k, d) => setAlbumsSort(k, d)}
+          sortOptions={[
+            { label: "Title", value: "title" },
+            { label: "Artist", value: "artist" },
+            { label: "Year", value: "year" },
+          ]}
+        />
       </PageHeader>
 
       {isLoading ? null : (

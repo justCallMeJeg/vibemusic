@@ -1,5 +1,4 @@
-import { useMemo, useState, memo, useCallback, useDeferredValue, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { useMemo, useState, memo, useCallback, useDeferredValue, useRef } from "react";
 import { useContentStore } from "@features/library/store/content-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
@@ -13,11 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Users, Search } from "lucide-react";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
-import { SortDropdown } from "@/components/shared/sort-dropdown";
-import { Input } from "@/components/ui/input";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
+import { PageSearchAndSort } from "@/components/shared/page-search-and-sort";
 
 const ArtistGridCard = memo(function ArtistGridCard({
   artist,
@@ -76,21 +74,7 @@ export default memo(function ArtistsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:artists";
-  useEffect(() => {
-    const { register, clearScope } = useKeybindsStore.getState();
-    register("escape", {
-      combo: { key: "Escape" },
-      handler: () => { if (searchQuery) setSearchQuery(""); },
-      description: "Clear search",
-    }, SCOPE);
-    register("ctrl+f", {
-      combo: { key: "f", ctrl: true },
-      handler: () => searchInputRef.current?.focus(),
-      description: "Focus search",
-      preventDefault: true,
-    }, SCOPE);
-    return () => clearScope(SCOPE);
-  }, [searchQuery]);
+  useSearchKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
 
   const handlePlayArtist = useCallback(async (artistId: number, shuffle = false) => {
     try {
@@ -159,31 +143,21 @@ export default memo(function ArtistsPage() {
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Artists">
-        <div className={cn("relative w-64 mr-2", isLoading && "pointer-events-none opacity-50")}>
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            placeholder="Filter artists..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Escape") { setSearchQuery(""); e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-            autoComplete="off"
-            disabled={isLoading}
-          />
-        </div>
-        <div className={isLoading ? "pointer-events-none opacity-50" : ""}>
-          <SortDropdown
-            sortKey={artistsSortKey}
-            sortDirection={artistsSortDirection}
-            onSortChange={(k, d) => setArtistsSort(k, d)}
-            options={[
-              { label: "Name", value: "name" },
-              { label: "Album Count", value: "album_count" },
-              { label: "Track Count", value: "track_count" },
-            ]}
-          />
-        </div>
+        <PageSearchAndSort
+          searchPlaceholder="Filter artists..."
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchInputRef={searchInputRef}
+          isLoading={isLoading}
+          sortKey={artistsSortKey}
+          sortDirection={artistsSortDirection as "asc" | "desc"}
+          onSortChange={(k, d) => setArtistsSort(k, d)}
+          sortOptions={[
+            { label: "Name", value: "name" },
+            { label: "Album Count", value: "album_count" },
+            { label: "Track Count", value: "track_count" },
+          ]}
+        />
       </PageHeader>
 
       {isLoading ? null : (

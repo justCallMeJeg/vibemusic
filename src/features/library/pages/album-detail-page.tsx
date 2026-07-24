@@ -17,8 +17,10 @@ import { TrackList } from "@/components/shared/templates/track-list";
 import { DetailHero } from "@features/library/components/detail-hero";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
+import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
+import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useKeybindsStore } from "@/stores/keybinds-store";
-import { useSelectionStore } from "@/stores/selection-store";
 import { useInteractionStore } from "@/stores/interaction-store";
 
 const AlbumTrackRow = memo(function AlbumTrackRow({
@@ -117,54 +119,22 @@ export default memo(function AlbumDetailPage() {
   const SCOPE = "page:album-detail";
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
-    register(
-      "escape",
-      {
-        combo: { key: "Escape" },
-        handler: () => goBack(),
-        description: "Return to albums",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "backspace",
-      {
-        combo: { key: "Backspace" },
-        handler: () => goBack(),
-        description: "Return to albums",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "escape-selection",
-      {
-        combo: { key: "Escape" },
-        handler: () => {
-          const sel = useSelectionStore.getState();
-          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
-            sel.clearSelection();
-            sel.disableCheckboxMode();
-          }
-        },
-        description: "Clear selection in track list",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "ctrl+a",
-      {
-        combo: { key: "a", ctrl: true },
-        handler: () => useSelectionStore.getState().selectAll(),
-        description: "Select all tracks",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
+    register("escape", {
+      combo: { key: "Escape" },
+      handler: () => goBack(),
+      description: "Return to albums",
+      preventDefault: true,
+    }, SCOPE);
+    register("backspace", {
+      combo: { key: "Backspace" },
+      handler: () => goBack(),
+      description: "Return to albums",
+      preventDefault: true,
+    }, SCOPE);
+    registerSelectAllAndCleanup(register, clearScope, SCOPE);
     return () => clearScope(SCOPE);
   }, [goBack]);
+  useSelectionEscapeKeybind(goBack, SCOPE);
 
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -231,6 +201,8 @@ export default memo(function AlbumDetailPage() {
       });
     }
   }, [isLoading, tracks.length]);
+
+  const activationHandlers = useTrackActivationHandlers(tracks);
 
   const handlePlay = () => {
     if (tracks.length === 0) return;
@@ -347,15 +319,7 @@ export default memo(function AlbumDetailPage() {
             />
           ) : null
         }
-        keyboardNav
-        onItemActivate={(index) => {
-          const track = tracks[index];
-          if (track) play(track, tracks);
-        }}
-        onItemActivateSecondary={(index) => {
-          const track = tracks[index];
-          if (track) playNext(track);
-        }}
+        {...activationHandlers}
       />
     </DetailPageTemplate>
   );

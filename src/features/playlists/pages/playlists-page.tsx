@@ -1,12 +1,4 @@
-import {
-  useState,
-  useMemo,
-  memo,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useRef,
-} from "react";
+import { useState, useMemo, memo, useCallback, useDeferredValue, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -31,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useKeybindsStore } from "@/stores/keybinds-store";
+import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
 
 const PlaylistGridCard = memo(function PlaylistGridCard({
   playlist,
@@ -147,41 +139,7 @@ export default memo(function PlaylistsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:playlists";
-  useEffect(() => {
-    const { register, clearScope } = useKeybindsStore.getState();
-    register(
-      "escape",
-      {
-        combo: { key: "Escape" },
-        handler: () => {
-          if (searchQuery) setSearchQuery("");
-        },
-        description: "Clear search",
-      },
-      SCOPE,
-    );
-    register(
-      "ctrl+f",
-      {
-        combo: { key: "f", ctrl: true },
-        handler: () => searchInputRef.current?.focus(),
-        description: "Focus search",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "n",
-      {
-        combo: { key: "n" },
-        handler: () => setIsDialogOpen(true),
-        description: "Create new playlist",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    return () => clearScope(SCOPE);
-  }, [searchQuery]);
+  useSearchKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
 
   const handlePlayPlaylist = useCallback(
     async (playlistId: number, shuffle = false) => {

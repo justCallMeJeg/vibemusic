@@ -1,12 +1,9 @@
-import { useRef, useCallback, isValidElement } from "react";
+import { useCallback, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
-import { useIsPlayerVisible } from "@/stores/audio-store";
+import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
-import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
@@ -45,23 +42,11 @@ export function VirtualizedList<T>({
   onItemActivateSecondary,
   autoFocus,
 }: VirtualizedListProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const keyboardNavSetting = useSettingsStore(
-    (s) => s.experimentalFeatures.keyboardNav,
+  const { parentRef, effectiveKeyboardNav, bottomPadding, getScrollElement, isPlayerVisible } = useVirtualizerSetup(
+    itemHeight,
+    paddingBottom,
+    keyboardNav,
   );
-  const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
-
-  // Dynamic padding based on player visibility
-  const isPlayerVisible = useIsPlayerVisible();
-  const bottomPadding = paddingBottom
-    ? parseInt(paddingBottom, 10)
-    : isPlayerVisible
-      ? PLAYER_BAR_HEIGHT
-      : 24;
-
-  // Apply visual scroll mask
-  useScrollMask(24, parentRef);
 
   // Virtualizer
   const hasHeader = !!header;
@@ -71,7 +56,6 @@ export function VirtualizedList<T>({
   const headerHeightPx = headerHeight;
 
   // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
-  const getScrollElement = useCallback(() => parentRef.current, []);
   const estimateSize = useCallback(
     (index: number) => {
       if (hasHeader && index === 0) return headerHeightPx;

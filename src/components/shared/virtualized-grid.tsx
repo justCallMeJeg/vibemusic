@@ -1,20 +1,15 @@
 import {
-  useRef,
   useState,
   useEffect,
   useMemo,
-  useCallback,
   isValidElement,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
+import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
 import { debounce, cn } from "@/lib/utils";
-import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
-import { useIsPlayerVisible } from "@/stores/audio-store";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
-import { useSettingsStore } from "@/stores/settings-store";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
@@ -80,33 +75,17 @@ export function VirtualizedGrid<T>({
   onItemActivate,
   onItemActivateSecondary,
 }: VirtualizedGridProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const keyboardNavSetting = useSettingsStore(
-    (s) => s.experimentalFeatures.keyboardNav,
+  const { parentRef, effectiveKeyboardNav, bottomPadding, getScrollElement, estimateSize, isPlayerVisible } = useVirtualizerSetup(
+    itemHeight,
+    paddingBottom,
+    keyboardNav,
   );
-  const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
-
-  // Dynamic padding based on player visibility
-  const isPlayerVisible = useIsPlayerVisible();
-  const bottomPadding = paddingBottom
-    ? parseInt(paddingBottom, 10)
-    : isPlayerVisible
-      ? PLAYER_BAR_HEIGHT
-      : 24;
-
-  // Apply visual scroll mask
-  useScrollMask(24, parentRef);
 
   // Determine number of columns
   const columns = useGridColumns();
 
   // Calculate rows
   const rowCount = Math.ceil(items.length / columns);
-
-  // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
-  const getScrollElement = useCallback(() => parentRef.current, []);
-  const estimateSize = useCallback(() => itemHeight, [itemHeight]);
 
   // Virtualizer
   const virtualizer = useVirtualizer({

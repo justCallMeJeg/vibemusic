@@ -41,6 +41,7 @@ import { useIsPlayerVisible } from "@/stores/audio-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
+import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
 import { useSelectionStore } from "@/stores/selection-store";
@@ -264,26 +265,9 @@ export default memo(function SongsPage() {
   const bottomPadding = isPlayerVisible ? 156 : 24;
 
   const SCOPE = "page:songs";
+  useSelectionEscapeKeybind(() => {}, SCOPE, () => { if (searchQuery) setSearchQuery(""); });
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
-    register(
-      "escape",
-      {
-        combo: { key: "Escape" },
-        handler: () => {
-          const sel = useSelectionStore.getState();
-          if (sel.mode === "checkbox" || sel.selectionCount() > 0) {
-            sel.clearSelection();
-            sel.disableCheckboxMode();
-          } else if (searchQuery) {
-            setSearchQuery("");
-          }
-        },
-        description: "Clear search or exit batch mode",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
     register(
       "ctrl+f",
       {
