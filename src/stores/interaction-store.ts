@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type FocusSource = "keyboard" | "mouse";
+type FocusSource = "keyboard" | "mouse";
 
 interface InteractionStore {
   focusSource: FocusSource;

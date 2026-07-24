@@ -80,7 +80,7 @@ export interface WeeklyWrapData {
   most_active_day_plays: number;
 }
 
-export interface StatsData {
+interface StatsData {
   top_tracks: TopTrack[];
   top_artists: TopArtist[];
   top_albums: TopAlbum[];

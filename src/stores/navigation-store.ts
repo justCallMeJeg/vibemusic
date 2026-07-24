@@ -24,7 +24,7 @@ export type DetailView =
   | { type: "artist"; id: number }
   | null;
 
-export interface BreadcrumbEntry {
+interface BreadcrumbEntry {
   label: string;
   page: Page;
   detailView?: DetailView;
@@ -345,12 +345,6 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
 export const useCurrentPage = () => useNavigationStore((s) => s.currentPage);
 export const useDetailView = () => useNavigationStore((s) => s.detailView);
 export const useBreadcrumbs = () => useNavigationStore((s) => s.history);
-export const useHistoryIndex = () =>
-  useNavigationStore((s) => s.history.length - 1);
 export const useGoBack = () => useNavigationStore((s) => s.goBack);
-export const useNavigateToHistoryIndex = () =>
-  useNavigationStore((s) => s.navigateToHistoryIndex);
-export const useUpdateBreadcrumbLabel = () =>
-  useNavigationStore((s) => s.updateBreadcrumbLabel);
 
 

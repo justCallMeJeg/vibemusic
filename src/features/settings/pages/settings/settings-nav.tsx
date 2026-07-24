@@ -12,7 +12,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 
-export const SETTINGS_SECTIONS = [
+const SETTINGS_SECTIONS = [
   { id: "general", label: "General", icon: Settings },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "navigation", label: "Navigation", icon: PanelLeft },

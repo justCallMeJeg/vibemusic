@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type SelectionMode = "off" | "checkbox";
+type SelectionMode = "off" | "checkbox";
 
 interface SelectionItem {
   id: number;

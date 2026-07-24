@@ -36,7 +36,7 @@ function focusItem(container: HTMLElement, index: number): void {
   el?.focus({ preventScroll: true });
 }
 
-export function useRovingTabindex({
+function useRovingTabindex({
   containerRef,
   itemCount,
   enabled = true,

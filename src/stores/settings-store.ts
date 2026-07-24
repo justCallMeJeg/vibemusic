@@ -20,7 +20,7 @@ export interface SidebarItem {
   hidden: boolean;
 }
 
-export interface ExperimentalFeatures {
+interface ExperimentalFeatures {
   keyboardNav: boolean;
   focusRegions: boolean;
   showFocusIndicator: boolean;
