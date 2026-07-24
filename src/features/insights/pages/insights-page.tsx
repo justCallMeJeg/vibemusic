@@ -167,7 +167,7 @@ export default memo(function InsightsPage() {
       insightsScrollRef.current?.scrollTo(0, 0);
       fetchStats();
     }
-  }, [currentPage, fetchStats]);
+  }, [currentPage, fetchStats, insightsScrollRef]);
 
   if (data && !hasLoadedOnce.current) {
     hasLoadedOnce.current = true;

@@ -154,7 +154,7 @@ export function useSectionKeyboardNav({
             const { prevSectionIdx } = getBoundaries();
             if (prevSectionIdx >= 0) {
               newSectionIdx = prevSectionIdx;
-              newItemIdx = s[prevSectionIdx].itemCount - 1;
+              newItemIdx = s[prevSectionIdx].orientation === "horizontal" ? 0 : s[prevSectionIdx].itemCount - 1;
             }
           }
           break;
@@ -182,7 +182,7 @@ export function useSectionKeyboardNav({
             const { prevSectionIdx } = getBoundaries();
             if (prevSectionIdx >= 0) {
               newSectionIdx = prevSectionIdx;
-              newItemIdx = s[prevSectionIdx].itemCount - 1;
+              newItemIdx = s[prevSectionIdx].orientation === "horizontal" ? 0 : s[prevSectionIdx].itemCount - 1;
             }
           }
           break;

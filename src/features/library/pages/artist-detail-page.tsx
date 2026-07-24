@@ -266,11 +266,11 @@ export default memo(function ArtistDetailPage() {
         if (firstTrack && albums.length > 0) {
           e.preventDefault();
           e.stopPropagation();
-          const lastAlbumBtn = document.querySelector<HTMLElement>(
-            `[data-album-index="${albums.length - 1}"] button`,
+          const firstAlbumBtn = document.querySelector<HTMLElement>(
+            `[data-album-index="0"] button`,
           );
-          lastAlbumBtn?.focus({ preventScroll: true });
-          focusedAlbumIdxRef.current = albums.length - 1;
+          firstAlbumBtn?.focus({ preventScroll: true });
+          focusedAlbumIdxRef.current = 0;
           const el = document.getElementById('artist-albums-section');
           if (el) {
             const scrollable = el.closest<HTMLElement>('[class*="overflow-y-auto"]');
