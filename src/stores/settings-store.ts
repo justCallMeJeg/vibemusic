@@ -135,6 +135,140 @@ interface SettingsActions {
   loadSettings: (profileId?: string) => Promise<void>;
 }
 
+async function persistSetting(
+  setter: (partial: Partial<SettingsState & SettingsActions>) => void,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  setter({ [key]: value } as unknown as Partial<SettingsState & SettingsActions>);
+  const store = await getStore();
+  await store.set(key, value);
+  await store.save();
+}
+
+async function loadThemeSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [theme, dynamicGradient] = await Promise.all([
+    store.get<"dark" | "light" | "system">("theme"),
+    store.get<boolean>("dynamicGradient"),
+  ]);
+  const themeValue = theme ?? "system";
+  return {
+    theme: themeValue,
+    resolvedTheme: applyThemeClass(themeValue),
+    dynamicGradient: dynamicGradient ?? true,
+  };
+}
+
+async function loadAudioSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration] =
+    await Promise.all([
+      store.get<string>("selectedDevice"),
+      store.get<number>("crossfadeDuration"),
+      store.get<boolean>("fadeInOutEnabled"),
+      store.get<number>("fadeInOutDuration"),
+    ]);
+
+  return {
+    state: {
+      selectedDevice: selectedDevice ?? null,
+      crossfadeDuration: crossfadeDuration ?? 0,
+      fadeInOutEnabled: fadeInOutEnabled ?? true,
+      fadeInOutDuration: fadeInOutDuration ?? 300,
+    },
+    raw: { selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration },
+  };
+}
+
+async function loadUISettings(store: Awaited<ReturnType<typeof load>>) {
+  const [
+    libraryPaths,
+    closeToTray,
+    scanOnStartup,
+    autoplay,
+    _sidebarItems,
+    defaultPage,
+    songsSortKey,
+    songsSortDirection,
+    albumsSortKey,
+    albumsSortDirection,
+    artistsSortKey,
+    artistsSortDirection,
+    playlistsSortKey,
+    playlistsSortDirection,
+    miniPlayerStyle,
+    miniPlayerPosition,
+    enableMediaKeys,
+    experimentalFeatures,
+  ] = await Promise.all([
+    store.get<string[]>("libraryPaths"),
+    store.get<boolean>("closeToTray"),
+    store.get<boolean>("scanOnStartup"),
+    store.get<boolean>("autoplay"),
+    store.get<{ id: string; hidden: boolean }[]>("sidebarItems"),
+    store.get<string>("defaultPage"),
+    store.get<string>("songsSortKey"),
+    store.get<string>("songsSortDirection"),
+    store.get<string>("albumsSortKey"),
+    store.get<string>("albumsSortDirection"),
+    store.get<string>("artistsSortKey"),
+    store.get<string>("artistsSortDirection"),
+    store.get<string>("playlistsSortKey"),
+    store.get<string>("playlistsSortDirection"),
+    store.get<"square" | "wide" | "bar">("miniPlayerStyle"),
+    store.get<"bottom-right" | "bottom-left" | "top-right" | "top-left">(
+      "miniPlayerPosition",
+    ),
+    store.get<boolean>("enableMediaKeys"),
+    store.get<ExperimentalFeatures>("experimentalFeatures"),
+  ]);
+
+  let sidebarItems = _sidebarItems;
+  if (sidebarItems) {
+    sidebarItems = sidebarItems.map((item) =>
+      item.id === "settings" ? { ...item, hidden: false } : item,
+    );
+  }
+
+  return {
+    libraryPaths: libraryPaths ?? [],
+    closeToTray: closeToTray ?? false,
+    scanOnStartup: scanOnStartup ?? false,
+    autoplay: autoplay ?? false,
+    sidebarItems: sidebarItems ?? [
+      { id: "home", hidden: false },
+      { id: "search", hidden: false },
+      { id: "songs", hidden: false },
+      { id: "albums", hidden: false },
+      { id: "playlists", hidden: false },
+      { id: "artists", hidden: false },
+      { id: "insights", hidden: false },
+      { id: "settings", hidden: false },
+    ],
+    defaultPage: defaultPage ?? "home",
+    songsSortKey: songsSortKey ?? "date_added",
+    songsSortDirection: songsSortDirection ?? "desc",
+    albumsSortKey: albumsSortKey ?? "title",
+    albumsSortDirection: albumsSortDirection ?? "asc",
+    artistsSortKey: artistsSortKey ?? "name",
+    artistsSortDirection: artistsSortDirection ?? "asc",
+    playlistsSortKey: playlistsSortKey ?? "name",
+    playlistsSortDirection: playlistsSortDirection ?? "asc",
+    miniPlayerStyle: miniPlayerStyle ?? "square",
+    miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
+    enableMediaKeys: enableMediaKeys ?? true,
+    experimentalFeatures: experimentalFeatures ?? {
+      keyboardNav: false,
+      focusRegions: false,
+      showFocusIndicator: false,
+    },
+    rawLibraryPaths: libraryPaths,
+  };
+}
+
+function loadKeybindSettings(_store: Awaited<ReturnType<typeof load>>) {
+  // Stub: ready for future Keybinds UI feature
+}
+
 /**
  * Store for managing application settings (theme, library paths, audio config).
  * Settings are persisted per-profile via the Tauri store plugin.
@@ -199,10 +333,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     setDynamicGradient: async (enabled) => {
-      set({ dynamicGradient: enabled });
-      const store = await getStore();
-      await store.set("dynamicGradient", enabled);
-      await store.save();
+      await persistSetting(set, "dynamicGradient", enabled);
     },
 
     addLibraryPath: async (path) => {
@@ -297,38 +428,23 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     setCloseToTray: async (enabled) => {
-      set({ closeToTray: enabled });
-      const store = await getStore();
-      await store.set("closeToTray", enabled);
-      await store.save();
+      await persistSetting(set, "closeToTray", enabled);
     },
 
     setScanOnStartup: async (enabled) => {
-      set({ scanOnStartup: enabled });
-      const store = await getStore();
-      await store.set("scanOnStartup", enabled);
-      await store.save();
+      await persistSetting(set, "scanOnStartup", enabled);
     },
 
     setAutoplay: async (enabled) => {
-      set({ autoplay: enabled });
-      const store = await getStore();
-      await store.set("autoplay", enabled);
-      await store.save();
+      await persistSetting(set, "autoplay", enabled);
     },
 
     setSidebarItems: async (items) => {
-      set({ sidebarItems: items });
-      const store = await getStore();
-      await store.set("sidebarItems", items);
-      await store.save();
+      await persistSetting(set, "sidebarItems", items);
     },
 
     setDefaultPage: async (page) => {
-      set({ defaultPage: page });
-      const store = await getStore();
-      await store.set("defaultPage", page);
-      await store.save();
+      await persistSetting(set, "defaultPage", page);
     },
 
     // Sorting
@@ -374,23 +490,14 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     setMiniPlayerStyle: async (style) => {
-      set({ miniPlayerStyle: style });
-      const store = await getStore();
-      await store.set("miniPlayerStyle", style);
-      await store.save();
+      await persistSetting(set, "miniPlayerStyle", style);
     },
 
     setMiniPlayerPosition: async (position) => {
-      set({ miniPlayerPosition: position });
-      const store = await getStore();
-      await store.set("miniPlayerPosition", position);
-      await store.save();
+      await persistSetting(set, "miniPlayerPosition", position);
     },
     setEnableMediaKeys: async (enabled) => {
-      set({ enableMediaKeys: enabled });
-      const store = await getStore();
-      await store.set("enableMediaKeys", enabled);
-      await store.save();
+      await persistSetting(set, "enableMediaKeys", enabled);
     },
     setExperimentalFeature: async (key, value) => {
       const current = get().experimentalFeatures;
@@ -411,117 +518,24 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       try {
         const store = await load(`settings_${profileId}.json`);
 
-        const getVal = async <T>(
-          key: string,
-        ): Promise<T | null | undefined> => {
-          return await store.get<T>(key);
-        };
+        loadKeybindSettings(store);
 
-        const [
-          theme,
-          dynamicGradient,
-          libraryPaths,
-          selectedDevice,
-          crossfadeDuration,
-          fadeInOutEnabled,
-          fadeInOutDuration,
-          closeToTray,
-          scanOnStartup,
-          autoplay,
-          _sidebarItems,
-          defaultPage,
-          songsSortKey,
-          songsSortDirection,
-          albumsSortKey,
-          albumsSortDirection,
-          artistsSortKey,
-          artistsSortDirection,
-          playlistsSortKey,
-          playlistsSortDirection,
-          miniPlayerStyle,
-          miniPlayerPosition,
-          enableMediaKeys,
-          experimentalFeatures,
-        ] = await Promise.all([
-          getVal<"dark" | "light" | "system">("theme"),
-          getVal<boolean>("dynamicGradient"),
-          getVal<string[]>("libraryPaths"),
-          getVal<string>("selectedDevice"),
-          getVal<number>("crossfadeDuration"),
-          getVal<boolean>("fadeInOutEnabled"),
-          getVal<number>("fadeInOutDuration"),
-          getVal<boolean>("closeToTray"),
-          getVal<boolean>("scanOnStartup"),
-          getVal<boolean>("autoplay"),
-          getVal<{ id: string; hidden: boolean }[]>("sidebarItems"),
-          getVal<string>("defaultPage"),
-          getVal<string>("songsSortKey"),
-          getVal<string>("songsSortDirection"),
-          getVal<string>("albumsSortKey"),
-          getVal<string>("albumsSortDirection"),
-          getVal<string>("artistsSortKey"),
-          getVal<string>("artistsSortDirection"),
-          getVal<string>("playlistsSortKey"),
-          getVal<string>("playlistsSortDirection"),
-          getVal<"square" | "wide" | "bar">("miniPlayerStyle"),
-          getVal<"bottom-right" | "bottom-left" | "top-right" | "top-left">(
-            "miniPlayerPosition",
-          ),
-          getVal<boolean>("enableMediaKeys"),
-          getVal<ExperimentalFeatures>("experimentalFeatures"),
+        const [themeSettings, audioResult, uiSettings] = await Promise.all([
+          loadThemeSettings(store),
+          loadAudioSettings(store),
+          loadUISettings(store),
         ]);
 
-        let sidebarItems = _sidebarItems;
-        if (sidebarItems) {
-          sidebarItems = sidebarItems.map((item) =>
-            item.id === "settings" ? { ...item, hidden: false } : item,
-          );
-        }
-
-        const themeValue = theme ?? "system";
-        const resolvedTheme = applyThemeClass(themeValue);
         set({
           currentProfileId: profileId,
-          theme: themeValue,
-          resolvedTheme,
-          dynamicGradient: dynamicGradient ?? true,
-          libraryPaths: libraryPaths ?? [],
-          selectedDevice: selectedDevice ?? null,
-          crossfadeDuration: crossfadeDuration ?? 0,
-          fadeInOutEnabled: fadeInOutEnabled ?? true,
-          fadeInOutDuration: fadeInOutDuration ?? 300,
-          closeToTray: closeToTray ?? false,
-          scanOnStartup: scanOnStartup ?? false,
-          autoplay: autoplay ?? false,
-          sidebarItems: sidebarItems ?? [
-            { id: "home", hidden: false },
-            { id: "search", hidden: false },
-            { id: "songs", hidden: false },
-            { id: "albums", hidden: false },
-            { id: "playlists", hidden: false },
-            { id: "artists", hidden: false },
-            { id: "insights", hidden: false },
-            { id: "settings", hidden: false },
-          ],
-          defaultPage: defaultPage ?? "home",
-          songsSortKey: songsSortKey ?? "date_added",
-          songsSortDirection: songsSortDirection ?? "desc",
-          albumsSortKey: albumsSortKey ?? "title",
-          albumsSortDirection: albumsSortDirection ?? "asc",
-          artistsSortKey: artistsSortKey ?? "name",
-          artistsSortDirection: artistsSortDirection ?? "asc",
-          playlistsSortKey: playlistsSortKey ?? "name",
-          playlistsSortDirection: playlistsSortDirection ?? "asc",
-          miniPlayerStyle: miniPlayerStyle ?? "square",
-          miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
-          enableMediaKeys: enableMediaKeys ?? true,
-          experimentalFeatures: experimentalFeatures ?? {
-            keyboardNav: false,
-            focusRegions: false,
-            showFocusIndicator: false,
-          },
+          ...themeSettings,
+          ...audioResult.state,
+          ...uiSettings,
           isLoading: false,
         });
+
+        const { selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration } =
+          audioResult.raw;
 
         await Promise.all([
           selectedDevice
@@ -551,7 +565,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
             : Promise.resolve(),
         ]);
 
-        invoke("watch_paths", { folders: libraryPaths ?? [] }).catch((e) =>
+        invoke("watch_paths", { folders: uiSettings.rawLibraryPaths ?? [] }).catch((e) =>
           logger.error("Failed to watch paths on settings load", e),
         );
 

@@ -13,7 +13,7 @@ import { CardItem } from "@/components/shared/card-item";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaylistEditDialog } from "@features/playlists/components/playlist-edit-dialog";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
@@ -26,10 +26,116 @@ import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { PageLayout } from "@/components/shared/page-layout";
 
-
 import { formatDuration } from "@/lib/format";
 
 import { useShallow } from "zustand/shallow";
+
+import { HomeSection } from "@/features/library/components/home-section";
+
+// --- Hooks ---
+
+function useSectionHandlers(type: "album" | "playlist") {
+  const play = useAudioStore((s) => s.play);
+  const playNext = useAudioStore((s) => s.playNext);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+
+  const typeRef = useRef(type);
+  typeRef.current = type;
+
+  const handlePlay = useCallback(async (id: number, shuffle = false) => {
+    const t = typeRef.current;
+    const getTracks = t === "album" ? getAlbumTracks : getPlaylistTracks;
+    const label = t === "album" ? "Album" : "Playlist";
+    try {
+      const tracks = await getTracks(id);
+      if (tracks.length === 0) {
+        toast.error(`${label} is empty`);
+        return;
+      }
+      const queue = shuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
+      play(queue[0], queue);
+    } catch (e) {
+      logger.error(`Failed to play ${label.toLowerCase()}`, e);
+    }
+  }, [play]);
+
+  const handlePlayNext = useCallback(async (id: number) => {
+    const t = typeRef.current;
+    const getTracks = t === "album" ? getAlbumTracks : getPlaylistTracks;
+    const lower = t === "album" ? "album" : "playlist";
+    try {
+      const tracks = await getTracks(id);
+      if (tracks.length === 0) return;
+      [...tracks].reverse().forEach((track) => playNext(track));
+      toast.success(`Playing ${lower} next`);
+    } catch (e) {
+      logger.error(`Failed to play ${lower} next`, e);
+    }
+  }, [playNext]);
+
+  const handleAddToQueue = useCallback(async (id: number) => {
+    const t = typeRef.current;
+    const getTracks = t === "album" ? getAlbumTracks : getPlaylistTracks;
+    const lower = t === "album" ? "album" : "playlist";
+    try {
+      const tracks = await getTracks(id);
+      if (tracks.length === 0) return;
+      tracks.forEach((track) => addToQueue(track));
+      toast.success(`Added ${lower} to queue`);
+    } catch (e) {
+      logger.error(`Failed to add ${lower} to queue`, e);
+    }
+  }, [addToQueue]);
+
+  return { handlePlay, handlePlayNext, handleAddToQueue };
+}
+
+function usePlaylistDeleteDialog() {
+  const deletePlaylist = usePlaylistStore((s) => s.deletePlaylist);
+  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = useCallback(async () => {
+    if (!playlistToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deletePlaylist(playlistToDelete.id);
+    } catch (error) {
+      logger.error("Failed to delete playlist", error);
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setPlaylistToDelete(null);
+    }
+  }, [deletePlaylist, playlistToDelete]);
+
+  const handleDeleteRequest = useCallback((playlist: Playlist) => {
+    setPlaylistToDelete(playlist);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  return {
+    playlistToDelete,
+    isDeleteDialogOpen,
+    isDeleting,
+    confirmDelete,
+    handleDeleteRequest,
+    setIsDeleteDialogOpen,
+  };
+}
+
+function useHomeSectionNav(albumsLen: number, playlistsLen: number, tracksLen: number) {
+  return useMemo(() => {
+    let idx = 0;
+    const albumSectionIdx = albumsLen > 0 ? idx++ : -1;
+    const playlistSectionIdx = playlistsLen > 0 ? idx++ : -1;
+    const trackSectionIdx = tracksLen > 0 ? idx++ : -1;
+    return { albumSectionIdx, playlistSectionIdx, trackSectionIdx } as const;
+  }, [albumsLen, playlistsLen, tracksLen]);
+}
+
+// --- Sub-components ---
 
 const HomeTrackRow = memo(function HomeTrackRow({
   track,
@@ -223,6 +329,8 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
   );
 });
 
+// --- Main component ---
+
 export default memo(function HomePage() {
   const { albums, tracks, isLoading } = useContentStore(
     useShallow((s) => ({
@@ -232,10 +340,7 @@ export default memo(function HomePage() {
     })),
   );
   const playlists = usePlaylistStore((s) => s.playlists);
-  const deletePlaylist = usePlaylistStore((s) => s.deletePlaylist);
-
   const setPage = useNavigationStore((s) => s.setPage);
-
   const currentTrack = useCurrentTrack();
   const status = usePlayerStatus();
   const play = useAudioStore((s) => s.play);
@@ -247,167 +352,60 @@ export default memo(function HomePage() {
   const openPlaylistDetail = useNavigationStore((s) => s.openPlaylistDetail);
   const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
 
-  const handlePlayAlbum = useCallback(async (albumId: number, shuffle = false) => {
-    try {
-      const tracks = await getAlbumTracks(albumId);
-      if (tracks.length === 0) {
-        toast.error("Album is empty");
-        return;
-      }
-      const queue = shuffle
-        ? [...tracks].sort(() => Math.random() - 0.5)
-        : tracks;
-      play(queue[0], queue);
-    } catch (e) {
-      logger.error("Failed to play album", e);
-    }
-  }, [play]);
-
-  const handlePlayNextAlbum = useCallback(async (albumId: number) => {
-    try {
-      const tracks = await getAlbumTracks(albumId);
-      if (tracks.length === 0) return;
-      [...tracks].reverse().forEach((track) => playNext(track));
-      toast.success("Playing album next");
-    } catch (e) {
-      logger.error("Failed to play album next", e);
-    }
-  }, [playNext]);
-
-  const handleAddAlbumToQueue = useCallback(async (albumId: number) => {
-    try {
-      const tracks = await getAlbumTracks(albumId);
-      if (tracks.length === 0) return;
-      tracks.forEach((track) => addToQueue(track));
-      toast.success("Added album to queue");
-    } catch (e) {
-      logger.error("Failed to add album to queue", e);
-    }
-  }, [addToQueue]);
-
-  const handlePlayPlaylist = useCallback(async (playlistId: number, shuffle = false) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) {
-        toast.error("Playlist is empty");
-        return;
-      }
-      const queue = shuffle
-        ? [...tracks].sort(() => Math.random() - 0.5)
-        : tracks;
-      play(queue[0], queue);
-    } catch (e) {
-      logger.error("Failed to play playlist", e);
-    }
-  }, [play]);
-
-  const handlePlayNextPlaylist = useCallback(async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-      [...tracks].reverse().forEach((track) => playNext(track));
-      toast.success("Playing playlist next");
-    } catch (e) {
-      logger.error("Failed to play playlist next", e);
-    }
-  }, [playNext]);
-
-  const handleAddPlaylistToQueue = useCallback(async (playlistId: number) => {
-    try {
-      const tracks = await getPlaylistTracks(playlistId);
-      if (tracks.length === 0) return;
-      tracks.forEach((track) => addToQueue(track));
-      toast.success("Added playlist to queue");
-    } catch (e) {
-      logger.error("Failed to add playlist to queue", e);
-    }
-  }, [addToQueue]);
-
+  const { handlePlay: handlePlayAlbum, handlePlayNext: handlePlayNextAlbum, handleAddToQueue: handleAddAlbumToQueue } = useSectionHandlers("album");
+  const { handlePlay: handlePlayPlaylist, handlePlayNext: handlePlayNextPlaylist, handleAddToQueue: handleAddPlaylistToQueue } = useSectionHandlers("playlist");
+  const deleteDialog = usePlaylistDeleteDialog();
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
-
-  // Delete Dialog State
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(
-    null,
-  );
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const confirmDelete = async () => {
-    if (!playlistToDelete) return;
-    setIsDeleting(true);
-    try {
-      await deletePlaylist(playlistToDelete.id);
-    } catch (error) {
-      logger.error("Failed to delete playlist", error);
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
-      setPlaylistToDelete(null);
-    }
-  };
-
-  const handleDeleteRequest = (playlist: Playlist) => {
-    setPlaylistToDelete(playlist);
-    setIsDeleteDialogOpen(true);
-  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useScrollMask(24, scrollRef);
-
   const isPlayerVisible = useIsPlayerVisible();
 
   const recentTracks = useMemo(() => tracks.slice(0, 20), [tracks]);
   const displayAlbums = useMemo(() => albums.slice(0, 10), [albums]);
   const displayPlaylists = useMemo(() => playlists.slice(0, 10), [playlists]);
+  const { albumSectionIdx, playlistSectionIdx, trackSectionIdx } = useHomeSectionNav(
+    displayAlbums.length, displayPlaylists.length, recentTracks.length,
+  );
 
-  const isEmpty =
-    !isLoading &&
-    displayAlbums.length === 0 &&
-    displayPlaylists.length === 0 &&
-    recentTracks.length === 0;
+  const isEmpty = !isLoading && displayAlbums.length === 0 && displayPlaylists.length === 0 && recentTracks.length === 0;
 
   const sectionNav = useSectionKeyboardNav({
     containerRef: scrollRef,
     enabled: !isEmpty,
     sections: [
       ...(displayAlbums.length > 0
-        ? [
-            {
-              id: "albums",
-              itemCount: displayAlbums.length,
-              orientation: "horizontal" as const,
-              onActivate: (idx: number) => openAlbumDetail(displayAlbums[idx].id),
-              onActivateSecondary: (idx: number) => handlePlayAlbum(displayAlbums[idx].id),
-            },
-          ]
+        ? [{
+            id: "albums",
+            itemCount: displayAlbums.length,
+            orientation: "horizontal" as const,
+            onActivate: (idx: number) => openAlbumDetail(displayAlbums[idx].id),
+            onActivateSecondary: (idx: number) => handlePlayAlbum(displayAlbums[idx].id),
+          }]
         : []),
       ...(displayPlaylists.length > 0
-        ? [
-            {
-              id: "playlists",
-              itemCount: displayPlaylists.length,
-              orientation: "horizontal" as const,
-              onActivate: (idx: number) => openPlaylistDetail(displayPlaylists[idx].id),
-              onActivateSecondary: (idx: number) => handlePlayPlaylist(displayPlaylists[idx].id),
-            },
-          ]
+        ? [{
+            id: "playlists",
+            itemCount: displayPlaylists.length,
+            orientation: "horizontal" as const,
+            onActivate: (idx: number) => openPlaylistDetail(displayPlaylists[idx].id),
+            onActivateSecondary: (idx: number) => handlePlayPlaylist(displayPlaylists[idx].id),
+          }]
         : []),
       ...(recentTracks.length > 0
-        ? [
-            {
-              id: "tracks",
-              itemCount: recentTracks.length,
-              orientation: "vertical" as const,
-              onActivate: (idx: number) => {
-                const track = recentTracks[idx];
-                if (track) play(track);
-              },
-              onActivateSecondary: (idx: number) => {
-                const track = recentTracks[idx];
-                if (track) playNext(track);
-              },
+        ? [{
+            id: "tracks",
+            itemCount: recentTracks.length,
+            orientation: "vertical" as const,
+            onActivate: (idx: number) => {
+              const track = recentTracks[idx];
+              if (track) play(track);
             },
-          ]
+            onActivateSecondary: (idx: number) => {
+              const track = recentTracks[idx];
+              if (track) playNext(track);
+            },
+          }]
         : []),
     ],
     onFocusChange: (_sectionIdx: number, _itemIdx: number) => {
@@ -417,11 +415,6 @@ export default memo(function HomePage() {
       el?.scrollIntoView({ block: "center", behavior: "auto" });
     },
   });
-
-  let nextSectionIdx = 0;
-  const albumSectionIdx = displayAlbums.length > 0 ? nextSectionIdx++ : -1;
-  const playlistSectionIdx = displayPlaylists.length > 0 ? nextSectionIdx++ : -1;
-  const trackSectionIdx = recentTracks.length > 0 ? nextSectionIdx++ : -1;
 
   useEffect(() => {
     if (isEmpty) return;
@@ -438,7 +431,6 @@ export default memo(function HomePage() {
 
   return (
     <PageLayout overflowHidden>
-      {/* Header */}
       <div className="mt-8 mb-6 px-2">
         <h1 className="text-4xl font-bold text-primary">Welcome Back</h1>
         <p className="text-muted-foreground mt-1">
@@ -448,126 +440,83 @@ export default memo(function HomePage() {
       <div
         ref={scrollRef}
         className={cn(
-          "flex-1 overflow-y-overlay overflow-x-hidden px-2 space-y-8  scroll-mask-y",
+          "flex-1 overflow-y-overlay overflow-x-hidden px-2 space-y-8 scroll-mask-y",
           (displayAlbums.length > 0 || displayPlaylists.length > 0) &&
             (isPlayerVisible ? "pb-player-bar" : "pb-8"),
           isEmpty && "flex flex-col",
           isEmpty && isPlayerVisible && "pb-player-bar",
         )}
       >
-        {/* Albums Section */}
-        {displayAlbums.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">Albums</h2>
-              <Button
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setPage("albums")}
-              >
-                See all <ChevronRight size={16} />
-              </Button>
-            </div>
-
-            <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
-              {displayAlbums.map((album, idx) => (
-                <AlbumCardItem
-                  key={album.id}
-                  album={album}
-                  onPlay={handlePlayAlbum}
-                  onPlayNext={handlePlayNextAlbum}
-                  onAddToQueue={handleAddAlbumToQueue}
-                  onOpenDetail={openAlbumDetail}
-                  tabIndex={sectionNav.getTabIndex(albumSectionIdx, idx)}
-                  data-section-item={`${albumSectionIdx}:${idx}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Playlists Section */}
-        {displayPlaylists.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">Playlists</h2>
-              <Button
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setPage("playlists")}
-              >
-                See all <ChevronRight size={16} />
-              </Button>
-            </div>
-
-            <div className="flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2">
-              {displayPlaylists.map((p, idx) => (
-                <PlaylistCardItem
-                  key={p.id}
-                  playlist={p}
-                  onPlay={handlePlayPlaylist}
-                  onPlayNext={handlePlayNextPlaylist}
-                  onAddToQueue={handleAddPlaylistToQueue}
-                  onOpenDetail={openPlaylistDetail}
-                  onEdit={setEditingPlaylist}
-                  onDelete={handleDeleteRequest}
-                  tabIndex={sectionNav.getTabIndex(playlistSectionIdx, idx)}
-                  data-section-item={`${playlistSectionIdx}:${idx}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Songs Section */}
-        {recentTracks.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">
-                Recently Added
-              </h2>
-              <Button
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setPage("songs")}
-              >
-                See all <ChevronRight size={16} />
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              {recentTracks.map((track, idx) => (
-                <HomeTrackRow
-                  key={track.id}
-                  track={track}
-                  currentTrackId={currentTrack?.id}
-                  status={status}
-                  playlists={playlists}
-                  play={play}
-                  pause={pause}
-                  resume={resume}
-                  playNext={playNext}
-                  addToQueue={addToQueue}
-                  addToPlaylist={addToPlaylist}
-                  tabIndex={sectionNav.getTabIndex(trackSectionIdx, idx)}
-                  data-section-item={`${trackSectionIdx}:${idx}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {!isLoading &&
-          displayAlbums.length === 0 &&
-          displayPlaylists.length === 0 &&
-          recentTracks.length === 0 && (
-            <EmptyState
-              icon={Play}
-              title="Your library is empty"
-              description="Import your local music to get started."
-              action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
+        <HomeSection
+          title="Albums"
+          items={displayAlbums}
+          orientation="horizontal"
+          onSeeAll={() => setPage("albums")}
+          renderItem={(album, idx) => (
+            <AlbumCardItem
+              key={album.id}
+              album={album}
+              onPlay={handlePlayAlbum}
+              onPlayNext={handlePlayNextAlbum}
+              onAddToQueue={handleAddAlbumToQueue}
+              onOpenDetail={openAlbumDetail}
+              tabIndex={sectionNav.getTabIndex(albumSectionIdx, idx)}
+              data-section-item={`${albumSectionIdx}:${idx}`}
             />
           )}
+        />
+        <HomeSection
+          title="Playlists"
+          items={displayPlaylists}
+          orientation="horizontal"
+          onSeeAll={() => setPage("playlists")}
+          renderItem={(p, idx) => (
+            <PlaylistCardItem
+              key={p.id}
+              playlist={p}
+              onPlay={handlePlayPlaylist}
+              onPlayNext={handlePlayNextPlaylist}
+              onAddToQueue={handleAddPlaylistToQueue}
+              onOpenDetail={openPlaylistDetail}
+              onEdit={setEditingPlaylist}
+              onDelete={deleteDialog.handleDeleteRequest}
+              tabIndex={sectionNav.getTabIndex(playlistSectionIdx, idx)}
+              data-section-item={`${playlistSectionIdx}:${idx}`}
+            />
+          )}
+        />
+        <HomeSection
+          title="Recently Added"
+          items={recentTracks}
+          orientation="vertical"
+          onSeeAll={() => setPage("songs")}
+          renderItem={(track, idx) => (
+            <HomeTrackRow
+              key={track.id}
+              track={track}
+              currentTrackId={currentTrack?.id}
+              status={status}
+              playlists={playlists}
+              play={play}
+              pause={pause}
+              resume={resume}
+              playNext={playNext}
+              addToQueue={addToQueue}
+              addToPlaylist={addToPlaylist}
+              tabIndex={sectionNav.getTabIndex(trackSectionIdx, idx)}
+              data-section-item={`${trackSectionIdx}:${idx}`}
+            />
+          )}
+        />
+
+        {!isLoading && displayAlbums.length === 0 && displayPlaylists.length === 0 && recentTracks.length === 0 && (
+          <EmptyState
+            icon={Play}
+            title="Your library is empty"
+            description="Import your local music to get started."
+            action={<Button onClick={() => setPage("settings")}>Add Music Folder</Button>}
+          />
+        )}
       </div>
 
       {editingPlaylist && (
@@ -579,14 +528,14 @@ export default memo(function HomePage() {
       )}
 
       <ConfirmDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
+        open={deleteDialog.isDeleteDialogOpen}
+        onOpenChange={deleteDialog.setIsDeleteDialogOpen}
         title="Delete Playlist?"
-        description={`This action cannot be undone. This will permanently delete the playlist "${playlistToDelete?.name}".`}
+        description={`This action cannot be undone. This will permanently delete the playlist "${deleteDialog.playlistToDelete?.name}".`}
         confirmText="Delete"
         variant="destructive"
-        onConfirm={confirmDelete}
-        isLoading={isDeleting}
+        onConfirm={deleteDialog.confirmDelete}
+        isLoading={deleteDialog.isDeleting}
         loadingText="Deleting..."
       />
     </PageLayout>

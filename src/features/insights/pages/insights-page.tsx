@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo, useCallback } from "react";
+import { useEffect, useRef, memo } from "react";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useStatsStore, type TimeRange } from "@/stores/stats-store";
 import { useNavigationStore, useCurrentPage, useGoBack } from "@/stores/navigation-store";
@@ -22,6 +22,7 @@ import { WeeklyWrap } from "@/components/insights/weekly-wrap";
 import { RankedListCard } from "@/features/insights/components/ranked-list-card";
 import { PageLayout } from "@/components/shared/page-layout";
 import { EmptyState } from "@/components/shared/empty-state";
+import { useCrossColumnNav } from "@/hooks/use-cross-column-nav";
 
 function StatCard({
   icon: Icon,
@@ -130,6 +131,41 @@ function TimeRangeSelector({
 const ITEMS_VISIBLE = 5;
 const SCOPE = "page:insights";
 
+function scrollItemIntoView(
+  container: HTMLElement | null,
+  index: number,
+  hasInteracted: boolean,
+) {
+  if (!container || !hasInteracted) return;
+  const item = container.querySelector<HTMLElement>(`[data-item-index="${index}"]`);
+  item?.scrollIntoView({ block: "center" });
+}
+
+function toTrackObj(track: {
+  id: number;
+  title: string;
+  artist: string;
+  cover_image: string | null;
+  file_path: string;
+  duration_ms: number;
+}) {
+  return {
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    artwork_path: track.cover_image,
+    duration_ms: track.duration_ms,
+    file_path: track.file_path,
+    album: "",
+    album_id: null,
+    artist_id: null,
+    artist_ids: [] as number[],
+    artist_names: [] as string[],
+    artist_roles: [] as string[],
+    track_number: null,
+  };
+}
+
 export default memo(function InsightsPage() {
   const { data, isLoading, fetchStats, timeRange, setTimeRange } =
     useStatsStore();
@@ -146,13 +182,8 @@ export default memo(function InsightsPage() {
   const tracksRef = useRef<HTMLDivElement>(null);
   const artistsRef = useRef<HTMLDivElement>(null);
   const albumsRef = useRef<HTMLDivElement>(null);
+  const columnsRef = useRef<HTMLDivElement>(null);
   const hasInteractedRef = useRef(false);
-
-  const scrollItemIntoView = useCallback((container: HTMLElement | null, index: number) => {
-    if (!container || !hasInteractedRef.current) return;
-    const item = container.querySelector<HTMLElement>(`[data-item-index="${index}"]`);
-    item?.scrollIntoView({ block: "center" });
-  }, []);
 
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
@@ -192,55 +223,7 @@ export default memo(function InsightsPage() {
   const rankedAlbums = data?.top_albums.slice(0, ITEMS_VISIBLE) ?? [];
 
   // Cross-column arrow navigation: ←/→ between Tracks ↔ Artists ↔ Albums
-  useEffect(() => {
-    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      const active = document.activeElement;
-      if (!active) return;
-
-      if (e.key === "ArrowRight") {
-        if (tracksRef.current?.contains(active)) {
-          e.preventDefault();
-          e.stopPropagation();
-          hasInteractedRef.current = true;
-          const first = artistsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
-          first?.focus({ preventScroll: true });
-          first?.scrollIntoView({ block: "center" });
-        } else if (artistsRef.current?.contains(active)) {
-          e.preventDefault();
-          e.stopPropagation();
-          hasInteractedRef.current = true;
-          const first = albumsRef.current?.querySelector<HTMLElement>('[data-item-index="0"]');
-          first?.focus({ preventScroll: true });
-          first?.scrollIntoView({ block: "center" });
-        }
-      } else {
-        if (albumsRef.current?.contains(active)) {
-          e.preventDefault();
-          e.stopPropagation();
-          hasInteractedRef.current = true;
-          const last = rankedArtists.length - 1;
-          const target = artistsRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
-          target?.focus({ preventScroll: true });
-          target?.scrollIntoView({ block: "center" });
-        } else if (artistsRef.current?.contains(active)) {
-          e.preventDefault();
-          e.stopPropagation();
-          hasInteractedRef.current = true;
-          const last = rankedTracks.length - 1;
-          const target = tracksRef.current?.querySelector<HTMLElement>(`[data-item-index="${last}"]`);
-          target?.focus({ preventScroll: true });
-          target?.scrollIntoView({ block: "center" });
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handler, { capture: true });
-    return () => document.removeEventListener("keydown", handler, { capture: true });
-  }, [rankedTracks.length, rankedArtists.length, rankedAlbums.length]);
+  useCrossColumnNav(columnsRef, 3, useSettingsStore.getState().experimentalFeatures.keyboardNav);
 
   return (
     <PageLayout overflowHidden>
@@ -322,15 +305,16 @@ export default memo(function InsightsPage() {
             </section>
 
             <section className="space-y-3 px-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div ref={columnsRef} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {showSkeleton && !data ? (
                   <>
-                    <TopListSkeleton />
-                    <TopListSkeleton />
-                    <TopListSkeleton />
+                    <div data-column-index={0}><TopListSkeleton /></div>
+                    <div data-column-index={1}><TopListSkeleton /></div>
+                    <div data-column-index={2}><TopListSkeleton /></div>
                   </>
                 ) : (
                   <>
+                    <div data-column-index={0}>
                     <RovingTabindexProvider
                       containerRef={tracksRef}
                       itemCount={rankedTracks.length}
@@ -361,25 +345,11 @@ export default memo(function InsightsPage() {
                           });
                         }
                       }}
-                      onIndexChange={(idx: number) => { scrollItemIntoView(tracksRef.current, idx); hasInteractedRef.current = true; }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(tracksRef.current, idx, hasInteractedRef.current); hasInteractedRef.current = true; }}
                     >
                       <RankedListCard ref={tracksRef} title="Top Tracks" isLoading={showSkeleton && !data} hasData={rankedTracks.length > 0} emptyMessage="No tracks played yet">
                         {rankedTracks.map((track, i) => {
-                            const trackObj = {
-                              id: track.id,
-                              title: track.title,
-                              artist: track.artist,
-                              artwork_path: track.cover_image,
-                              duration_ms: track.duration_ms,
-                              file_path: track.file_path,
-                              album: "",
-                              album_id: null,
-                              artist_id: null,
-                              artist_ids: [],
-                              artist_names: [],
-                              artist_roles: [],
-                              track_number: null,
-                            };
+                            const trackObj = toTrackObj(track);
                             return (
                               <ListItem
                                 key={track.id}
@@ -402,7 +372,9 @@ export default memo(function InsightsPage() {
                           })}
                       </RankedListCard>
                     </RovingTabindexProvider>
+                    </div>
 
+                    <div data-column-index={1}>
                     <RovingTabindexProvider
                       containerRef={artistsRef}
                       itemCount={rankedArtists.length}
@@ -425,7 +397,7 @@ export default memo(function InsightsPage() {
                           }
                         }
                       }}
-                      onIndexChange={(idx: number) => { scrollItemIntoView(artistsRef.current, idx); hasInteractedRef.current = true; }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(artistsRef.current, idx, hasInteractedRef.current); hasInteractedRef.current = true; }}
                     >
                       <RankedListCard ref={artistsRef} title="Top Artists" isLoading={showSkeleton && !data} hasData={rankedArtists.length > 0} emptyMessage="No artists played yet">
                         {rankedArtists.map((artist, i) => (
@@ -458,7 +430,9 @@ export default memo(function InsightsPage() {
                         ))}
                       </RankedListCard>
                     </RovingTabindexProvider>
+                    </div>
 
+                    <div data-column-index={2}>
                     <RovingTabindexProvider
                       containerRef={albumsRef}
                       itemCount={rankedAlbums.length}
@@ -484,7 +458,7 @@ export default memo(function InsightsPage() {
                           }
                         }
                       }}
-                      onIndexChange={(idx: number) => { scrollItemIntoView(albumsRef.current, idx); hasInteractedRef.current = true; }}
+                      onIndexChange={(idx: number) => { scrollItemIntoView(albumsRef.current, idx, hasInteractedRef.current); hasInteractedRef.current = true; }}
                     >
                       <RankedListCard ref={albumsRef} title="Top Albums" isLoading={showSkeleton && !data} hasData={rankedAlbums.length > 0} emptyMessage="No albums played yet">
                         {rankedAlbums.map((album, i) => {
@@ -534,6 +508,7 @@ export default memo(function InsightsPage() {
                           })}
                       </RankedListCard>
                     </RovingTabindexProvider>
+                    </div>
                   </>
                 )}
               </div>

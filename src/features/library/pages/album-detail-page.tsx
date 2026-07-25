@@ -1,4 +1,4 @@
-import { useEffect, useState, memo, useCallback } from "react";
+import { useEffect, useState, memo, useCallback, useMemo } from "react";
 import { getAlbumById, getAlbumTracks, Album, Track } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { logger } from "@/lib/logger";
@@ -26,38 +26,41 @@ import { useInteractionStore } from "@/stores/interaction-store";
 const AlbumTrackRow = memo(function AlbumTrackRow({
   track,
   index,
-  currentTrackId,
-  status,
   tracks,
-  play,
-  pause,
-  resume,
-  menuActions,
   dataItemIndex,
 }: {
   track: Track;
   index: number;
-  currentTrackId?: number;
-  status: string;
   tracks: Track[];
-  play: (track: Track, queue?: Track[]) => Promise<void>;
-  pause: () => Promise<void>;
-  resume: () => Promise<void>;
-  menuActions?: {
-    onPlay?: () => void;
-    onPause?: () => void;
-    onShuffle?: () => void;
-    onPlayNext?: () => void;
-    onAddToQueue?: () => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-    onGoToAlbum?: () => void;
-    onGoToArtist?: () => void;
-    onAddToPlaylist?: (playlistId: number) => void;
-    playlists?: { id: number; name: string }[];
-  };
   dataItemIndex?: number;
 }) {
+  const currentTrack = useCurrentTrack();
+  const status = usePlayerStatus();
+  const play = useAudioStore((s) => s.play);
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playNext = useAudioStore((s) => s.playNext);
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
+
+  const menuActions = useMemo(() => ({
+    onPlay: () => play(track, tracks),
+    onPause:
+      currentTrack?.id === track.id && status === "playing"
+        ? () => pause()
+        : undefined,
+    onShuffle: () => {
+      const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+      play(shuffled[0], shuffled);
+    },
+    onPlayNext: () => playNext(track),
+    onAddToQueue: () => addToQueue(track),
+    onGoToArtist:
+      track.artist_ids?.[0] || track.artist_id
+        ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
+        : undefined,
+  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail]);
+
   return (
     <ListItem
       title={track.title}
@@ -79,15 +82,15 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
       index={index + 1}
       showArtwork={false}
       variant="indexed"
-      active={currentTrackId === track.id}
-      isPlaying={currentTrackId === track.id && status === "playing"}
+      active={currentTrack?.id === track.id}
+      isPlaying={currentTrack?.id === track.id && status === "playing"}
       trailing={
         <span className="tabular-nums text-xs">
           {formatDuration(track.duration_ms)}
         </span>
       }
       onClick={() => {
-        if (currentTrackId === track.id) {
+        if (currentTrack?.id === track.id) {
           if (status === "playing") pause();
           else resume();
         } else {
@@ -106,32 +109,27 @@ export default memo(function AlbumDetailPage() {
   const updateBreadcrumbLabel = useNavigationStore(
     (s) => s.updateBreadcrumbLabel,
   );
-  const play = useAudioStore((s) => s.play);
-  const pause = useAudioStore((s) => s.pause);
-  const resume = useAudioStore((s) => s.resume);
-  const status = usePlayerStatus();
-  const currentTrack = useCurrentTrack();
-
-  const addToQueue = useAudioStore((s) => s.addToQueue);
-  const playNext = useAudioStore((s) => s.playNext);
-  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   const SCOPE = "page:album-detail";
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
-    register("escape", {
-      combo: { key: "Escape" },
-      handler: () => goBack(),
-      description: "Return to albums",
-      preventDefault: true,
-    }, SCOPE);
-    register("backspace", {
-      combo: { key: "Backspace" },
-      handler: () => goBack(),
-      description: "Return to albums",
-      preventDefault: true,
-    }, SCOPE);
+
+    const navKeys = [
+      { id: "escape", key: "Escape" },
+      { id: "backspace", key: "Backspace" },
+    ];
+
+    for (const { id, key } of navKeys) {
+      register(id, {
+        combo: { key },
+        handler: () => goBack(),
+        description: "Return to albums",
+        preventDefault: true,
+      }, SCOPE);
+    }
+
     registerSelectAllAndCleanup(register, clearScope, SCOPE);
+
     return () => clearScope(SCOPE);
   }, [goBack]);
   useSelectionEscapeKeybind(goBack, SCOPE);
@@ -151,7 +149,7 @@ export default memo(function AlbumDetailPage() {
   useEffect(() => {
     if (!albumId) return;
 
-    let cancelled = false;
+    const abortController = new AbortController();
 
     const loadAlbumData = async () => {
       setIsLoading(true);
@@ -160,32 +158,26 @@ export default memo(function AlbumDetailPage() {
           getAlbumById(albumId),
           getAlbumTracks(albumId),
         ]);
-        if (!cancelled) {
-          if (albumData) {
-            setAlbum(albumData);
-            updateBreadcrumbLabel("album", albumId, albumData.title);
-          }
-          // Sort by track number by default
-          const sortedTracks = [...tracksData].sort(
-            (a, b) => (a.track_number || 0) - (b.track_number || 0),
-          );
-          setTracks(sortedTracks);
+        if (abortController.signal.aborted) return;
+        if (albumData) {
+          setAlbum(albumData);
+          updateBreadcrumbLabel("album", albumId, albumData.title);
         }
+        const sortedTracks = [...tracksData].sort(
+          (a, b) => (a.track_number || 0) - (b.track_number || 0),
+        );
+        setTracks(sortedTracks);
       } catch (error) {
-        if (!cancelled) {
-          logger.error("Failed to load album", error);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (abortController.signal.aborted) return;
+        logger.error("Failed to load album", error);
       }
+      setIsLoading(false);
     };
 
     loadAlbumData();
 
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
   }, [albumId, updateBreadcrumbLabel]);
 
@@ -206,62 +198,28 @@ export default memo(function AlbumDetailPage() {
 
   const handlePlay = () => {
     if (tracks.length === 0) return;
+    const play = useAudioStore.getState().play;
     play(tracks[0], tracks);
   };
 
   const handleShuffle = () => {
     if (tracks.length === 0) return;
+    const play = useAudioStore.getState().play;
     const shuffled = [...tracks].sort(() => Math.random() - 0.5);
     play(shuffled[0], shuffled);
   };
 
   const renderItem = useCallback(
-    (track: Track, index: number) => {
-      const menuActions = {
-        onPlay: () => play(track, tracks),
-        onPause:
-          currentTrack?.id === track.id && status === "playing"
-            ? () => pause()
-            : undefined,
-        onShuffle: () => {
-          const shuffled = [...tracks].sort(() => Math.random() - 0.5);
-          play(shuffled[0], shuffled);
-        },
-        onPlayNext: () => playNext(track),
-        onAddToQueue: () => addToQueue(track),
-        onGoToArtist:
-          track.artist_ids?.[0] || track.artist_id
-            ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
-            : undefined,
-      };
-
-      return (
-        <AlbumTrackRow
-          key={track.id}
-          track={track}
-          index={index}
-          currentTrackId={currentTrack?.id}
-          status={status}
-          tracks={tracks}
-          play={play}
-          pause={pause}
-          resume={resume}
-          menuActions={menuActions}
-          dataItemIndex={index}
-        />
-      );
-    },
-    [
-      currentTrack?.id,
-      status,
-      tracks,
-      play,
-      pause,
-      resume,
-      addToQueue,
-      playNext,
-      openArtistDetail,
-    ],
+    (track: Track, index: number) => (
+      <AlbumTrackRow
+        key={track.id}
+        track={track}
+        index={index}
+        tracks={tracks}
+        dataItemIndex={index}
+      />
+    ),
+    [tracks],
   );
 
   if (!album && !isLoading) {

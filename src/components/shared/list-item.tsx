@@ -31,6 +31,106 @@ const rowVariants = cva(
   },
 );
 
+const PlayPauseIcon = memo(function PlayPauseIcon({
+  isPlaying = false,
+  className = "",
+}: {
+  isPlaying?: boolean;
+  className?: string;
+}) {
+  const Icon = isPlaying ? Pause : Play;
+  return <Icon size={16} fill="currentColor" className={className} />;
+});
+
+interface IndexedColumnProps {
+  index?: number;
+  isActive?: boolean;
+  isPlaying?: boolean;
+  onPlay?: () => void;
+}
+
+const IndexedColumn = memo(function IndexedColumn({
+  index,
+  isActive = false,
+  isPlaying = false,
+}: IndexedColumnProps) {
+  return (
+    <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
+      {!isActive ? (
+        <>
+          <span className="group-hover:hidden">
+            {index ?? null}
+          </span>
+          <span
+            aria-label="Play"
+            className="hidden group-hover:block text-foreground"
+          >
+            <Play size={16} fill="currentColor" />
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="group-hover:hidden text-primary">
+            <Pause size={16} fill="currentColor" />
+          </span>
+          <span
+            aria-label={isActive && isPlaying ? "Pause" : "Play"}
+            className="hidden group-hover:block text-foreground"
+          >
+            <PlayPauseIcon isPlaying={isActive && isPlaying} />
+          </span>
+        </>
+      )}
+    </div>
+  );
+});
+
+interface ArtworkWithOverlayProps {
+  src?: string | null;
+  alt?: string;
+  isActive?: boolean;
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  circular?: boolean;
+  placeholderType?: "artist" | "playlist" | "track";
+}
+
+const ArtworkWithOverlay = memo(function ArtworkWithOverlay({
+  src,
+  alt,
+  isActive = false,
+  isPlaying = false,
+  onPlay,
+  circular = false,
+  placeholderType = "track",
+}: ArtworkWithOverlayProps) {
+  const showOverlay = onPlay || isActive;
+  return (
+    <div className="relative shrink-0">
+      <ArtworkImage
+        src={src}
+        alt={alt || "Artwork"}
+        placeholderType={placeholderType}
+        className={cn(
+          "w-10 h-10 object-cover bg-secondary",
+          circular ? "rounded-full" : "rounded shadow-sm",
+        )}
+      />
+      {showOverlay && (
+        <div
+          className={cn(
+            "absolute inset-0 bg-black/40 flex items-center justify-center rounded transition-opacity",
+            circular && "rounded-full",
+            isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          )}
+        >
+          <PlayPauseIcon isPlaying={isPlaying} className="fill-white text-white" />
+        </div>
+      )}
+    </div>
+  );
+});
+
 interface ListItemProps
   extends
     Omit<React.HTMLAttributes<HTMLDivElement>, "title" | "onClick">,
@@ -39,7 +139,6 @@ interface ListItemProps
   subtitle?: string | React.ReactNode;
   artworkSrc?: string;
   index?: number;
-  leading?: React.ReactNode;
   trailing?: React.ReactNode;
   showArtwork?: boolean;
   isPlaying?: boolean;
@@ -60,7 +159,6 @@ export const ListItem = memo(function ListItem({
   subtitle,
   artworkSrc,
   index,
-  leading,
   trailing,
   variant,
   active,
@@ -99,74 +197,24 @@ export const ListItem = memo(function ListItem({
       {...(resolvedTabIndex !== undefined ? { tabIndex: resolvedTabIndex } : {})}
     >
       {variant === "indexed" && (
-        <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
-          {!active ? (
-            <>
-              <span className="group-hover:hidden">
-                {leading ?? index ?? null}
-              </span>
-              <span
-                aria-label="Play"
-                className="hidden group-hover:block text-foreground"
-              >
-                <Play size={16} fill="currentColor" />
-              </span>
-            </>
-          ) : (
-            <>
-              <span
-                className={cn(
-                  "group-hover:hidden",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Pause size={16} fill="currentColor" />
-              </span>
-              <span
-                aria-label={active && isPlaying ? "Pause" : "Play"}
-                className="hidden group-hover:block text-foreground"
-              >
-                {active && isPlaying ? (
-                  <Pause size={16} fill="currentColor" />
-                ) : (
-                  <Play size={16} fill="currentColor" />
-                )}
-              </span>
-            </>
-          )}
-        </div>
+        <IndexedColumn
+          index={index}
+          isActive={!!active}
+          isPlaying={isPlaying}
+        />
       )}
 
       {showArtwork && (
-        <div
-          className={cn(
-            "relative shrink-0",
-            variant !== "indexed" && "w-10 h-10",
-          )}
-        >
-          <ArtworkImage
+        <div className={cn("relative shrink-0", variant !== "indexed" && "w-10 h-10")}>
+          <ArtworkWithOverlay
             src={artworkSrc}
             alt={typeof title === "string" ? title : "Artwork"}
+            isActive={!!active}
+            isPlaying={isPlaying}
+            onPlay={onClick}
+            circular={artworkCircular}
             placeholderType={placeholderType || "track"}
-            className={cn(
-              "w-10 h-10 object-cover bg-secondary",
-              artworkCircular ? "rounded-full" : "rounded shadow-sm",
-            )}
           />
-          {variant !== "indexed" && (onClick || active) && (
-            <div
-              className={cn(
-                "absolute inset-0 bg-black/40 flex items-center justify-center rounded transition-opacity",
-                active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-              )}
-            >
-              {isPlaying ? (
-                <Pause size={16} className="fill-white text-white" />
-              ) : (
-                <Play size={16} className="fill-white text-white" />
-              )}
-            </div>
-          )}
         </div>
       )}
 

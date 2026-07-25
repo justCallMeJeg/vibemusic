@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, memo, useCallback } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import {
   getArtistById,
@@ -11,27 +11,23 @@ import {
 } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { ArtworkImage } from "@/components/shared/artwork-image";
-import { SearchX, Shuffle, ChevronLeft, ChevronRight, Users } from "lucide-react";
-import { CardItem } from "@/components/shared/card-item";
-import { EmptyState } from "@/components/shared/empty-state";
-import {
-  useAudioStore,
-  useCurrentTrack,
-  usePlayerStatus,
-} from "@/stores/audio-store";
+import { SearchX, Shuffle, Users } from "lucide-react";
+import { useAudioStore, useCurrentTrack, usePlayerStatus } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
 import { ListItem } from "@/components/shared/list-item";
 import { ArtistLinks } from "@/components/shared/artist-links";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
-import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
 import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
-import { registerSelectAllAndCleanup } from "@/lib/keybinds";
-import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
-import { useSettingsStore } from "@/stores/settings-store";
+import { useKeybindsStore } from "@/stores/keybinds-store";
+import { registerSelectAllAndCleanup } from "@/lib/keybinds";
+import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { AlbumCarousel } from "@features/library/components/album-carousel";
+import { useArtistKeyboardNav } from "@/hooks/use-artist-keyboard-nav";
 
 const ArtistTrackRow = memo(function ArtistTrackRow({
   track,
@@ -155,9 +151,6 @@ export default memo(function ArtistDetailPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Scroll ref for albums row
-  const albumsScrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (detailView?.type !== "artist" || !detailView.id) return;
 
@@ -219,80 +212,16 @@ export default memo(function ArtistDetailPage() {
     });
   }, [isLoading, tracks.length, albums.length]);
 
-  // Cross-section keyboard nav: albums ↔ tracks + albums left/right
-  const focusedAlbumIdxRef = useRef(-1);
-  useEffect(() => {
-    if (albums.length === 0) return;
-    if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-
-      if (e.key === "ArrowLeft") {
-        const inAlbums = target.closest('[data-album-index]');
-        if (!inAlbums) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const current = focusedAlbumIdxRef.current >= 0 ? focusedAlbumIdxRef.current : 0;
-        const next = Math.max(0, current - 1);
-        const btn = document.querySelector<HTMLElement>(`[data-album-index="${next}"] button`);
-        btn?.focus({ preventScroll: true });
-        focusedAlbumIdxRef.current = next;
-        return;
-      }
-
-      if (e.key === "ArrowRight") {
-        const inAlbums = target.closest('[data-album-index]');
-        if (!inAlbums) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const current = focusedAlbumIdxRef.current >= 0 ? focusedAlbumIdxRef.current : 0;
-        const next = Math.min(albums.length - 1, current + 1);
-        const btn = document.querySelector<HTMLElement>(`[data-album-index="${next}"] button`);
-        btn?.focus({ preventScroll: true });
-        focusedAlbumIdxRef.current = next;
-        return;
-      }
-
-      if (e.key === "ArrowUp") {
-        const firstTrack = target.closest('[data-item-index="0"]');
-        if (firstTrack && albums.length > 0) {
-          e.preventDefault();
-          e.stopPropagation();
-          const firstAlbumBtn = document.querySelector<HTMLElement>(
-            `[data-album-index="0"] button`,
-          );
-          firstAlbumBtn?.focus({ preventScroll: true });
-          focusedAlbumIdxRef.current = 0;
-          const el = document.getElementById('artist-albums-section');
-          if (el) {
-            const scrollable = el.closest<HTMLElement>('[class*="overflow-y-auto"]');
-            scrollable?.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-          return;
-        }
-      }
-
-      if (e.key === "ArrowDown") {
-        const inAlbums = target.closest('[data-album-index]');
-        const inTracks = target.closest('[data-item-index]');
-        if (inAlbums && !inTracks && tracks.length > 0) {
-          e.preventDefault();
-          e.stopPropagation();
-          const firstTrack = document.querySelector<HTMLElement>('[data-item-index="0"]');
-          firstTrack?.focus();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handler, { capture: true });
-    return () => document.removeEventListener("keydown", handler, { capture: true });
-  }, [albums.length, tracks.length]);
+  useArtistKeyboardNav(albums.length, tracks.length);
 
   const renderItem = useCallback(
     (track: Track, index: number) => {
+      const isCurrent = currentTrack?.id === track.id;
+      const isPlayingStatus = status === "playing";
+
       const menuActions = {
         onPlay: () => play(track, tracks),
-        onPause: currentTrack?.id === track.id && status === "playing" ? () => pause() : undefined,
+        onPause: isCurrent && isPlayingStatus ? () => pause() : undefined,
         onShuffle: () => {
           const shuffled = [...tracks].sort(() => Math.random() - 0.5);
           play(shuffled[0], shuffled);
@@ -359,16 +288,6 @@ export default memo(function ArtistDetailPage() {
     openAlbumDetail(albumId);
   };
 
-  const scrollAlbums = (direction: "left" | "right") => {
-    if (albumsScrollRef.current) {
-      const scrollAmount = 300;
-      albumsScrollRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
-
   return (
     <DetailPageTemplate
       title={artist?.name ?? ""}
@@ -426,54 +345,11 @@ export default memo(function ArtistDetailPage() {
         headerExtras={
           <>
             {albums.length > 0 && (
-              <section id="artist-albums-section" className="pb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    Albums
-                  </h2>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => scrollAlbums("left")}
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => scrollAlbums("right")}
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div
-                  ref={albumsScrollRef}
-                  className="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
-                >
-                  {albums.map((album, idx) => (
-                    <div key={album.id} className="w-40 min-w-40" data-album-index={idx}>
-                      <CardItem
-                        title={album.title}
-                        subtitle={
-                          album.year ? String(album.year) : "Unknown Year"
-                        }
-                        artworkSrc={album.artwork_path || undefined}
-                        artworkType="album"
-                        variant="compact"
-                        onClick={() => handleAlbumClick(album.id)}
-                        onPlay={() => handlePlayAlbum(album.id)}
-                        menuActions={{
-                          onPlay: () => handlePlayAlbum(album.id),
-                          onShuffle: () => handlePlayAlbum(album.id),
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <AlbumCarousel
+                albums={albums}
+                onAlbumClick={handleAlbumClick}
+                onPlayAlbum={handlePlayAlbum}
+              />
             )}
 
             {tracks.length > 0 && (

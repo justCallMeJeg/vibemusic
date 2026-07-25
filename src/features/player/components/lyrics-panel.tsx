@@ -1,17 +1,17 @@
-import { memo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import {
   useAudioStore,
   useCurrentTrack,
   usePosition,
   useTrackVersion,
 } from "@/stores/audio-store";
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { getLyrics, LyricLine, LyricsData } from "@/lib/api";
-import { logger } from "@/lib/logger";
+import { LyricLine } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Music2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyPanel } from "@/components/shared/empty-panel";
+import { useAutoScroll } from "@/features/player/hooks/use-auto-scroll";
+import { useLyricsFetch } from "@/features/player/hooks/use-lyrics-fetch";
 
 function LyricsSkeleton() {
   const widths = [70, 40, 55, 90, 60, 45, 80, 50, 75, 65];
@@ -31,11 +31,16 @@ function LyricsSkeleton() {
   );
 }
 
-const SyncedLyricLine = memo(function SyncedLyricLine({
+const PlainLine = memo(function PlainLine({ text }: { text: string }) {
+  return (
+    <div className="text-base text-muted-foreground/90 py-0.5">{text}</div>
+  );
+});
+
+const SyncedLine = memo(function SyncedLine({
   line,
   isActive,
   isPast,
-  isSynced,
   activeLineRef,
   onSeek,
   onAutoScroll,
@@ -43,38 +48,33 @@ const SyncedLyricLine = memo(function SyncedLyricLine({
   line: LyricLine;
   isActive: boolean;
   isPast: boolean;
-  isSynced: boolean;
   activeLineRef: React.RefObject<HTMLButtonElement | null>;
   onSeek: (ms: number) => void;
   onAutoScroll: () => void;
 }) {
-  if (!isSynced) {
-    return (
-      <div className="text-base text-muted-foreground/90 py-0.5">
-        {line.text}
-      </div>
-    );
-  }
+  const handleClick = () => {
+    if (line.timestamp_ms !== null) {
+      onSeek(line.timestamp_ms);
+      onAutoScroll();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (
+      (e.key === "Enter" || e.key === " ") &&
+      line.timestamp_ms !== null
+    ) {
+      onSeek(line.timestamp_ms);
+      onAutoScroll();
+    }
+  };
 
   return (
     <button
       type="button"
       ref={isActive ? activeLineRef : null}
-      onClick={() => {
-        if (line.timestamp_ms !== null) {
-          onSeek(line.timestamp_ms);
-          onAutoScroll();
-        }
-      }}
-      onKeyDown={(e) => {
-        if (
-          (e.key === "Enter" || e.key === " ") &&
-          line.timestamp_ms !== null
-        ) {
-          onSeek(line.timestamp_ms);
-          onAutoScroll();
-        }
-      }}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className={cn(
         "text-xl transition-all duration-300 py-2 px-4 rounded-xl origin-left w-fit max-w-full text-left",
         line.timestamp_ms !== null && "cursor-pointer hover:bg-accent/50",
@@ -96,152 +96,24 @@ export default function LyricsContent() {
   const seek = useAudioStore((s) => s.seek);
   const trackVersion = useTrackVersion();
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lyrics, setLyrics] = useState<LyricLine[]>([]);
-  const [isSynced, setIsSynced] = useState(false);
-  const [source, setSource] = useState<string>("");
-  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-
-  const handleAutoScroll = useCallback(() => setAutoScroll(true), []);
-
-  const lyricsCacheRef = useRef<Map<string, { data: LyricsData; version: number }> | null>(null);
-  if (lyricsCacheRef.current === null)
-    lyricsCacheRef.current = new Map<string, { data: LyricsData; version: number }>();
-  const lyricsCache = lyricsCacheRef.current;
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const setContainerRef = useCallback((el: HTMLDivElement | null) => {
-    containerRef.current = el;
-    setContainerEl(el);
-  }, []);
-  const activeLineRef = useRef<HTMLButtonElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-
-  const scrollDeltaRef = useRef(0);
-  const touchStartYRef = useRef(0);
-  const touchDeltaRef = useRef(0);
-  const lastTouchUpdateRef = useRef(0);
-  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastProgrammaticScrollMsRef = useRef(0);
-  const hasScrolledOnceRef = useRef(false);
-  const firstScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+  const { lyrics, loading, error, isSynced, source } = useLyricsFetch(
+    currentTrack?.file_path,
+    trackVersion,
   );
 
-  useEffect(() => {
-    return () => {
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    };
-  }, []);
-
-  const startInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    inactivityTimerRef.current = setTimeout(() => {
-      setAutoScroll(true);
-      scrollDeltaRef.current = 0;
-      touchDeltaRef.current = 0;
-    }, 3000);
-  }, []);
-
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      scrollDeltaRef.current += Math.abs(e.deltaY);
-
-      if (scrollDeltaRef.current > 80) {
-        setAutoScroll((current) => (current === true ? false : current));
-      }
-
-      startInactivityTimer();
-    },
-    [startInactivityTimer],
-  );
-
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    touchStartYRef.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e: TouchEvent) => {
-      const now = Date.now();
-      if (now - lastTouchUpdateRef.current < 100) return;
-      lastTouchUpdateRef.current = now;
-
-      const delta = Math.abs(e.touches[0].clientY - touchStartYRef.current);
-      touchDeltaRef.current = Math.max(touchDeltaRef.current, delta);
-
-      if (touchDeltaRef.current > 40) {
-        setAutoScroll((current) => (current === true ? false : current));
-      }
-
-      startInactivityTimer();
-    },
-    [startInactivityTimer],
-  );
-
-  const handleScroll = useCallback(() => {
-    if (Date.now() - lastProgrammaticScrollMsRef.current < 500) return;
-    setAutoScroll((current) => (current === true ? false : current));
-    startInactivityTimer();
-  }, [startInactivityTimer]);
+  const {
+    containerRef,
+    activeLineRef,
+    isAutoScrolling,
+    scrollToIndex,
+    enableAutoScroll,
+    resumeAutoScroll,
+    reset,
+  } = useAutoScroll();
 
   useEffect(() => {
-    if (!containerEl) return;
-
-    containerEl.addEventListener("wheel", handleWheel, { passive: true });
-    containerEl.addEventListener("touchstart", handleTouchStart, { passive: true });
-    containerEl.addEventListener("touchmove", handleTouchMove, { passive: true });
-    containerEl.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      containerEl.removeEventListener("wheel", handleWheel);
-      containerEl.removeEventListener("touchstart", handleTouchStart);
-      containerEl.removeEventListener("touchmove", handleTouchMove);
-      containerEl.removeEventListener("scroll", handleScroll);
-    };
-  }, [handleWheel, handleTouchStart, handleTouchMove, handleScroll, containerEl]);
-
-  useEffect(() => {
-    setAutoScroll(true);
-    scrollDeltaRef.current = 0;
-    touchDeltaRef.current = 0;
-    hasScrolledOnceRef.current = false;
-  }, [currentTrack]);
-
-  useEffect(() => {
-    const path = currentTrack?.file_path;
-    if (!path) return;
-
-    const cached = lyricsCache.get(path);
-    if (cached && cached.version === trackVersion) {
-      setLyrics(cached.data.lines);
-      setIsSynced(cached.data.is_synced);
-      setSource(cached.data.source);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setLyrics([]);
-    setSource("");
-
-    getLyrics(path)
-      .then((data) => {
-        setLyrics(data.lines);
-        setIsSynced(data.is_synced);
-        setSource(data.source);
-        lyricsCache.set(path, { data, version: trackVersion });
-      })
-      .catch((err) => {
-        logger.warn("Failed to fetch lyrics:", err);
-        setError("No lyrics found");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [currentTrack?.file_path, trackVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+    reset();
+  }, [currentTrack, reset]);
 
   const activeIndex = useMemo(() => {
     if (!isSynced || !lyrics.length) return -1;
@@ -266,39 +138,9 @@ export default function LyricsContent() {
   }, [lyrics, position, isSynced]);
 
   useEffect(() => {
-    if (!autoScroll || activeIndex === -1 || !containerRef.current) return;
-
-    const scrollToActive = () => {
-      const element = activeLineRef.current;
-      if (!element) return;
-
-      const container = containerRef.current!;
-      const containerHeight = container.clientHeight;
-      const elementTop = element.offsetTop;
-      const elementHeight = element.clientHeight;
-
-      lastProgrammaticScrollMsRef.current = Date.now();
-
-      container.scrollTo({
-        top: elementTop - containerHeight / 2 + elementHeight / 2,
-        behavior: hasScrolledOnceRef.current ? "smooth" : "instant",
-      });
-      hasScrolledOnceRef.current = true;
-    };
-
-    if (!hasScrolledOnceRef.current) {
-      firstScrollTimerRef.current = setTimeout(scrollToActive, 200);
-    } else {
-      scrollToActive();
-    }
-
-    return () => {
-      if (firstScrollTimerRef.current) {
-        clearTimeout(firstScrollTimerRef.current);
-        firstScrollTimerRef.current = null;
-      }
-    };
-  }, [activeIndex, autoScroll]);
+    if (!isAutoScrolling || activeIndex === -1) return;
+    scrollToIndex(activeIndex);
+  }, [activeIndex, isAutoScrolling, scrollToIndex]);
 
   const sourceLabel = useMemo(() => {
     if (!source) return "";
@@ -312,9 +154,7 @@ export default function LyricsContent() {
   }, [source, isSynced]);
 
   if (!currentTrack) {
-    return (
-      <EmptyPanel icon={Music2} title="No track playing" />
-    );
+    return <EmptyPanel icon={Music2} title="No track playing" />;
   }
 
   if (loading) {
@@ -333,7 +173,7 @@ export default function LyricsContent() {
 
   return (
     <div
-      ref={setContainerRef}
+      ref={containerRef}
       className="flex-1 overflow-y-auto pt-4 pb-[50%] px-6 scroll-smooth"
     >
       {source ? (
@@ -345,31 +185,30 @@ export default function LyricsContent() {
       ) : null}
 
       <div className="flex flex-col gap-4 min-h-0">
-        {lyrics.map((line, index) => (
-          <SyncedLyricLine
-            key={index}
-            line={line}
-            isActive={index === activeIndex}
-            isPast={index < activeIndex}
-            isSynced={isSynced}
-            activeLineRef={
-              activeLineRef as React.RefObject<HTMLButtonElement | null>
-            }
-            onSeek={seek}
-            onAutoScroll={handleAutoScroll}
-          />
-        ))}
+        {lyrics.map((line, index) =>
+          isSynced ? (
+            <SyncedLine
+              key={index}
+              line={line}
+              isActive={index === activeIndex}
+              isPast={index < activeIndex}
+              activeLineRef={
+                activeLineRef as React.RefObject<HTMLButtonElement | null>
+              }
+              onSeek={seek}
+              onAutoScroll={enableAutoScroll}
+            />
+          ) : (
+            <PlainLine key={index} text={line.text} />
+          ),
+        )}
       </div>
 
-      {!autoScroll && isSynced ? (
+      {!isAutoScrolling && isSynced ? (
         <div className="sticky bottom-11/12 z-10 flex justify-end">
           <button
             type="button"
-            onClick={() => {
-              setAutoScroll(true);
-              scrollDeltaRef.current = 0;
-              touchDeltaRef.current = 0;
-            }}
+            onClick={resumeAutoScroll}
             className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-3 py-1.5 rounded-full transition-colors shadow-sm backdrop-blur-sm"
           >
             Resume Auto-Scroll

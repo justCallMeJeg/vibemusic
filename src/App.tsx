@@ -1,24 +1,22 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
 import MusicController from "@features/player/components/music-controller";
-import { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
 import {
   useKeyboardShortcuts,
   useGlobalKeydownListener,
 } from "@/hooks/use-keyboard-shortcuts";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
-import { useInteractionStore } from "@/stores/interaction-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
 
 import MainContent from "@features/shell/components/main-content";
 import { BackgroundGradient } from "@features/shell/components/background-gradient";
 import { SidebarSection } from "@features/shell/components/sidebar-section";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { getDominantColor } from "./lib/color-utils";
 import {
   useWindowCloseHandler,
   useRefreshInterceptor,
@@ -36,8 +34,11 @@ import { useDialogStore } from "@/stores/dialog-store";
 
 import { useContentStore } from "@features/library/store/content-store";
 import { usePlaylistStore } from "@features/playlists/store/playlist-store";
-import { logger } from "@/lib/logger";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
+import { useFocusTracking } from "@/hooks/use-focus-tracking";
+import { useTrackGradient } from "@/hooks/use-track-gradient";
+import { useScanOnStartup } from "@/hooks/use-scan-on-startup";
+import { useProfileSwitch } from "@/hooks/use-profile-switch";
 
 const SidePanelContent = lazy(
   () => import("@features/shell/components/side-panel-content"),
@@ -53,12 +54,9 @@ export default function App() {
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const status = useAudioStore((s) => s.status);
-  const [gradientColor, setGradientColor] = useState<string>("transparent");
-
-  // Refresh Warning State
-  const isPlaying = status === "playing";
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
+  const isPlaying = status === "playing";
 
   useRefreshInterceptor(isPlaying, () =>
     useDialogStore.getState().setIsRefreshWarningOpen(true),
@@ -78,78 +76,20 @@ export default function App() {
     : undefined;
 
   useProfileTheme();
-
-  // Keyboard shortcuts — gated via experimental features inside the hooks
   useKeyboardShortcuts();
   useGlobalKeydownListener();
-
-  // Block native WebView right-click context menu
-  useEffect(() => {
-    const handler = (e: MouseEvent) => e.preventDefault();
-    document.addEventListener("contextmenu", handler);
-    return () => document.removeEventListener("contextmenu", handler);
-  }, []);
-
-  // Track interaction source for keyboard-aware focus behavior
-  useEffect(() => {
-    const onMouseDown = () => useInteractionStore.getState().setFocusSource("mouse");
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) return;
-      const navKeys = ["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", " ", "Home", "End"];
-      if (navKeys.includes(e.key)) {
-        useInteractionStore.getState().setFocusSource("keyboard");
-      }
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
+  useFocusTracking();
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 
-  const handleProfileClick = () => {
-    // Check if playback is active
-    if (currentTrack && (status === "playing" || status === "paused")) {
-      useDialogStore.getState().setShowProfileSwitchWarning(true);
-    } else {
-      useProfileStore.getState().selectProfile(null);
-    }
-  };
-
-  const confirmProfileSwitch = async () => {
-    await useAudioStore.getState().stop();
-    useDialogStore.getState().setShowProfileSwitchWarning(false);
-    useProfileStore.getState().selectProfile(null);
-  };
+  const { handleProfileClick, confirmProfileSwitch } = useProfileSwitch();
 
   useAppInit();
 
-  const hasDoneInitialScan = useRef(false);
+  const { handleFolderImport, isScanning, setIsScanning } = useFolderImport();
+  useScanOnStartup(activeProfileId, setIsScanning);
 
-  useEffect(() => {
-    if (activeProfileId) {
-      const settings = useSettingsStore.getState();
-      if (
-        !hasDoneInitialScan.current &&
-        settings.scanOnStartup &&
-        settings.libraryPaths.length > 0
-      ) {
-        hasDoneInitialScan.current = true;
-        setIsScanning(true);
-        invoke("scan_music_library", { folders: settings.libraryPaths })
-          .then(() => {
-            useContentStore.getState().fetchContent();
-            usePlaylistStore.getState().fetchPlaylists();
-          })
-          .catch((err) => logger.error("Startup scan failed:", err))
-          .finally(() => setIsScanning(false));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfileId]);
+  const gradientColor = useTrackGradient();
 
   const handleQuitApp = async () => {
     useDialogStore.getState().closeQuitDialog();
@@ -176,51 +116,21 @@ export default function App() {
     }
   });
 
-  // Listen for global scan progress to refresh library - extracted to custom hook
   useScanProgressListener(async () => {
     await useContentStore.getState().fetchContent();
     await usePlaylistStore.getState().fetchPlaylists();
   });
 
-  const isPlaybackActive = status === "playing" || status === "paused";
-
-  // Update gradient when track changes - only show when actually playing/paused
-  useEffect(() => {
-    if (!isPlaybackActive) {
-      setGradientColor("transparent");
-      return;
-    }
-
-    if (currentTrack?.artwork_path) {
-      const src = convertFileSrc(currentTrack.artwork_path);
-      let cancelled = false;
-      getDominantColor(src).then((color) => {
-        if (!cancelled) setGradientColor(color);
-      });
-      return () => {
-        cancelled = true;
-      };
-    } else {
-      setGradientColor("transparent");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack?.id, isPlaybackActive]);
-
-  // Initialize audio event listeners
   useEffect(() => {
     const cleanup = initListeners();
     return cleanup;
   }, [initListeners]);
 
-  // Initialize system theme listener
   useEffect(() => {
     const cleanup = useSettingsStore.getState().initSystemThemeListener();
     return cleanup;
   }, []);
 
-  const { handleFolderImport, isScanning, setIsScanning } = useFolderImport();
-
-  // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
 
   useEffect(() => {
@@ -273,7 +183,6 @@ export default function App() {
             <MainContent />
           </div>
 
-          {/* Queue Menu / Track Detail Panel */}
           <div
             data-region="sidepanel"
             data-region-visible={sidePanel !== "none" ? "true" : "false"}
@@ -292,7 +201,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Music Controller */}
       <div
         data-region="player"
         data-region-visible={isPlayerVisible ? "true" : "false"}

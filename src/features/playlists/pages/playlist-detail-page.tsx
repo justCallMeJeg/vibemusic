@@ -9,26 +9,21 @@ import {
 } from "@/lib/api";
 import { useNavigationStore, useDetailView } from "@/stores/navigation-store";
 import { useAudioStore } from "@/stores/audio-store";
-import { useKeybindsStore } from "@/stores/keybinds-store";
-import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
 import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
-import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useInteractionStore } from "@/stores/interaction-store";
 import { SearchX, Plus, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { EmptyState } from "@/components/shared/empty-state";
-import { PlaylistEditDialog } from "@features/playlists/components/playlist-edit-dialog";
 import { arrayMove } from "@dnd-kit/sortable";
-import { TrackSelectDialog } from "@features/playlists/components/track-select-dialog";
 import { DetailPageTemplate } from "@/components/shared/templates/detail-page-template";
 import { TrackList } from "@/components/shared/templates/track-list";
 import { PlaylistHero } from "@features/playlists/components/playlist-hero";
-
 import { SortableTrackItem } from "@features/playlists/components/sortable-track-item";
+import { PlaylistDialogs } from "@features/playlists/components/playlist-dialogs";
+import { usePlaylistPageKeybinds } from "@/hooks/use-playlist-page-keybinds";
 
 export default memo(function PlaylistDetailPage() {
   const detailView = useDetailView();
@@ -55,25 +50,7 @@ export default memo(function PlaylistDetailPage() {
 
   const playlistId = detailView?.type === "playlist" ? detailView.id : null;
 
-  const SCOPE = "page:playlist-detail";
-  useEffect(() => {
-    const { register, clearScope } = useKeybindsStore.getState();
-    register("escape", {
-      combo: { key: "Escape" },
-      handler: () => goBack(),
-      description: "Return to playlists",
-      preventDefault: true,
-    }, SCOPE);
-    register("backspace", {
-      combo: { key: "Backspace" },
-      handler: () => goBack(),
-      description: "Return to playlists",
-      preventDefault: true,
-    }, SCOPE);
-    registerSelectAllAndCleanup(register, clearScope, SCOPE);
-    return () => clearScope(SCOPE);
-  }, [goBack]);
-  useSelectionEscapeKeybind(goBack, SCOPE);
+  usePlaylistPageKeybinds(goBack);
 
   const loadData = useCallback(async () => {
     if (!playlistId) return;
@@ -173,12 +150,8 @@ export default memo(function PlaylistDetailPage() {
 
   const handleReorder = useCallback(
     async (activeId: string | number, overId: string | number) => {
-      let oldIdx = -1,
-        newIdx = -1;
-      for (let i = 0; i < tracks.length; i++) {
-        if (tracks[i].id === activeId) oldIdx = i;
-        if (tracks[i].id === overId) newIdx = i;
-      }
+      const oldIdx = tracks.findIndex((t) => t.id === activeId);
+      const newIdx = tracks.findIndex((t) => t.id === overId);
       if (oldIdx === -1 || newIdx === -1) return;
       const newOrder = arrayMove(tracks, oldIdx, newIdx);
       setTracks(newOrder);
@@ -269,42 +242,20 @@ export default memo(function PlaylistDetailPage() {
           </PlaylistHero>
         }
         headerExtras={
-          <>
-            <ConfirmDialog
-              open={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
-              title="Delete Playlist?"
-              description={`This action cannot be undone. This will permanently delete the playlist "${playlist?.name ?? ""}".`}
-              confirmText="Delete"
-              variant="destructive"
-              onConfirm={handleDelete}
-              isLoading={isDeleting}
-              loadingText="Deleting..."
-            />
-
-            {playlist && (
-              <PlaylistEditDialog
-                playlist={playlist}
-                open={isEditOpen}
-                onOpenChange={(open) => {
-                  setIsEditOpen(open);
-                  if (!open) loadData();
-                }}
-              />
-            )}
-
-            {playlistId && (
-              <TrackSelectDialog
-                open={isAddSongOpen}
-                onOpenChange={(open) => {
-                  setIsAddSongOpen(open);
-                  if (!open) loadData();
-                }}
-                playlistId={playlistId}
-                existingTrackIds={existingTrackIds}
-              />
-            )}
-          </>
+          <PlaylistDialogs
+            isDeleteDialogOpen={isDeleteDialogOpen}
+            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+            isEditOpen={isEditOpen}
+            setIsEditOpen={setIsEditOpen}
+            isAddSongOpen={isAddSongOpen}
+            setIsAddSongOpen={setIsAddSongOpen}
+            isDeleting={isDeleting}
+            playlist={playlist}
+            playlistId={playlistId}
+            existingTrackIds={existingTrackIds}
+            handleDelete={handleDelete}
+            loadData={loadData}
+          />
         }
         emptyState={
           !isLoading ? (

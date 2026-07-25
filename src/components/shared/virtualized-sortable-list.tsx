@@ -20,6 +20,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
+function useSortableSensors(effectiveKeyboardNav: boolean | undefined) {
+  const keyboardSensor = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  return useSensors(
+    useSensor(PointerSensor),
+    ...(effectiveKeyboardNav ? [] : [keyboardSensor]),
+  );
+}
+
 interface VirtualizedSortableListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
@@ -72,13 +82,7 @@ export function VirtualizedSortableList<T>({
     overscan: 5,
   });
 
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    ...(effectiveKeyboardNav ? [] : [keyboardSensor]),
-  );
+  const sensors = useSortableSensors(effectiveKeyboardNav);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

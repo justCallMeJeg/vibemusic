@@ -40,6 +40,54 @@ const imageVariants = cva("relative bg-card overflow-hidden shadow-sm", {
   },
 });
 
+function useCardTabIndex(dataItemIndex: number | undefined) {
+  const roving = useRovingTabindexContext();
+  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
+  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const resolvedTabIndex = rovingTabIndex !== undefined
+    ? rovingTabIndex
+    : (dataItemIndex !== undefined && !!roving ? -1 : undefined);
+  return { rovingTabIndex, isRovingActive, resolvedTabIndex };
+}
+
+function CardArtwork({
+  artworkSrc,
+  artworkType,
+  title,
+}: {
+  artworkSrc?: string;
+  artworkType: "album" | "artist" | "playlist";
+  title: string;
+}) {
+  if (artworkSrc) {
+    return (
+      <ArtworkImage
+        src={artworkSrc}
+        alt={title}
+        placeholderType={artworkType}
+        className="group-hover:scale-[1.02] transition-transform duration-300"
+      />
+    );
+  }
+  if (artworkType === "playlist") {
+    return (
+      <DynamicPlaceholder
+        type="playlist"
+        title={title}
+        className="group-hover:scale-[1.02] transition-transform"
+      />
+    );
+  }
+  return (
+    <ArtworkImage
+      src={undefined}
+      alt={title}
+      placeholderType={artworkType === "artist" ? "artist" : "track"}
+      className="group-hover:scale-[1.02] transition-transform duration-300"
+    />
+  );
+}
+
 interface CardItemProps
   extends
     Omit<React.ComponentProps<"button">, "contextMenu">,
@@ -79,43 +127,9 @@ export const CardItem = memo(function CardItem({
   dataItemIndex,
   ...props
 }: CardItemProps) {
-  const roving = useRovingTabindexContext();
-  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
-  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
-  const resolvedTabIndex = rovingTabIndex !== undefined
-    ? rovingTabIndex
-    : (dataItemIndex !== undefined && !!roving ? -1 : undefined);
+  const { isRovingActive, resolvedTabIndex } = useCardTabIndex(dataItemIndex);
   const isCircle = variant === "circle";
   const isCompact = variant === "compact";
-
-  const artwork = artworkSrc ? (
-    <ArtworkImage
-      src={artworkSrc}
-      alt={title}
-      placeholderType={artworkType}
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
-  ) : artworkType === "playlist" ? (
-    <DynamicPlaceholder
-      type="playlist"
-      title={title}
-      className="group-hover:scale-[1.02] transition-transform"
-    />
-  ) : artworkType === "artist" ? (
-    <ArtworkImage
-      src={undefined}
-      alt={title}
-      placeholderType="artist"
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
-  ) : (
-    <ArtworkImage
-      src={undefined}
-      alt={title}
-      placeholderType="track"
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
-  );
 
   const CardContent = (
     <button
@@ -137,7 +151,11 @@ export const CardItem = memo(function CardItem({
             isCircle ? "rounded-full" : "rounded-[inherit]",
           )}
         >
-          {artwork}
+          <CardArtwork
+            artworkSrc={artworkSrc}
+            artworkType={artworkType}
+            title={title}
+          />
           {onPlay && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
               <Button

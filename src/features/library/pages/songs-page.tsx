@@ -2,9 +2,7 @@ import {
   memo,
   useMemo,
   useRef,
-  useState,
   useCallback,
-  useDeferredValue,
   useEffect,
 } from "react";
 import { cn } from "@/lib/utils";
@@ -34,7 +32,6 @@ import {
 import { useNavigationStore } from "@/stores/navigation-store";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArrowUpDown, Search, Music2 } from "lucide-react";
-import { useSettingsStore } from "@/stores/settings-store";
 import { useContentStore } from "@features/library/store/content-store";
 import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
@@ -45,41 +42,33 @@ import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind"
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
 import { useSelectionStore } from "@/stores/selection-store";
+import { useSongSearchAndSort } from "@/hooks/use-song-search-and-sort";
 
 import { formatDuration } from "@/lib/format";
 
 type SortKey = "title" | "artist" | "date_added" | "duration";
 type SortDirection = "asc" | "desc";
 
-// Item height for virtualization (matches MusicListItem padding + content)
 const ITEM_HEIGHT = 60;
 
 const SongListMenu = memo(function SongListMenu({
   track,
-  status,
-  currentTrackId,
-  pause,
-  resume,
-  play,
-  playNext,
-  addToQueue,
-  addToPlaylist,
-  playlists,
   dataItemIndex,
 }: {
   track: Track;
-  status: string;
-  currentTrackId?: number;
-  pause: () => Promise<void>;
-  resume: () => Promise<void>;
-  play: (track: Track) => Promise<void>;
-  playNext: (track: Track) => void;
-  addToQueue: (track: Track) => void;
-  addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
-  playlists: { id: number; name: string }[];
   dataItemIndex?: number;
 }) {
-  const isCurrent = currentTrackId === track.id;
+  const currentTrack = useCurrentTrack();
+  const status = usePlayerStatus();
+  const pause = useAudioStore((s) => s.pause);
+  const resume = useAudioStore((s) => s.resume);
+  const play = useAudioStore((s) => s.play);
+  const playNext = useAudioStore((s) => s.playNext);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
+  const playlists = usePlaylistStore((s) => s.playlists);
+
+  const isCurrent = currentTrack?.id === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
 
   const handleClick = useCallback(() => {
@@ -169,98 +158,36 @@ const SongListMenu = memo(function SongListMenu({
 });
 
 export default memo(function SongsPage() {
-  const tracks = useContentStore((s) => s.tracks);
   const isLoading = useContentStore((s) => s.isLoading);
-  const [searchQuery, setSearchQuery] = useState("");
-  const deferredQuery = useDeferredValue(searchQuery);
+  const {
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    setSortKey,
+    sortDirection,
+    setSortDirection,
+    filteredItems,
+  } = useSongSearchAndSort();
 
-  // Use persistent settings - individual selectors for better re-render performance
-  const songsSortKey = useSettingsStore((s) => s.songsSortKey);
-  const songsSortDirection = useSettingsStore((s) => s.songsSortDirection);
-  const setSongsSort = useSettingsStore((s) => s.setSongsSort);
-
-  const currentTrack = useCurrentTrack();
-  const status = usePlayerStatus();
   const play = useAudioStore((s) => s.play);
-  const pause = useAudioStore((s) => s.pause);
-  const resume = useAudioStore((s) => s.resume);
-  const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
-  const playlists = usePlaylistStore((s) => s.playlists);
-  const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
   const setPage = useNavigationStore((s) => s.setPage);
 
-  // Ref for the scrollable container
   const parentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Apply visual scroll mask using the same ref
   useScrollMask(24, parentRef);
 
-  // ... (existing code)
-
-  // Filter and Sort Logic
-  const displayedTracks = useMemo(() => {
-    let result = [...tracks];
-
-    // Filter
-    if (deferredQuery) {
-      const query = deferredQuery.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.title.toLowerCase().includes(query) ||
-          (t.artist && t.artist.toLowerCase().includes(query)) ||
-          (t.album && t.album.toLowerCase().includes(query)),
-      );
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      let valA: string | number | undefined;
-      let valB: string | number | undefined;
-
-      switch (songsSortKey) {
-        case "title":
-          valA = a.title.toLowerCase();
-          valB = b.title.toLowerCase();
-          break;
-        case "artist":
-          valA = (a.artist || "").toLowerCase();
-          valB = (b.artist || "").toLowerCase();
-          break;
-        case "duration":
-          valA = a.duration_ms;
-          valB = b.duration_ms;
-          break;
-        case "date_added":
-        default:
-          valA = a.id;
-          valB = b.id;
-          break;
-      }
-
-      if (valA === undefined || valB === undefined) return 0;
-      if (valA < valB) return songsSortDirection === "asc" ? -1 : 1;
-      if (valA > valB) return songsSortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [tracks, deferredQuery, songsSortKey, songsSortDirection]);
-
-  // Virtualizer for efficient list rendering
   const virtualizer = useVirtualizer({
-    count: displayedTracks.length,
+    count: filteredItems.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ITEM_HEIGHT,
     overscan: 5,
   });
 
-  // Store tracks in a ref for menu callbacks
-  const tracksRef = useRef(displayedTracks);
-  tracksRef.current = displayedTracks;
+  const tracksRef = useRef(filteredItems);
+  tracksRef.current = filteredItems;
 
-  // Dynamic padding based on player visibility
   const isPlayerVisible = useIsPlayerVisible();
   const bottomPadding = isPlayerVisible ? 156 : 24;
 
@@ -296,7 +223,6 @@ export default memo(function SongsPage() {
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Songs">
-        {/* Toolbar */}
         <div className="flex items-center gap-2">
           <div
             className={cn(
@@ -335,9 +261,9 @@ export default memo(function SongsPage() {
                 <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup
-                  value={songsSortKey}
+                  value={sortKey}
                   onValueChange={(v) =>
-                    setSongsSort(v as SortKey, songsSortDirection)
+                    setSortKey(v as SortKey)
                   }
                 >
                   <DropdownMenuRadioItem value="title">
@@ -357,9 +283,9 @@ export default memo(function SongsPage() {
                 <DropdownMenuLabel>Order</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuRadioGroup
-                  value={songsSortDirection}
+                  value={sortDirection}
                   onValueChange={(v) =>
-                    setSongsSort(songsSortKey, v as SortDirection)
+                    setSortDirection(v as SortDirection)
                   }
                 >
                   <DropdownMenuRadioItem value="asc">
@@ -375,7 +301,7 @@ export default memo(function SongsPage() {
 
           {!isLoading && (
             <div className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
-              {displayedTracks.length} tracks
+              {filteredItems.length} tracks
             </div>
           )}
         </div>
@@ -385,14 +311,14 @@ export default memo(function SongsPage() {
         ref={parentRef}
         className={cn(
           "flex-1 overflow-y-auto px-2 scroll-mask-y",
-          !isLoading && displayedTracks.length === 0 && "flex flex-col gap-1",
+          !isLoading && filteredItems.length === 0 && "flex flex-col gap-1",
           !isLoading &&
-            displayedTracks.length === 0 &&
+            filteredItems.length === 0 &&
             isPlayerVisible &&
             "pb-player-bar",
         )}
       >
-        {isLoading ? null : displayedTracks.length === 0 ? (
+        {isLoading ? null : filteredItems.length === 0 ? (
           searchQuery ? (
             <EmptyState
               icon={Search}
@@ -419,16 +345,16 @@ export default memo(function SongsPage() {
         ) : (
           <RovingTabindexProvider
             containerRef={parentRef}
-            itemCount={displayedTracks.length}
-            enabled={displayedTracks.length > 0}
-            autoFocus={displayedTracks.length > 0 && useInteractionStore.getState().focusSource === "keyboard"}
+            itemCount={filteredItems.length}
+            enabled={filteredItems.length > 0}
+            autoFocus={filteredItems.length > 0 && useInteractionStore.getState().focusSource === "keyboard"}
             direction="vertical"
             onActivate={(index: number) => {
-              const track = displayedTracks[index];
+              const track = filteredItems[index];
               if (track) play(track);
             }}
             onActivateSecondary={(index: number) => {
-              const track = displayedTracks[index];
+              const track = filteredItems[index];
               if (track) playNext(track);
             }}
             onIndexChange={(index: number) => {
@@ -444,7 +370,7 @@ export default memo(function SongsPage() {
               }}
             >
               {virtualizer.getVirtualItems().map((virtualItem) => {
-                const track = displayedTracks[virtualItem.index];
+                const track = filteredItems[virtualItem.index];
                 return (
                   <div
                     key={track.id}
@@ -456,15 +382,6 @@ export default memo(function SongsPage() {
                   >
                     <SongListMenu
                       track={track}
-                      status={status}
-                      currentTrackId={currentTrack?.id}
-                      pause={pause}
-                      resume={resume}
-                      play={play}
-                      playNext={playNext}
-                      addToQueue={addToQueue}
-                      addToPlaylist={addToPlaylist}
-                      playlists={playlists}
                       dataItemIndex={virtualItem.index}
                     />
                   </div>
