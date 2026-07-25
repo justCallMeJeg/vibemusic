@@ -13,9 +13,14 @@ interface SortableTrackItemProps {
   index: number;
   onRemove: (e: React.MouseEvent) => void;
   dataItemIndex?: number;
+  onGoToAlbum?: () => void;
+  onGoToArtist?: () => void;
+  onCopyTitle?: () => void;
+  onCopyArtist?: () => void;
+  onCopyFilePath?: () => void;
 }
 
-export function SortableTrackItem({ track, index, onRemove, dataItemIndex }: SortableTrackItemProps) {
+export function SortableTrackItem({ track, index, onRemove, dataItemIndex, onGoToAlbum, onGoToArtist, onCopyTitle, onCopyArtist, onCopyFilePath }: SortableTrackItemProps) {
   const currentTrack = useCurrentTrack();
   const play = useAudioStore((s) => s.play);
   const pause = useAudioStore((s) => s.pause);
@@ -104,6 +109,11 @@ export function SortableTrackItem({ track, index, onRemove, dataItemIndex }: Sor
             onPause: isCurrentTrack ? () => pause() : undefined,
             onPlayNext: () => playNext(track),
             onAddToQueue: () => addToQueue(track),
+            onGoToAlbum,
+            onGoToArtist,
+            onCopyTitle,
+            onCopyArtist,
+            onCopyFilePath,
           }}
           dataItemIndex={dataItemIndex}
         />

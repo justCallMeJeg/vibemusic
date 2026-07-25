@@ -8,9 +8,11 @@ interface AlbumCarouselProps {
   albums: Album[];
   onAlbumClick: (albumId: number) => void;
   onPlayAlbum: (albumId: number) => void;
+  onShuffleAlbum?: (albumId: number) => Promise<void>;
+  onAddToAlbumQueue?: (albumId: number) => Promise<void>;
 }
 
-export function AlbumCarousel({ albums, onAlbumClick, onPlayAlbum }: AlbumCarouselProps) {
+export function AlbumCarousel({ albums, onAlbumClick, onPlayAlbum, onShuffleAlbum, onAddToAlbumQueue }: AlbumCarouselProps) {
   const albumsScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollAlbums = (direction: "left" | "right") => {
@@ -65,7 +67,8 @@ export function AlbumCarousel({ albums, onAlbumClick, onPlayAlbum }: AlbumCarous
               onPlay={() => onPlayAlbum(album.id)}
               menuActions={{
                 onPlay: () => onPlayAlbum(album.id),
-                onShuffle: () => onPlayAlbum(album.id),
+                onShuffle: onShuffleAlbum ? () => onShuffleAlbum(album.id) : undefined,
+                onAddToQueue: onAddToAlbumQueue ? () => onAddToAlbumQueue(album.id) : undefined,
               }}
             />
           </div>

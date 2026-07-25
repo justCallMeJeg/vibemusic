@@ -112,6 +112,7 @@ export default memo(function ArtistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
   const updateBreadcrumbLabel = useNavigationStore(
     (s) => s.updateBreadcrumbLabel,
   );
@@ -229,6 +230,13 @@ export default memo(function ArtistDetailPage() {
         onPlayNext: () => playNext(track),
         onAddToQueue: () => addToQueue(track),
         onGoToAlbum: track.album_id != null ? () => openAlbumDetail(track.album_id!) : undefined,
+        onGoToArtist:
+          track.artist_ids?.[0] || track.artist_id
+            ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
+            : undefined,
+        onCopyTitle: () => navigator.clipboard.writeText(track.title),
+        onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
+        onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
       };
 
       return (
@@ -247,7 +255,7 @@ export default memo(function ArtistDetailPage() {
         />
       );
     },
-    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openAlbumDetail],
+    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openAlbumDetail, openArtistDetail],
   );
 
   const activationHandlers = useTrackActivationHandlers(tracks);
@@ -281,6 +289,29 @@ export default memo(function ArtistDetailPage() {
       }
     } catch (err) {
       logger.error("Failed to play album", err);
+    }
+  };
+
+  const handleShuffleAlbum = async (albumId: number) => {
+    try {
+      const albumTracks = await getAlbumTracks(albumId);
+      if (albumTracks.length > 0) {
+        const shuffled = [...albumTracks].sort(() => Math.random() - 0.5);
+        play(shuffled[0], shuffled);
+      }
+    } catch (err) {
+      logger.error("Failed to shuffle album", err);
+    }
+  };
+
+  const handleAddAlbumToQueue = async (albumId: number) => {
+    try {
+      const albumTracks = await getAlbumTracks(albumId);
+      if (albumTracks.length > 0) {
+        albumTracks.forEach((track) => addToQueue(track));
+      }
+    } catch (err) {
+      logger.error("Failed to add album to queue", err);
     }
   };
 
@@ -349,6 +380,8 @@ export default memo(function ArtistDetailPage() {
                 albums={albums}
                 onAlbumClick={handleAlbumClick}
                 onPlayAlbum={handlePlayAlbum}
+                onShuffleAlbum={handleShuffleAlbum}
+                onAddToAlbumQueue={handleAddAlbumToQueue}
               />
             )}
 

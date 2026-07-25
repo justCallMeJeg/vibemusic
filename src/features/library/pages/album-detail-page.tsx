@@ -41,6 +41,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   const resume = useAudioStore((s) => s.resume);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const playNext = useAudioStore((s) => s.playNext);
+  const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   const menuActions = useMemo(() => ({
@@ -59,7 +60,12 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
       track.artist_ids?.[0] || track.artist_id
         ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
         : undefined,
-  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail]);
+    onGoToAlbum:
+      track.album_id != null ? () => openAlbumDetail(track.album_id!) : undefined,
+    onCopyTitle: () => navigator.clipboard.writeText(track.title),
+    onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
+    onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
+  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail, openAlbumDetail]);
 
   return (
     <ListItem

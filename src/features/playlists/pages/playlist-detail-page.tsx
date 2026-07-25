@@ -28,6 +28,8 @@ import { usePlaylistPageKeybinds } from "@/hooks/use-playlist-page-keybinds";
 export default memo(function PlaylistDetailPage() {
   const detailView = useDetailView();
   const goBack = useNavigationStore((s) => s.goBack);
+  const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
   const updateBreadcrumbLabel = useNavigationStore(
     (s) => s.updateBreadcrumbLabel,
   );
@@ -175,9 +177,18 @@ export default memo(function PlaylistDetailPage() {
         index={index}
         dataItemIndex={index}
         onRemove={(e: React.MouseEvent) => handleRemoveTrack(track.id, e)}
+        onGoToAlbum={track.album_id != null ? () => openAlbumDetail(track.album_id!) : undefined}
+        onGoToArtist={
+          track.artist_ids?.[0] || track.artist_id
+            ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
+            : undefined
+        }
+        onCopyTitle={() => navigator.clipboard.writeText(track.title)}
+        onCopyArtist={() => navigator.clipboard.writeText(track.artist ?? "")}
+        onCopyFilePath={track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined}
       />
     ),
-    [handleRemoveTrack],
+    [handleRemoveTrack, openAlbumDetail, openArtistDetail],
   );
 
   const activationHandlers = useTrackActivationHandlers(tracks);
