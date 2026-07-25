@@ -9,15 +9,20 @@ use thiserror::Error;
 /// Application-wide error type.
 #[derive(Error, Debug)]
 pub enum AppError {
-    #[error("IO error: {0}")]
+    #[error("Database: {0}")]
+    Database(#[from] rusqlite::Error),
+    #[error("IO: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Audio error: {0}")]
+    #[error("Audio: {0}")]
     Audio(String),
-    #[error("Internal error: {0}")]
-    #[allow(dead_code)]
+    #[error("HTTP: {0}")]
+    Http(#[from] reqwest::Error),
+    #[error("Not found: {0}")]
+    NotFound(String),
+    #[error("Validation: {0}")]
+    Validation(String),
+    #[error("{0}")]
     Internal(String),
-    #[error("Unknown error: {0}")]
-    Unknown(String),
 }
 
 impl Serialize for AppError {
@@ -31,7 +36,7 @@ impl Serialize for AppError {
 
 impl From<String> for AppError {
     fn from(s: String) -> Self {
-        AppError::Unknown(s)
+        AppError::Internal(s)
     }
 }
 
@@ -42,21 +47,21 @@ mod tests {
     #[test]
     fn test_app_error_audio_display() {
         let err = AppError::Audio("device not found".to_string());
-        assert_eq!(err.to_string(), "Audio error: device not found");
+        assert_eq!(err.to_string(), "Audio: device not found");
     }
 
     #[test]
-    fn test_app_error_unknown_display() {
-        let err = AppError::Unknown("something went wrong".to_string());
-        assert_eq!(err.to_string(), "Unknown error: something went wrong");
+    fn test_app_error_not_found_display() {
+        let err = AppError::NotFound("track #42".to_string());
+        assert_eq!(err.to_string(), "Not found: track #42");
     }
 
     #[test]
     fn test_app_error_from_string() {
         let err: AppError = "custom error".to_string().into();
         match err {
-            AppError::Unknown(s) => assert_eq!(s, "custom error"),
-            _ => panic!("Expected Unknown variant"),
+            AppError::Internal(s) => assert_eq!(s, "custom error"),
+            _ => panic!("Expected Internal variant"),
         }
     }
 
@@ -64,12 +69,12 @@ mod tests {
     fn test_app_error_serializes_to_string() {
         let err = AppError::Audio("no output".to_string());
         let serialized = serde_json::to_string(&err).unwrap_or_default();
-        assert_eq!(serialized, "\"Audio error: no output\"");
+        assert_eq!(serialized, "\"Audio: no output\"");
     }
 
     #[test]
     fn test_app_error_internal_display() {
         let err = AppError::Internal("lock poisoned".to_string());
-        assert_eq!(err.to_string(), "Internal error: lock poisoned");
+        assert_eq!(err.to_string(), "lock poisoned");
     }
 }

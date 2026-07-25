@@ -1,3 +1,4 @@
+use crate::shared::error::AppError;
 use log::info;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -41,7 +42,7 @@ pub fn get_library_db_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 /// Opens the library database and calls the given function with a DbHelper reference.
 /// Uses a connection cache keyed by profile ID to avoid re-opening connections.
-pub fn with_db<F, T>(app: &AppHandle, f: F) -> Result<T, String>
+pub fn with_db<F, T>(app: &AppHandle, f: F) -> Result<T, AppError>
 where
     F: FnOnce(&crate::database::DbHelper) -> Result<T, rusqlite::Error>,
 {
@@ -49,7 +50,7 @@ where
         .state::<ProfileState>()
         .0
         .lock()
-        .map_err(|e| format!("Profile state lock poisoned: {}", e))?
+        .map_err(|e| AppError::Internal(format!("Profile state lock poisoned: {}", e)))?
         .clone();
     let db_path = get_library_db_path(app)?;
 
@@ -57,20 +58,20 @@ where
     let mut cache = cache
         .0
         .lock()
-        .map_err(|e| format!("DbCache lock poisoned: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("DbCache lock poisoned: {}", e)))?;
     if !cache.contains_key(&profile_id) {
         let db = crate::database::DbHelper::new(&db_path)
-            .map_err(|e| format!("Failed to open database connection: {}", e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to open database connection: {}", e)))?;
         cache.insert(profile_id.clone(), db);
     }
     let db = cache
         .get(&profile_id)
-        .ok_or("Database not found in cache after insert")?;
+        .ok_or(AppError::Internal("Database not found in cache after insert".into()))?;
 
-    f(db).map_err(|e| format!("Database operation failed: {}", e))
+    f(db).map_err(AppError::Database)
 }
 
-pub fn with_db_mut<F, T>(app: &AppHandle, f: F) -> Result<T, String>
+pub fn with_db_mut<F, T>(app: &AppHandle, f: F) -> Result<T, AppError>
 where
     F: FnOnce(&mut crate::database::DbHelper) -> Result<T, rusqlite::Error>,
 {
@@ -78,7 +79,7 @@ where
         .state::<ProfileState>()
         .0
         .lock()
-        .map_err(|e| format!("Profile state lock poisoned: {}", e))?
+        .map_err(|e| AppError::Internal(format!("Profile state lock poisoned: {}", e)))?
         .clone();
     let db_path = get_library_db_path(app)?;
 
@@ -86,17 +87,17 @@ where
     let mut cache = cache
         .0
         .lock()
-        .map_err(|e| format!("DbCache lock poisoned: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("DbCache lock poisoned: {}", e)))?;
     if !cache.contains_key(&profile_id) {
         let db = crate::database::DbHelper::new(&db_path)
-            .map_err(|e| format!("Failed to open database connection: {}", e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to open database connection: {}", e)))?;
         cache.insert(profile_id.clone(), db);
     }
     let db = cache
         .get_mut(&profile_id)
-        .ok_or("Database not found in cache after insert")?;
+        .ok_or(AppError::Internal("Database not found in cache after insert".into()))?;
 
-    f(db).map_err(|e| format!("Database operation failed: {}", e))
+    f(db).map_err(AppError::Database)
 }
 
 /// Deletes all data associated with a profile (DB, settings, avatar).

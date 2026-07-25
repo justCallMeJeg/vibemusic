@@ -1,22 +1,32 @@
-use super::crossfade::CrossfadeState;
-use super::decoder::SymphoniaDecoder;
-use super::types::{
-    AudioCommand, PlaybackState, EVENT_PLAYBACK_ERROR, EVENT_PLAYBACK_FINISHED,
-    EVENT_PLAYBACK_PROGRESS, EVENT_PLAYBACK_STATE,
-};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Stream, StreamConfig};
-use log::{debug, error, info, warn};
-use ringbuf::{
-    traits::{Consumer, Observer, Producer, Split},
-    HeapRb,
-};
-use souvlaki::{MediaMetadata, MediaPlayback, MediaPosition};
+//! AudioWorker thread — decode, resample, mix, output.
+//!
+//! Sub-modules:
+//! - [`fade_controller`]: Pause/resume/stop with atomic gain ramping
+//! - [`decoder_pool`]: Decoder creation, seek, prefetch, resample
+//! - [`stream_manager`]: CPAL stream creation/rebuild, device recovery
+
+mod decoder_pool;
+mod fade_controller;
+mod stream_manager;
+
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::Stream;
+use log::{debug, error, info, warn};
+use ringbuf::traits::{Observer, Producer};
+use souvlaki::{MediaMetadata, MediaPlayback, MediaPosition};
 use tauri::{AppHandle, Emitter};
+
+use crate::audio::crossfade::CrossfadeState;
+use crate::audio::decoder::SymphoniaDecoder;
+use crate::audio::types::{
+    AudioCommand, PlaybackState, EVENT_PLAYBACK_ERROR, EVENT_PLAYBACK_FINISHED,
+    EVENT_PLAYBACK_PROGRESS, EVENT_PLAYBACK_STATE,
+};
 
 pub(crate) struct AudioWorker {
     pub(crate) receiver: Receiver<AudioCommand>,
@@ -271,13 +281,7 @@ impl AudioWorker {
                         }
                     }
 
-                    self.update_media_metadata(
-                        title,
-                        artist,
-                        album,
-                        artwork_path,
-                        self.duration_ms,
-                    );
+                    self.update_media_metadata(title, artist, album, artwork_path, self.duration_ms);
                     self.emit_state();
                     self.emit_progress();
                 }
@@ -354,46 +358,6 @@ impl AudioWorker {
         self.emit_state();
     }
 
-    fn prefill_buffer(&mut self, file_rate: u32) -> Vec<f32> {
-        let target_samples =
-            (self.device_sample_rate as usize * self.device_channels as usize) / 4;
-        let mut prefill = Vec::with_capacity(target_samples);
-        let start = Instant::now();
-
-        let Some(decoder) = self.primary_decoder.as_mut() else {
-            return prefill;
-        };
-
-        let dev_rate = self.device_sample_rate;
-        let dev_ch = self.device_channels as usize;
-
-        while prefill.len() < target_samples && start.elapsed() < Duration::from_millis(100) {
-            let Ok(n) = decoder.decode(&mut self.primary_buffer) else {
-                break;
-            };
-            if n == 0 {
-                break;
-            }
-
-            let len = if file_rate != dev_rate {
-                Self::resample_audio(
-                    &self.primary_buffer[..n],
-                    file_rate,
-                    dev_rate,
-                    dev_ch,
-                    &mut self.resample_buf,
-                )
-            } else {
-                let copy_len = n.min(self.resample_buf.len());
-                self.resample_buf[..copy_len].copy_from_slice(&self.primary_buffer[..copy_len]);
-                copy_len
-            };
-            prefill.extend_from_slice(&self.resample_buf[..len]);
-        }
-
-        prefill
-    }
-
     pub(crate) fn update_media_metadata(
         &self,
         title: &str,
@@ -420,178 +384,6 @@ impl AudioWorker {
                 }
             }
         }
-    }
-
-    pub(crate) fn recreate_cpal_stream(
-        &mut self,
-        _sample_rate: u32,
-        _channels: u16,
-        prefill: Option<&[f32]>,
-    ) {
-        let host = cpal::default_host();
-
-        let device = if let Some(ref name) = self.selected_device_name {
-            host.output_devices()
-                .ok()
-                .and_then(|mut devices| {
-                    devices.find(|d| d.name().map(|n| n == *name).unwrap_or(false))
-                })
-                .or_else(|| host.default_output_device())
-        } else {
-            host.default_output_device()
-        };
-
-        let Some(device) = device else {
-            error!("No audio output device available");
-            self.app_handle
-                .emit(EVENT_PLAYBACK_ERROR, "No audio output device available")
-                .ok();
-            return;
-        };
-
-        let config: StreamConfig = match device.default_output_config() {
-            Ok(c) => c.into(),
-            Err(e) => {
-                error!("Failed to get default audio config: {}", e);
-                self.app_handle
-                    .emit(EVENT_PLAYBACK_ERROR, format!("Audio device error: {}", e))
-                    .ok();
-                return;
-            }
-        };
-
-        self.device_sample_rate = config.sample_rate.0;
-        self.device_channels = config.channels;
-
-        let min_buffer = self.primary_buffer.len() * 2;
-        let buffer_size =
-            (self.device_sample_rate as usize * self.device_channels as usize).max(min_buffer);
-
-        let (mut producer, consumer) = HeapRb::<f32>::new(buffer_size).split();
-
-        if let Some(data) = prefill {
-            let _ = producer.push_slice(data);
-        }
-
-        self.producer = Some(producer);
-
-        let volume = self.volume.clone();
-        let is_playing = self.is_playing.clone();
-        let device_error = self.device_error.clone();
-        let fade_gain_arc = self.fade_gain.clone();
-        let fade_target_arc = self.fade_target.clone();
-        let fade_step_arc = self.fade_step.clone();
-        let channels = self.device_channels as usize;
-        let mut consumer = consumer;
-
-        let stream = match device.build_output_stream(
-            &config,
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                if !is_playing.load(Ordering::Relaxed) {
-                    data.fill(0.0);
-                    return;
-                }
-
-                let vol = f32::from_bits(volume.load(Ordering::Relaxed) as u32);
-                let mut gain = f32::from_bits(fade_gain_arc.load(Ordering::Relaxed));
-                let target = f32::from_bits(fade_target_arc.load(Ordering::Relaxed));
-                let step = f32::from_bits(fade_step_arc.load(Ordering::Relaxed));
-
-                let mut should_stop = false;
-                for frame in data.chunks_mut(channels) {
-                    for sample in frame.iter_mut() {
-                        if (gain - target).abs() > step * 0.5 {
-                            gain += if gain < target { step } else { -step };
-                            if (gain - target).abs() <= step {
-                                gain = target;
-                            }
-                        }
-                        if gain <= f32::EPSILON && target <= f32::EPSILON {
-                            should_stop = true;
-                        }
-                        *sample = consumer.try_pop().unwrap_or(0.0) * vol * gain;
-                    }
-                }
-                fade_gain_arc.store(gain.to_bits(), Ordering::Relaxed);
-                if should_stop {
-                    is_playing.store(false, Ordering::Relaxed);
-                }
-            },
-            move |err| {
-                error!("CPAL Error: {}", err);
-                device_error.store(true, Ordering::Relaxed);
-            },
-            None,
-        ) {
-            Ok(s) => s,
-            Err(e) => {
-                error!("Failed to build audio stream: {}", e);
-                self.app_handle
-                    .emit(
-                        EVENT_PLAYBACK_ERROR,
-                        format!("Failed to initialize audio: {}", e),
-                    )
-                    .ok();
-                return;
-            }
-        };
-
-        self.is_playing.store(true, Ordering::Relaxed);
-
-        if let Err(e) = stream.play() {
-            error!("Failed to play audio stream: {}", e);
-            self.app_handle
-                .emit(
-                    EVENT_PLAYBACK_ERROR,
-                    format!("Failed to start playback: {}", e),
-                )
-                .ok();
-            return;
-        }
-
-        self._current_stream = Some(stream);
-    }
-
-    /// Linear interpolation resampler: converts audio from input_rate to output_rate
-    pub(crate) fn resample_audio(
-        input: &[f32],
-        input_rate: u32,
-        output_rate: u32,
-        channels: usize,
-        output: &mut [f32],
-    ) -> usize {
-        if input_rate == output_rate || input_rate == 0 || output_rate == 0 {
-            let n = input.len().min(output.len());
-            output[..n].copy_from_slice(&input[..n]);
-            return n;
-        }
-
-        let ratio = input_rate as f64 / output_rate as f64;
-        let input_frames = input.len() / channels;
-        let output_frames = ((input_frames as f64) / ratio).ceil() as usize;
-        let output_frames = output_frames.min(output.len() / channels);
-
-        for of in 0..output_frames {
-            let src_pos = of as f64 * ratio;
-            let fi = src_pos as usize;
-            let frac = src_pos - fi as f64;
-
-            for ch in 0..channels {
-                let a = if fi < input_frames {
-                    input[fi * channels + ch] as f64
-                } else {
-                    0.0
-                };
-                let b = if fi + 1 < input_frames {
-                    input[(fi + 1) * channels + ch] as f64
-                } else {
-                    a
-                };
-                output[of * channels + ch] = (a * (1.0 - frac) + b * frac).clamp(-1.0, 1.0) as f32;
-            }
-        }
-
-        output_frames * channels
     }
 
     pub(crate) fn decode_and_push(&mut self) {
@@ -730,10 +522,10 @@ impl AudioWorker {
                     };
 
                     debug!(
-                        "[crossfade] batch: pri_read={} sec_read={} pri_resampled={} sec_resampled={} rate_pri={}hz→{}hz rate_sec={}hz→{}hz progress={:.4} fade_delta_in={:.6}",
+                        "[crossfade] batch: pri_read={} sec_read={} pri_resampled={} sec_resampled={} rate_pri={}hz->{}hz rate_sec={}hz->{}hz progress={:.4}",
                         primary_read, secondary_read, primary_len, secondary_len,
                         primary_rate, dev_rate, secondary_rate, dev_rate,
-                        crossfade_progress, secondary_len as f32 * vol_step_fade_in,
+                        crossfade_progress,
                     );
                     for i in 0..primary_len {
                         let t = (1.0 - crossfade_progress + i as f32 * vol_step_fade_out).max(0.0);
@@ -753,13 +545,13 @@ impl AudioWorker {
                     }
                     producer.push_slice(&self.resample_buf[..mix_len]);
 
-                    self.samples_played += secondary_len as u64;
-                    let samples_per_ms = (dev_rate as u64 * self.device_channels as u64) / 1000;
+                    self.samples_played += mix_len as u64;
+                    let samples_per_ms = (dev_rate as u64 * dev_channels as u64) / 1000;
                     if samples_per_ms > 0 {
                         self.current_position_ms = self.samples_played / samples_per_ms;
                     }
 
-                    if crossfade_progress + secondary_len as f32 * vol_step_fade_in >= 1.0 {
+                    if crossfade_progress + mix_len as f32 * vol_step_fade_in >= 1.0 {
                         debug!(
                             "[crossfade] complete: new_rate={}hz new_ch={}",
                             self.secondary_decoder
@@ -823,155 +615,10 @@ impl AudioWorker {
         }
     }
 
-    pub(crate) fn handle_device_change(&mut self) {
-        info!("Audio device changed, reconfiguring stream");
-        self.device_error.store(false, Ordering::Relaxed);
-        if self.current_file_path.is_some() {
-            self._current_stream = None;
-            self.producer = None;
-            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels, None);
-            self.app_handle.emit("audio-device-recovered", ()).ok();
-        }
-    }
-
     pub(crate) fn handle_end_of_track(&mut self) {
         info!("Track finished naturally");
         self.stop();
         self.app_handle.emit(EVENT_PLAYBACK_FINISHED, ()).ok();
-    }
-
-    pub(crate) fn pause(&mut self) {
-        let step = f32::from_bits(self.fade_step.load(Ordering::Relaxed));
-        if self.fade_in_out_enabled && step > 0.0 && self.is_playing.load(Ordering::Relaxed) {
-            info!("Playback paused (fade-out)");
-            self.fade_target.store(f32::to_bits(0.0), Ordering::Relaxed);
-            {
-                match self.state.lock() {
-                    Ok(mut s) => {
-                        s.is_paused = true;
-                        s.is_playing = false;
-                    }
-                    Err(poisoned) => {
-                        error!("Audio state mutex poisoned in pause, recovering");
-                        let mut s = poisoned.into_inner();
-                        s.is_paused = true;
-                        s.is_playing = false;
-                    }
-                }
-            }
-            self.update_media_controls();
-            self.emit_state();
-        } else {
-            info!("Playback paused");
-            self.is_playing.store(false, Ordering::Relaxed);
-            {
-                match self.state.lock() {
-                    Ok(mut s) => {
-                        s.is_paused = true;
-                        s.is_playing = false;
-                    }
-                    Err(poisoned) => {
-                        error!("Audio state mutex poisoned in pause, recovering");
-                        let mut s = poisoned.into_inner();
-                        s.is_paused = true;
-                        s.is_playing = false;
-                    }
-                }
-            }
-            self.update_media_controls();
-            self.emit_state();
-        }
-    }
-
-    pub(crate) fn resume(&mut self) {
-        let step = f32::from_bits(self.fade_step.load(Ordering::Relaxed));
-        if self.fade_in_out_enabled && step > 0.0 {
-            info!("Playback resumed (fade-in)");
-            self.is_playing.store(true, Ordering::Relaxed);
-            self.fade_gain.store(f32::to_bits(0.0), Ordering::Relaxed);
-            self.fade_target.store(f32::to_bits(1.0), Ordering::Relaxed);
-            {
-                match self.state.lock() {
-                    Ok(mut s) => {
-                        s.is_paused = false;
-                        s.is_playing = true;
-                    }
-                    Err(poisoned) => {
-                        error!("Audio state mutex poisoned in resume, recovering");
-                        let mut s = poisoned.into_inner();
-                        s.is_paused = false;
-                        s.is_playing = true;
-                    }
-                }
-            }
-            self.update_media_controls();
-            self.emit_state();
-        } else {
-            info!("Playback resumed");
-            self.is_playing.store(true, Ordering::Relaxed);
-            {
-                match self.state.lock() {
-                    Ok(mut s) => {
-                        s.is_paused = false;
-                        s.is_playing = true;
-                    }
-                    Err(poisoned) => {
-                        error!("Audio state mutex poisoned in resume, recovering");
-                        let mut s = poisoned.into_inner();
-                        s.is_paused = false;
-                        s.is_playing = true;
-                    }
-                }
-            }
-            self.update_media_controls();
-            self.emit_state();
-        }
-    }
-
-    pub(crate) fn stop(&mut self) {
-        info!("Playback stopped");
-        self.is_playing.store(false, Ordering::Relaxed);
-        self.fade_gain.store(f32::to_bits(1.0), Ordering::Relaxed);
-        self.fade_target.store(f32::to_bits(1.0), Ordering::Relaxed);
-
-        self.primary_decoder = None;
-        self.secondary_decoder = None;
-
-        self._current_stream = None;
-        self.producer = None;
-        self.current_file_path = None;
-        self.current_position_ms = 0;
-        self.duration_ms = 0;
-        self.samples_played = 0;
-        self.crossfade_state = CrossfadeState::None;
-        self.crossfade_batches_logged = 0;
-
-        {
-            match self.state.lock() {
-                Ok(mut s) => {
-                    s.is_playing = false;
-                    s.is_paused = false;
-                    s.position_ms = 0;
-                    s.current_file = None;
-                }
-                Err(poisoned) => {
-                    error!("Audio state mutex poisoned in stop, recovering");
-                    let mut s = poisoned.into_inner();
-                    s.is_playing = false;
-                    s.is_paused = false;
-                    s.position_ms = 0;
-                    s.current_file = None;
-                }
-            }
-        }
-
-        if let Ok(mut guard) = self.media_controls.lock() {
-            if let Some(ref mut c) = *guard {
-                c.set_playback(MediaPlayback::Stopped).ok();
-            }
-        }
-
-        self.emit_state();
     }
 
     pub(crate) fn seek(&mut self, pos_ms: u64) {
@@ -1025,11 +672,7 @@ impl AudioWorker {
                 }
             }
 
-            self.recreate_cpal_stream(
-                self.device_sample_rate,
-                self.device_channels,
-                Some(&prefill),
-            );
+            self.recreate_cpal_stream(self.device_sample_rate, self.device_channels, Some(&prefill));
 
             if !was_playing {
                 self.is_playing.store(false, Ordering::Relaxed);
