@@ -2,12 +2,13 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useSelectionStore } from "@/stores/selection-store";
 import { cn } from "@/lib/utils";
-import { ListMusic, ListPlus, Minus, X, Check } from "lucide-react";
+import { ListMusic, ListPlus, Minus, X, Check, SkipForward } from "lucide-react";
 
 interface BatchActionsBarProps {
   entityType: "track" | "album" | "artist" | "playlist";
   onAddToPlaylist?: () => void;
   onAddToQueue?: () => void;
+  onPlayNext?: () => void;
   onRemove?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function BatchActionsBar({
   entityType,
   onAddToPlaylist,
   onAddToQueue,
+  onPlayNext,
   onRemove,
 }: BatchActionsBarProps) {
   const selectionCount = useSelectionStore((s) => s.selectedIds.length);
@@ -77,6 +79,12 @@ export function BatchActionsBar({
               <Button variant="ghost" size="sm" onClick={onAddToPlaylist}>
                 <ListPlus className="size-4 mr-1.5" />
                 Playlist
+              </Button>
+            )}
+            {onPlayNext && (
+              <Button variant="ghost" size="sm" onClick={onPlayNext}>
+                <SkipForward className="size-4 mr-1.5" />
+                Next
               </Button>
             )}
             {onAddToQueue && (

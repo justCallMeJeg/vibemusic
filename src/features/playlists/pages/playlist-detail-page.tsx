@@ -29,7 +29,6 @@ import { PlaylistHero } from "@features/playlists/components/playlist-hero";
 import { PlaylistDialogs } from "@features/playlists/components/playlist-dialogs";
 import { usePlaylistPageKeybinds } from "@/hooks/use-playlist-page-keybinds";
 import { useSelectionStore } from "@/stores/selection-store";
-import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 
 interface PlaylistTrackRowProps {
   track: Track;
@@ -259,29 +258,6 @@ export default memo(function PlaylistDetailPage() {
     );
   }, [tracks]);
 
-  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
-  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-
-  const confirmBatchRemove = useCallback(async () => {
-    const ids = useSelectionStore.getState().getSelectedIds();
-    if (!playlistId) return;
-    setIsBatchDeleting(true);
-    try {
-      for (const trackId of ids) {
-        await removeTrackFromPlaylist(playlistId, trackId);
-      }
-      setTracks((prev) => prev.filter((t) => !ids.includes(t.id)));
-      useSelectionStore.getState().disableCheckboxMode();
-      toast.success(`Removed ${ids.length} track${ids.length !== 1 ? "s" : ""}`);
-    } catch (error) {
-      logger.error("Failed to remove tracks from playlist", error);
-      toast.error("Failed to remove some tracks");
-    } finally {
-      setIsBatchDeleting(false);
-      setBatchDeleteDialogOpen(false);
-    }
-  }, [playlistId]);
-
   const handlePlay = () => {
     if (tracks.length > 0) {
       play(tracks[0], tracks);
@@ -469,17 +445,6 @@ export default memo(function PlaylistDetailPage() {
         }
       />
     </DetailPageTemplate>
-      <ConfirmDialog
-        open={batchDeleteDialogOpen}
-        onOpenChange={setBatchDeleteDialogOpen}
-        title="Remove Tracks?"
-        description={`This will remove the selected tracks from this playlist. The tracks will remain in your library.`}
-        confirmText="Remove"
-        variant="destructive"
-        onConfirm={confirmBatchRemove}
-        isLoading={isBatchDeleting}
-        loadingText="Removing..."
-      />
     </>
   );
 });
