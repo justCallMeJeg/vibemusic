@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
+import { useIndexPageKeybinds } from "@/hooks/use-index-page-keybinds";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useSelection } from "@/hooks/use-selection";
 
@@ -151,7 +151,19 @@ export default memo(function PlaylistsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:playlists";
-  useSearchKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
+  useIndexPageKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE, [
+    ["delete", {
+      combo: { key: "Delete" },
+      handler: () => {
+        const sel = useSelectionStore.getState();
+        if (sel.selectionCount() > 0) {
+          setBatchDeleteDialogOpen(true);
+        }
+      },
+      description: "Delete selected playlists",
+      preventDefault: true,
+    }],
+  ]);
 
   const handlePlayPlaylist = useCallback(
     async (playlistId: number, shuffle = false) => {

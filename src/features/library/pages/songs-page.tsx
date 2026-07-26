@@ -33,9 +33,8 @@ import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { useIndexPageKeybinds } from "@/hooks/use-index-page-keybinds";
 import { useSelectionStore } from "@/stores/selection-store";
-import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useSongSearchAndSort } from "@/hooks/use-song-search-and-sort";
 
 import { VirtualizedList } from "@/components/shared/virtualized-list";
@@ -180,33 +179,7 @@ export default memo(function SongsPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const SCOPE = "page:songs";
-  useSelectionEscapeKeybind(() => {}, SCOPE, () => { if (searchQuery) setSearchQuery(""); });
-  useEffect(() => {
-    const { register, clearScope } = useKeybindsStore.getState();
-    register(
-      "ctrl+f",
-      {
-        combo: { key: "f", ctrl: true },
-        handler: () => {
-          searchInputRef.current?.focus();
-        },
-        description: "Focus search",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    register(
-      "ctrl+a",
-      {
-        combo: { key: "a", ctrl: true },
-        handler: () => useSelectionStore.getState().selectAll(),
-        description: "Select all visible tracks",
-        preventDefault: true,
-      },
-      SCOPE,
-    );
-    return () => clearScope(SCOPE);
-  }, [searchQuery]);
+  useIndexPageKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
 
   const handleActivate = useCallback(
     (index: number) => {

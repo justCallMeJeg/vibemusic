@@ -14,7 +14,7 @@ import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
-import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
+import { useIndexPageKeybinds } from "@/hooks/use-index-page-keybinds";
 import { PageSearchAndSort } from "@/components/shared/page-search-and-sort";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useSelection } from "@/hooks/use-selection";
@@ -85,7 +85,7 @@ export default memo(function AlbumsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:albums";
-  useSearchKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
+  useIndexPageKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE);
 
   const handlePlayAlbum = useCallback(async (albumId: number, shuffle = false) => {
     try {
