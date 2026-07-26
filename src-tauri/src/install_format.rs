@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::env;
 
 /// Detected installation format of the current app.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
