@@ -70,7 +70,7 @@ function parseAssets(
   for (const asset of assets) {
     const name: string = asset.name;
     if (!version) {
-      const m = name.match(/_(\d+\.\d+\.\d+)_/);
+      const m = name.match(/_(\d+\.\d+\.\d+)/);
       if (m) version = m[1];
     }
     const match64 = name.includes("x64") || name.includes("amd64");
