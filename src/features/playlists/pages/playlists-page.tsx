@@ -1,4 +1,4 @@
-import { useState, useMemo, memo, useCallback, useDeferredValue, useRef } from "react";
+import { useState, useMemo, memo, useCallback, useDeferredValue, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -24,6 +24,8 @@ import { VirtualizedGrid } from "@/components/shared/virtualized-grid";
 import { PageLayout } from "@/components/shared/page-layout";
 
 import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useSelection } from "@/hooks/use-selection";
 
 const PlaylistGridCard = memo(function PlaylistGridCard({
   playlist,
@@ -44,6 +46,11 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onDelete: (p: Playlist) => void;
   dataItemIndex?: number;
 }) {
+  useSelection({ itemId: playlist.id, index: dataItemIndex ?? 0 });
+  const checkboxMode = useSelectionStore((s) => s.mode === "checkbox");
+  const handleClick = useCallback(() => {
+    onOpenDetail(playlist.id);
+  }, [playlist.id, onOpenDetail]);
   const menuActions = useMemo(
     () => ({
       onPlay: () => onPlay(playlist.id),
@@ -63,10 +70,11 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
       artworkSrc={playlist.artwork_path || undefined}
       artworkType="playlist"
       variant="portrait"
-      onClick={() => onOpenDetail(playlist.id)}
+      onClick={handleClick}
       onPlay={() => onPlay(playlist.id)}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      selectable={checkboxMode}
     />
   );
 });
@@ -122,6 +130,10 @@ export default memo(function PlaylistsPage() {
       return 0;
     });
   }, [playlists, playlistsSortKey, playlistsSortDirection, deferredQuery]);
+
+  useEffect(() => {
+    useSelectionStore.getState().setItems(filteredAndSortedPlaylists.map((p, i) => ({ id: p.id, index: i })));
+  }, [filteredAndSortedPlaylists]);
 
   // Create Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -206,6 +218,27 @@ export default memo(function PlaylistsPage() {
     setPlaylistToDelete(playlist);
     setIsDeleteDialogOpen(true);
   };
+
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+
+  const confirmBatchDelete = useCallback(async () => {
+    const ids = useSelectionStore.getState().getSelectedIds();
+    setIsBatchDeleting(true);
+    try {
+      for (const playlistId of ids) {
+        await deletePlaylist(playlistId);
+      }
+      useSelectionStore.getState().disableCheckboxMode();
+      toast.success(`Deleted ${ids.length} playlist${ids.length !== 1 ? "s" : ""}`);
+    } catch (error) {
+      logger.error("Failed to delete playlists", error);
+      toast.error("Failed to delete some playlists");
+    } finally {
+      setIsBatchDeleting(false);
+      setBatchDeleteDialogOpen(false);
+    }
+  }, [deletePlaylist]);
 
   return (
     <PageLayout>
@@ -330,6 +363,18 @@ export default memo(function PlaylistsPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={batchDeleteDialogOpen}
+        onOpenChange={setBatchDeleteDialogOpen}
+        title="Delete Playlists?"
+        description={`This action cannot be undone. This will permanently delete the selected playlists.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={confirmBatchDelete}
+        isLoading={isBatchDeleting}
+        loadingText="Deleting..."
+      />
 
       {editingPlaylist && (
         <PlaylistEditDialog

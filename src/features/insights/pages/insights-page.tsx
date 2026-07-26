@@ -358,10 +358,12 @@ export default memo(function InsightsPage() {
                                 artworkSrc={track.cover_image ?? undefined}
                                 index={i + 1}
                                 dataItemIndex={i}
+                                itemId={track.id}
                                 trailing={<span className="tabular-nums text-xs">{track.play_count}</span>}
                                 variant="compact"
                                 showArtwork
                                 onClick={() => play(trackObj)}
+                                selectable
                                 menuActions={{
                                   onPlay: () => play(trackObj),
                                   onPlayNext: () => playNext(trackObj),
@@ -410,9 +412,11 @@ export default memo(function InsightsPage() {
                             placeholderType="artist"
                             index={i + 1}
                             dataItemIndex={i}
+                            itemId={artist.id}
                             variant="compact"
                             showArtwork
                             onClick={() => openArtistDetail(artist.id)}
+                            selectable
                             menuActions={{
                               onPlay: async () => {
                                 try {
@@ -494,10 +498,12 @@ export default memo(function InsightsPage() {
                                 artworkSrc={album.cover_image ?? undefined}
                                 index={i + 1}
                                 dataItemIndex={i}
+                                itemId={album.id}
                                 trailing={<span className="tabular-nums text-xs">{album.play_count}</span>}
                                 variant="compact"
                                 showArtwork
                                 onClick={() => openAlbumDetail(album.id)}
+                                selectable
                                 menuActions={{
                                   onPlay: handlePlayAlbum,
                                   onShuffle: handleShuffleAlbum,

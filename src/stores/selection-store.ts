@@ -78,27 +78,39 @@ export const useSelectionStore = create<SelectionStore>((set, get) => ({
     const selectedSet = new Set(state.selectedIds);
 
     if (opts?.shift && state.lastClickedIndex !== null) {
-      state.selectRange(state.lastClickedIndex, index);
+      const start = Math.min(state.lastClickedIndex, index);
+      const end = Math.max(state.lastClickedIndex, index);
+      const rangeIds = state.items
+        .filter((item) => item.index >= start && item.index <= end)
+        .map((item) => item.id);
+      set({
+        mode: "checkbox",
+        selectedIds: [...new Set([...state.selectedIds, ...rangeIds])],
+        lastClickedIndex: index,
+      });
       return;
     }
 
     if (opts?.ctrl) {
-      if (selectedSet.has(id)) {
-        state.deselect(id);
-      } else {
-        state.select(id);
-      }
-      set({ lastClickedIndex: index });
+      const newSelectedIds = selectedSet.has(id)
+        ? state.selectedIds.filter((i) => i !== id)
+        : [...state.selectedIds, id];
+      set({
+        mode: "checkbox",
+        selectedIds: newSelectedIds,
+        lastClickedIndex: index,
+      });
       return;
     }
 
     if (state.mode === "checkbox") {
-      if (selectedSet.has(id)) {
-        state.deselect(id);
-      } else {
-        state.select(id);
-      }
-      set({ lastClickedIndex: index });
+      const newSelectedIds = selectedSet.has(id)
+        ? state.selectedIds.filter((i) => i !== id)
+        : [...state.selectedIds, id];
+      set({
+        selectedIds: newSelectedIds,
+        lastClickedIndex: index,
+      });
       return;
     }
 
@@ -115,7 +127,7 @@ export const useSelectionStore = create<SelectionStore>((set, get) => ({
     const selectedSet = new Set(state.selectedIds);
     const allSelected = state.items.every((item) => selectedSet.has(item.id));
     if (allSelected) {
-      set({ selectedIds: [], lastClickedIndex: null });
+      set({ selectedIds: [], lastClickedIndex: null, mode: "off" });
     } else {
       set({ selectedIds: state.items.map((item) => item.id), lastClickedIndex: null });
     }

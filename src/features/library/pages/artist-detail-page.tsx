@@ -22,6 +22,7 @@ import { TrackList } from "@/components/shared/templates/track-list";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
 import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
+import { useSelectionStore } from "@/stores/selection-store";
 import { useInteractionStore } from "@/stores/interaction-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { registerSelectAllAndCleanup } from "@/lib/keybinds";
@@ -94,7 +95,7 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
           {formatDuration(track.duration_ms)}
         </span>
       }
-      onClick={() => {
+      onClick={(_e: React.MouseEvent) => {
         if (isCurrentTrack) {
           if (status === "playing") pause();
           else resume();
@@ -104,6 +105,8 @@ const ArtistTrackRow = memo(function ArtistTrackRow({
       }}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      itemId={track.id}
+      selectable
     />
   );
 });
@@ -215,6 +218,12 @@ export default memo(function ArtistDetailPage() {
 
   useArtistKeyboardNav(albums.length, tracks.length);
 
+  useEffect(() => {
+    useSelectionStore.getState().setItems(
+      tracks.map((t, i) => ({ id: t.id, index: i })),
+    );
+  }, [tracks]);
+
   const renderItem = useCallback(
     (track: Track, index: number) => {
       const isCurrent = currentTrack?.id === track.id;
@@ -320,6 +329,7 @@ export default memo(function ArtistDetailPage() {
   };
 
   return (
+    <>
     <DetailPageTemplate
       title={artist?.name ?? ""}
       subtitle={artist ? `${artist.album_count} Albums • ${artist.track_count} Songs` : undefined}
@@ -404,5 +414,6 @@ export default memo(function ArtistDetailPage() {
         {...activationHandlers}
       />
     </DetailPageTemplate>
+    </>
   );
 });

@@ -2,7 +2,8 @@ import { useRef, useCallback } from "react";
 import { useScrollMask } from "@/hooks/use-scroll-mask";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
-import { PLAYER_BAR_HEIGHT } from "@/lib/constants";
+import { useSelectionStore } from "@/stores/selection-store";
+import { PLAYER_BAR_HEIGHT, BATCH_BAR_HEIGHT } from "@/lib/constants";
 
 export function useVirtualizerSetup(
   itemHeight: number,
@@ -18,12 +19,13 @@ export function useVirtualizerSetup(
   const effectiveKeyboardNav = keyboardNav && keyboardNavSetting;
 
   const isPlayerVisible = useIsPlayerVisible();
+  const batchBarVisible = useSelectionStore((s) => s.selectedIds.length > 0);
   const basePadding = paddingBottom
     ? parseInt(paddingBottom, 10)
-    : isPlayerVisible
-      ? PLAYER_BAR_HEIGHT
-      : 24;
-  const bottomPadding = basePadding + (extraBottomPadding ?? 0);
+    : 0;
+  const playerPadding = isPlayerVisible && !paddingBottom ? PLAYER_BAR_HEIGHT : 0;
+  const batchPadding = batchBarVisible ? BATCH_BAR_HEIGHT : 0;
+  const bottomPadding = basePadding + playerPadding + batchPadding + (extraBottomPadding ?? 0);
 
   useScrollMask(24, parentRef);
 

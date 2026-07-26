@@ -39,9 +39,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
 import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { useSelectionStore } from "@/stores/selection-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
-import { useSelectionStore } from "@/stores/selection-store";
 import { useSongSearchAndSort } from "@/hooks/use-song-search-and-sort";
 
 import { formatDuration } from "@/lib/format";
@@ -71,7 +71,7 @@ const SongListMenu = memo(function SongListMenu({
   const isCurrent = currentTrack?.id === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback((_e: React.MouseEvent) => {
     if (isCurrent) {
       if (status === "playing") pause();
       else resume();
@@ -153,6 +153,8 @@ const SongListMenu = memo(function SongListMenu({
       trailing={trailing}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      itemId={track.id}
+      selectable
     />
   );
 });
@@ -168,6 +170,12 @@ export default memo(function SongsPage() {
     setSortDirection,
     filteredItems,
   } = useSongSearchAndSort();
+
+  useEffect(() => {
+    useSelectionStore.getState().setItems(
+      filteredItems.map((t, i) => ({ id: t.id, index: i })),
+    );
+  }, [filteredItems]);
 
   const play = useAudioStore((s) => s.play);
   const playNext = useAudioStore((s) => s.playNext);
@@ -189,7 +197,8 @@ export default memo(function SongsPage() {
   tracksRef.current = filteredItems;
 
   const isPlayerVisible = useIsPlayerVisible();
-  const bottomPadding = isPlayerVisible ? 156 : 24;
+  const batchBarVisible = useSelectionStore((s) => s.selectedIds.length > 0);
+  const bottomPadding = (isPlayerVisible ? 156 : 24) + (batchBarVisible ? 72 : 0);
 
   const SCOPE = "page:songs";
   useSelectionEscapeKeybind(() => {}, SCOPE, () => { if (searchQuery) setSearchQuery(""); });
@@ -391,6 +400,7 @@ export default memo(function SongsPage() {
           </RovingTabindexProvider>
         )}
       </div>
+
     </PageLayout>
   );
 });

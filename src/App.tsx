@@ -39,6 +39,9 @@ import { useFocusTracking } from "@/hooks/use-focus-tracking";
 import { useTrackGradient } from "@/hooks/use-track-gradient";
 import { useScanOnStartup } from "@/hooks/use-scan-on-startup";
 import { useProfileSwitch } from "@/hooks/use-profile-switch";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
+import { BatchActionsBar } from "@/components/shared/batch-actions-bar";
 
 const SidePanelContent = lazy(
   () => import("@features/shell/components/side-panel-content"),
@@ -48,6 +51,55 @@ const GlobalSearch = lazy(() =>
     default: m.GlobalSearch,
   })),
 );
+
+function AppBatchBar() {
+  const currentPage = useCurrentPage();
+  const detailView = useDetailView();
+  const isPlayerVisible = useAudioStore(
+    (s) => !!(s.currentTrack && s.status !== "stopped"),
+  );
+  const tracks = useContentStore((s) => s.tracks);
+
+  let entityType: "track" | "album" | "artist" | "playlist" | null = null;
+
+  if (detailView?.type === "playlist") entityType = "track";
+  else if (detailView?.type === "album") entityType = "track";
+  else if (detailView?.type === "artist") entityType = "track";
+  else if (currentPage === "songs") entityType = "track";
+  else if (currentPage === "albums") entityType = "album";
+  else if (currentPage === "artists") entityType = "artist";
+  else if (currentPage === "playlists") entityType = "playlist";
+
+  if (!entityType) return null;
+
+  const handleAddToQueue = () => {
+    const ids = useSelectionStore.getState().getSelectedIds();
+    const addToQueue = useAudioStore.getState().addToQueue;
+    if (entityType === "track") {
+      ids.forEach((id) => {
+        const track = tracks.find((t) => t.id === id);
+        if (track) addToQueue(track);
+      });
+    }
+    useSelectionStore.getState().disableCheckboxMode();
+  };
+
+  const isPlaylistPage =
+    currentPage === "playlists" || detailView?.type === "playlist";
+
+  return (
+    <div
+      className="absolute left-0 right-0 z-40"
+      style={{ bottom: isPlayerVisible ? "156px" : "0" }}
+    >
+      <BatchActionsBar
+        entityType={entityType}
+        onAddToQueue={entityType === "track" ? handleAddToQueue : undefined}
+        onRemove={isPlaylistPage ? () => {} : undefined}
+      />
+    </div>
+  );
+}
 
 export default function App() {
   const sidePanel = useAudioStore((s) => s.sidePanel);
@@ -175,12 +227,15 @@ export default function App() {
           <div
             data-region="main"
             tabIndex={-1}
-            className="flex-1 min-w-0 min-h-0"
+            className="flex-1 min-w-0 min-h-0 flex flex-col relative"
             onFocus={() =>
               useFocusRegionStore.getState().setActiveRegion("main")
             }
           >
-            <MainContent />
+            <div className="flex-1 min-h-0">
+              <MainContent />
+            </div>
+            <AppBatchBar />
           </div>
 
           <div

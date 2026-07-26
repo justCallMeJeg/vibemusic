@@ -15,6 +15,7 @@ export const ScrollingText = memo(function ScrollingText({
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const wasOverflowingRef = useRef(false);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -23,7 +24,11 @@ export const ScrollingText = memo(function ScrollingText({
         const textWidth = textEl
           ? textEl.scrollWidth
           : textRef.current.scrollWidth;
-        setIsOverflowing(textWidth >= containerRef.current.clientWidth);
+        const containerWidth = containerRef.current.clientWidth;
+        const threshold = wasOverflowingRef.current ? 0 : 2;
+        const newOverflow = textWidth >= containerWidth + threshold;
+        wasOverflowingRef.current = newOverflow;
+        setIsOverflowing(newOverflow);
       }
     };
 
@@ -44,7 +49,7 @@ export const ScrollingText = memo(function ScrollingText({
       <div
         ref={textRef}
         className={cn(
-          "inline-block transition-transform will-change-transform",
+          "inline-block will-change-transform",
           triggerProp === "always"
             ? isOverflowing &&
                 "motion-safe:animate-scroll-text motion-safe:group-data-[selected=true]:animate-scroll-text"

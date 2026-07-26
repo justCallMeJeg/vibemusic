@@ -195,6 +195,10 @@ export async function removeTrackFromPlaylist(
   return await invoke("remove_track_from_playlist", { playlistId, trackId });
 }
 
+export async function deleteTrack(trackId: number): Promise<void> {
+  return await invoke("delete_track", { trackId });
+}
+
 export async function reorderPlaylist(
   id: number,
   newOrder: number[]

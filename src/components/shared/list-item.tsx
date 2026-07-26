@@ -1,16 +1,19 @@
-import { memo } from "react";
+import { memo, useRef, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { ScrollingText } from "@/components/shared/scrolling-text";
 import { Play, Pause } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
 import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
 import type { TrackMenuActions } from "@/components/shared/context-menu-types";
 import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
+import { useSelection } from "@/hooks/use-selection";
+import { useSelectionStore } from "@/stores/selection-store";
 
 const rowVariants = cva(
-  "mx-0.5 group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
+  "mx-0.5 group flex items-center gap-3 rounded-md p-2 cursor-default select-none relative debug-list-item",
   {
     variants: {
       variant: {
@@ -46,21 +49,36 @@ interface IndexedColumnProps {
   index?: number;
   isActive?: boolean;
   isPlaying?: boolean;
-  onPlay?: () => void;
+  onPlay?: (e: React.MouseEvent) => void;
+  /** When "checkbox", renders a Checkbox for batch selection mode */
+  mode?: "index" | "checkbox";
+  isChecked?: boolean;
+  onToggleCheck?: () => void;
 }
 
 const IndexedColumn = memo(function IndexedColumn({
   index,
   isActive = false,
   isPlaying = false,
+  mode = "index",
+  isChecked = false,
+  onToggleCheck,
 }: IndexedColumnProps) {
+  if (mode === "checkbox") {
+    return (
+      <div
+        className="w-8 flex justify-center shrink-0"
+        data-checkbox-column="true"
+      >
+        <Checkbox checked={isChecked} onCheckedChange={onToggleCheck} />
+      </div>
+    );
+  }
   return (
     <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
       {!isActive ? (
         <>
-          <span className="group-hover:hidden">
-            {index ?? null}
-          </span>
+          <span className="group-hover:hidden">{index ?? null}</span>
           <span
             aria-label="Play"
             className="hidden group-hover:block text-foreground"
@@ -90,7 +108,7 @@ interface ArtworkWithOverlayProps {
   alt?: string;
   isActive?: boolean;
   isPlaying?: boolean;
-  onPlay?: () => void;
+  onPlay?: (e: React.MouseEvent) => void;
   circular?: boolean;
   placeholderType?: "artist" | "playlist" | "track";
 }
@@ -124,7 +142,10 @@ const ArtworkWithOverlay = memo(function ArtworkWithOverlay({
             isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}
         >
-          <PlayPauseIcon isPlaying={isPlaying} className="fill-white text-white" />
+          <PlayPauseIcon
+            isPlaying={isPlaying}
+            className="fill-white text-white"
+          />
         </div>
       )}
     </div>
@@ -133,7 +154,10 @@ const ArtworkWithOverlay = memo(function ArtworkWithOverlay({
 
 interface ListItemProps
   extends
-    Omit<React.HTMLAttributes<HTMLDivElement>, "title" | "onClick">,
+    Omit<
+      React.HTMLAttributes<HTMLDivElement>,
+      "title" | "onClick" | "onPointerDown" | "prefix" | "suffix" | "itemId"
+    >,
     VariantProps<typeof rowVariants> {
   title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
@@ -145,13 +169,23 @@ interface ListItemProps
   artworkCircular?: boolean;
 
   placeholderType?: "artist" | "track";
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   menuActions?: TrackMenuActions;
 
   /**
    * Index within the parent list for arrow-key sibling navigation.
    */
   dataItemIndex?: number;
+
+  selectable?: boolean;
+  itemId?: number;
+  /** When true, hides the internal IndexedColumn checkbox even during checkbox mode. Use when parent renders its own checkbox externally. */
+  hideCheckboxColumn?: boolean;
+  /** When provided, overrides the internal checkboxMode subscription. Use to avoid mass re-renders. */
+  checkboxMode?: boolean;
+  isSelected?: boolean;
+  prefix?: ReactNode;
+  suffix?: ReactNode;
 }
 
 export const ListItem = memo(function ListItem({
@@ -171,47 +205,118 @@ export const ListItem = memo(function ListItem({
   onClick,
   menuActions,
   dataItemIndex,
+  selectable,
+  itemId,
+  checkboxMode: checkboxModeProp,
+  hideCheckboxColumn,
+  isSelected: isSelectedProp,
+  prefix,
+  suffix,
   ...props
 }: ListItemProps) {
   const roving = useRovingTabindexContext();
-  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
-  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
-  const resolvedTabIndex = rovingTabIndex !== undefined
-    ? rovingTabIndex
-    : (dataItemIndex !== undefined && !!roving ? -1 : undefined);
+  const rovingTabIndex =
+    dataItemIndex !== undefined
+      ? roving?.getTabIndex(dataItemIndex)
+      : undefined;
+  const isRovingActive =
+    dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const resolvedTabIndex =
+    rovingTabIndex !== undefined
+      ? rovingTabIndex
+      : dataItemIndex !== undefined && !!roving
+        ? -1
+        : undefined;
+
+  const internal = useSelection({
+    itemId: itemId ?? dataItemIndex ?? 0,
+    index: dataItemIndex ?? 0,
+  });
+
+  const { isSelected: selIsSelected, onClick: selectionOnClick } = internal;
+
+  const isSelected = isSelectedProp ?? selIsSelected;
+  const subscribedCheckboxMode = useSelectionStore(
+    (s) => s.mode === "checkbox",
+  );
+  const checkboxMode = checkboxModeProp ?? subscribedCheckboxMode;
+
+  const pointerDownHandled = useRef(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-checkbox-column="true"]')) return;
+    if (pointerDownHandled.current) {
+      pointerDownHandled.current = false;
+      return;
+    }
+    if (selectable && (checkboxMode || e.ctrlKey || e.shiftKey || e.metaKey)) {
+      selectionOnClick(e);
+      return;
+    }
+    onClick?.(e);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-checkbox-column="true"]')) return;
+    if (selectable && (checkboxMode || e.ctrlKey || e.shiftKey || e.metaKey)) {
+      selectionOnClick(e as unknown as React.MouseEvent);
+      pointerDownHandled.current = true;
+    }
+  };
 
   const row = (
     <div
       {...props}
       data-active={active}
       data-item-index={dataItemIndex}
-      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
       role={onClick ? "button" : undefined}
       className={cn(
         rowVariants({ variant, active }),
+        !checkboxMode && "transition-colors",
         isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        isSelected && "bg-accent/20",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
         onClick && "cursor-pointer",
         className,
       )}
-      {...(resolvedTabIndex !== undefined ? { tabIndex: resolvedTabIndex } : {})}
+      {...(resolvedTabIndex !== undefined
+        ? { tabIndex: resolvedTabIndex }
+        : {})}
     >
-      {variant === "indexed" && (
+      {(variant === "indexed" || (checkboxMode && !hideCheckboxColumn)) && (
         <IndexedColumn
           index={index}
           isActive={!!active}
           isPlaying={isPlaying}
+          mode={checkboxMode ? "checkbox" : "index"}
+          isChecked={isSelected}
+          onToggleCheck={() =>
+            useSelectionStore
+              .getState()
+              .toggle(itemId ?? dataItemIndex ?? 0, dataItemIndex ?? 0)
+          }
         />
       )}
 
+      {checkboxMode ? null : prefix}
+
       {showArtwork && (
-        <div className={cn("relative shrink-0", variant !== "indexed" && "w-10 h-10")}>
+        <div
+          className={cn(
+            "relative shrink-0",
+            variant !== "indexed" && "w-10 h-10",
+          )}
+        >
           <ArtworkWithOverlay
             src={artworkSrc}
             alt={typeof title === "string" ? title : "Artwork"}
             isActive={!!active}
             isPlaying={isPlaying}
-            onPlay={onClick}
+            onPlay={handleClick}
             circular={artworkCircular}
             placeholderType={placeholderType || "track"}
           />
@@ -239,6 +344,8 @@ export const ListItem = memo(function ListItem({
         )}
       </div>
 
+      {checkboxMode ? null : suffix}
+
       {trailing && (
         <div className="flex items-center gap-2 shrink-0 text-muted-foreground text-sm">
           {trailing}
@@ -260,9 +367,7 @@ export const ListItem = memo(function ListItem({
   });
 
   if (menuItems.length > 0) {
-    return (
-      <UnifiedContextMenu items={menuItems}>{row}</UnifiedContextMenu>
-    );
+    return <UnifiedContextMenu items={menuItems}>{row}</UnifiedContextMenu>;
   }
 
   return row;

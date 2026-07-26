@@ -233,6 +233,7 @@ const HomeTrackRow = memo(function HomeTrackRow({
       menuActions={menuActions}
       tabIndex={tabIndex}
       data-section-item={dataSectionItem}
+      itemId={track.id}
     />
   );
 });

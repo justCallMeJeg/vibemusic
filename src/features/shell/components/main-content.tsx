@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
+import { useSelectionStore } from "@/stores/selection-store";
 
 import HomePage from "@features/library/pages/home-page";
 import SongsPage from "@features/library/pages/songs-page";
@@ -11,9 +13,16 @@ import ArtistDetailPage from "@features/library/pages/artist-detail-page";
 import InsightsPage from "@features/insights/pages/insights-page";
 import SettingsPage from "@features/settings/pages/settings-page";
 
+import { useClickOutsideCancel } from "@/hooks/use-click-outside-cancel";
+
 export default function MainContent() {
+  useClickOutsideCancel();
   const currentPage = useCurrentPage();
   const detailView = useDetailView();
+
+  useEffect(() => {
+    useSelectionStore.getState().clearSelection();
+  }, [currentPage, detailView]);
 
   return (
     <>

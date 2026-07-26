@@ -1,4 +1,4 @@
-import { useMemo, useState, memo, useCallback, useDeferredValue, useRef } from "react";
+import { useMemo, useState, memo, useCallback, useDeferredValue, useRef, useEffect } from "react";
 import { useContentStore } from "@features/library/store/content-store";
 import { useAudioStore } from "@/stores/audio-store";
 import { useNavigationStore } from "@/stores/navigation-store";
@@ -16,6 +16,8 @@ import { PageLayout } from "@/components/shared/page-layout";
 
 import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
 import { PageSearchAndSort } from "@/components/shared/page-search-and-sort";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useSelection } from "@/hooks/use-selection";
 
 const ArtistGridCard = memo(function ArtistGridCard({
   artist,
@@ -32,6 +34,11 @@ const ArtistGridCard = memo(function ArtistGridCard({
   onAddToQueue: (id: number) => Promise<void>;
   dataItemIndex?: number;
 }) {
+  useSelection({ itemId: artist.id, index: dataItemIndex ?? 0 });
+  const checkboxMode = useSelectionStore((s) => s.mode === "checkbox");
+  const handleClick = useCallback(() => {
+    onOpenDetail(artist.id);
+  }, [artist.id, onOpenDetail]);
   const menuActions = useMemo(
     () => ({
       onPlay: () => onPlay(artist.id),
@@ -49,10 +56,11 @@ const ArtistGridCard = memo(function ArtistGridCard({
       artworkSrc={artist.artwork_path || undefined}
       artworkType="artist"
       variant="circle"
-      onClick={() => onOpenDetail(artist.id)}
+      onClick={handleClick}
       onPlay={() => onPlay(artist.id, true)}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      selectable={checkboxMode}
     />
   );
 });
@@ -140,6 +148,10 @@ export default memo(function ArtistsPage() {
     });
   }, [artists, artistsSortKey, artistsSortDirection, deferredQuery]);
 
+  useEffect(() => {
+    useSelectionStore.getState().setItems(filteredAndSortedArtists.map((a, i) => ({ id: a.id, index: i })));
+  }, [filteredAndSortedArtists]);
+
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Artists">
@@ -205,6 +217,7 @@ export default memo(function ArtistsPage() {
           />
         </>
       )}
+
     </PageLayout>
   );
 });

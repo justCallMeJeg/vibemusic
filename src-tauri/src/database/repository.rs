@@ -23,6 +23,16 @@ pub trait TrackRepository {
     ) -> Result<HashMap<String, (i64, i64)>, AppError>;
     fn check_files_exist(conn: &DbHelper) -> Result<Vec<(i64, String)>, AppError>;
     fn prune_missing_tracks(conn: &mut DbHelper, ids: &[i64]) -> Result<Vec<String>, AppError>;
+    /// Batch: find multiple tracks by IDs (for batch operations feature)
+    fn find_by_ids(conn: &DbHelper, _ids: &[i64]) -> Result<Vec<LibraryTrack>, AppError> {
+        let _ = conn;
+        Err(AppError::Internal("find_by_ids not implemented yet".to_string()))
+    }
+    /// Batch: update multiple tracks' metadata (for batch tag editor feature)
+    fn update_many(conn: &mut DbHelper, updates: &[()]) -> Result<(), AppError> {
+        let _ = (conn, updates);
+        Err(AppError::Internal("update_many not implemented yet".to_string()))
+    }
 }
 
 impl TrackRepository for DbHelper {
@@ -108,6 +118,11 @@ pub trait AlbumRepository {
     fn get_album_tracks(conn: &DbHelper, album_id: i64) -> Result<Vec<LibraryTrack>, AppError>;
     fn get_artist_albums(conn: &DbHelper, artist_id: i64) -> Result<Vec<LibraryAlbum>, AppError>;
     fn upsert_album(conn: &mut DbHelper, metadata: &TrackMetadata) -> Result<i64, AppError>;
+    /// Batch: delete multiple albums by IDs
+    fn delete_many(conn: &mut DbHelper, ids: &[i64]) -> Result<(), AppError> {
+        let _ = (conn, ids);
+        Err(AppError::Internal("delete_many not implemented yet".to_string()))
+    }
 }
 
 impl AlbumRepository for DbHelper {
@@ -189,6 +204,11 @@ pub trait ArtistRepository {
     fn get_all_artists(conn: &DbHelper) -> Result<Vec<Artist>, AppError>;
     fn get_artist_by_id(conn: &DbHelper, artist_id: i64) -> Result<Option<Artist>, AppError>;
     fn upsert_artist(conn: &mut DbHelper, name: &str) -> Result<i64, AppError>;
+    /// Batch: delete multiple artists by IDs
+    fn delete_many(conn: &mut DbHelper, ids: &[i64]) -> Result<(), AppError> {
+        let _ = (conn, ids);
+        Err(AppError::Internal("delete_many not implemented yet".to_string()))
+    }
 }
 
 impl ArtistRepository for DbHelper {

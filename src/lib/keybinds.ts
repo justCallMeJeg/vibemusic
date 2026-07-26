@@ -8,7 +8,10 @@ export function registerSelectAllAndCleanup(
 ) {
   register("ctrl+a", {
     combo: { key: "a", ctrl: true },
-    handler: () => useSelectionStore.getState().selectAll(),
+    handler: () => {
+      useSelectionStore.getState().enableCheckboxMode();
+      useSelectionStore.getState().selectAll();
+    },
     description: "Select all tracks",
     preventDefault: true,
   }, scope);

@@ -1,4 +1,4 @@
-import { useMemo, useState, memo, useCallback, useDeferredValue, useRef } from "react";
+import { useMemo, useState, memo, useCallback, useDeferredValue, useRef, useEffect } from "react";
 import { Disc, Search } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { PageLayout } from "@/components/shared/page-layout";
 
 import { useSearchKeybinds } from "@/hooks/use-search-keybinds";
 import { PageSearchAndSort } from "@/components/shared/page-search-and-sort";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useSelection } from "@/hooks/use-selection";
 
 
 
@@ -34,6 +36,11 @@ const AlbumGridCard = memo(function AlbumGridCard({
   onAddToQueue: (id: number) => Promise<void>;
   dataItemIndex?: number;
 }) {
+  useSelection({ itemId: album.id, index: dataItemIndex ?? 0 });
+  const checkboxMode = useSelectionStore((s) => s.mode === "checkbox");
+  const handleClick = useCallback(() => {
+    onOpenDetail(album.id);
+  }, [album.id, onOpenDetail]);
   const menuActions = useMemo(
     () => ({
       onPlay: () => onPlay(album.id),
@@ -52,10 +59,11 @@ const AlbumGridCard = memo(function AlbumGridCard({
       artworkSrc={album.artwork_path || undefined}
       artworkType="album"
       variant="portrait"
-      onClick={() => onOpenDetail(album.id)}
+      onClick={handleClick}
       onPlay={() => onPlay(album.id)}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      selectable={checkboxMode}
     />
   );
 });
@@ -145,6 +153,10 @@ export default memo(function AlbumsPage() {
     });
   }, [albums, albumsSortKey, albumsSortDirection, deferredQuery]);
 
+  useEffect(() => {
+    useSelectionStore.getState().setItems(filteredAndSortedAlbums.map((a, i) => ({ id: a.id, index: i })));
+  }, [filteredAndSortedAlbums]);
+
   return (
     <PageLayout overflowHidden>
       <PageHeader title="Albums">
@@ -210,6 +222,7 @@ export default memo(function AlbumsPage() {
           />
         </>
       )}
+
     </PageLayout>
   );
 });

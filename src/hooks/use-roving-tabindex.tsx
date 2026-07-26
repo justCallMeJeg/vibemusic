@@ -3,6 +3,7 @@ import {
   useContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -243,11 +244,11 @@ function useRovingTabindex({
     [enabled, activeIndex],
   );
 
-  return {
+  return useMemo(() => ({
     activeIndex,
     setActiveIndex: activate,
     getTabIndex,
-  };
+  }), [activeIndex, activate, getTabIndex]);
 }
 
 // --- Context-based API ---

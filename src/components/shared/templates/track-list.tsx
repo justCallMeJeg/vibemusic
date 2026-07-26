@@ -59,6 +59,7 @@ export function TrackList<T>({
   autoFocus,
 }: TrackListProps<T>) {
   const onScroll = useDetailScroll();
+  const resolvedGetItemId = getItemId ?? ((item: T) => tracks.indexOf(item));
 
   const header = (
     <div className="w-full min-w-0 flex flex-col">
@@ -79,11 +80,12 @@ export function TrackList<T>({
         items={tracks}
         onScroll={onScroll}
         header={header}
-        onReorder={onReorder!}
-        getItemId={getItemId!}
+        onReorder={onReorder}
+        getItemId={resolvedGetItemId}
         renderItem={renderItem}
         emptyState={emptyState}
         className={className}
+        disabled={!sortable}
         keyboardNav={keyboardNav}
         onItemActivate={onItemActivate}
         onItemActivateSecondary={onItemActivateSecondary}

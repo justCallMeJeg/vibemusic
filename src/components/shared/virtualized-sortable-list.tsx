@@ -1,4 +1,4 @@
-import { useRef, isValidElement } from "react";
+import { useRef, useCallback, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
 import { EmptyPanel } from "@/components/shared/empty-panel";
@@ -20,34 +20,33 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-function useSortableSensors(effectiveKeyboardNav: boolean | undefined) {
+function useSortableSensors(effectiveKeyboardNav: boolean | undefined, disabled = false) {
+  const pointerSensor = useSensor(PointerSensor);
   const keyboardSensor = useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates,
   });
   return useSensors(
-    useSensor(PointerSensor),
-    ...(effectiveKeyboardNav ? [] : [keyboardSensor]),
+    ...(disabled ? [] : [pointerSensor]),
+    ...(disabled || effectiveKeyboardNav ? [] : [keyboardSensor]),
   );
 }
 
 interface VirtualizedSortableListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
-  onReorder: (activeId: string | number, overId: string | number) => void;
+  onReorder?: (activeId: string | number, overId: string | number) => void;
   getItemId: (item: T) => string | number;
   itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string; // Override dynamic padding if provided
+  paddingBottom?: string;
   className?: string;
   header?: React.ReactNode;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
-  /** Enable keyboard navigation (arrow keys, Enter, Shift+F10) */
+  /** Disable DnD interaction without unmounting items (e.g. during multi-select) */
+  disabled?: boolean;
   keyboardNav?: boolean;
-  /** Called when Enter is pressed on focused item */
   onItemActivate?: (index: number) => void;
-  /** Called when Shift+Enter is pressed on focused item */
   onItemActivateSecondary?: (index: number) => void;
-  /** Override default auto-focus behavior */
   autoFocus?: boolean;
 }
 
@@ -62,12 +61,14 @@ export function VirtualizedSortableList<T>({
   className = "",
   header,
   onScroll,
+  disabled = false,
   keyboardNav = false,
   onItemActivate,
   onItemActivateSecondary,
   autoFocus,
 }: VirtualizedSortableListProps<T>) {
   const headerRef = useRef<HTMLDivElement>(null);
+
   const { parentRef, effectiveKeyboardNav, bottomPadding, getScrollElement, estimateSize, isPlayerVisible } = useVirtualizerSetup(
     itemHeight,
     paddingBottom,
@@ -82,14 +83,28 @@ export function VirtualizedSortableList<T>({
     overscan: 5,
   });
 
-  const sensors = useSortableSensors(effectiveKeyboardNav);
+  const sensors = useSortableSensors(effectiveKeyboardNav, disabled);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const onReorderRef = useRef(onReorder);
+  onReorderRef.current = onReorder;
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      onReorder(active.id, over.id);
+      onReorderRef.current?.(active.id, over.id);
     }
-  };
+  }, []);
+
+  const handleIndexChange = useCallback((index: number) => {
+    if (effectiveKeyboardNav && index >= 0) {
+      const container = parentRef.current;
+      if (!container) return;
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      const itemOffset = index * itemHeight + headerHeight;
+      const viewportHeight = container.clientHeight;
+      container.scrollTop = Math.max(0, itemOffset - viewportHeight / 2 + itemHeight / 2);
+    }
+  }, [effectiveKeyboardNav, parentRef, headerRef, itemHeight]);
 
   const virtualItems = virtualizer.getVirtualItems();
 
@@ -115,6 +130,16 @@ export function VirtualizedSortableList<T>({
         {items.length === 0 ? (
           emptyState || <EmptyPanel icon={ListMusic} title="No items" />
         ) : (
+          <RovingTabindexProvider
+            containerRef={parentRef}
+            itemCount={effectiveKeyboardNav ? items.length : 0}
+            enabled={!!effectiveKeyboardNav}
+            autoFocus={autoFocus ?? (effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
+            direction="vertical"
+            onActivate={onItemActivate}
+            onActivateSecondary={onItemActivateSecondary}
+            onIndexChange={handleIndexChange}
+          >
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -124,25 +149,6 @@ export function VirtualizedSortableList<T>({
               items={itemIds}
               strategy={verticalListSortingStrategy}
             >
-              <RovingTabindexProvider
-                containerRef={parentRef}
-                itemCount={effectiveKeyboardNav ? items.length : 0}
-                enabled={!!effectiveKeyboardNav}
-                autoFocus={autoFocus ?? (effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
-                direction="vertical"
-                onActivate={onItemActivate}
-                onActivateSecondary={onItemActivateSecondary}
-                onIndexChange={(index: number) => {
-                  if (effectiveKeyboardNav && index >= 0) {
-                    const container = parentRef.current;
-                    if (!container) return;
-                    const headerHeight = headerRef.current?.offsetHeight ?? 0;
-                    const itemOffset = index * itemHeight + headerHeight;
-                    const viewportHeight = container.clientHeight;
-                    container.scrollTop = Math.max(0, itemOffset - viewportHeight / 2 + itemHeight / 2);
-                  }
-                }}
-              >
                 <div
                   role="list"
                   style={{
@@ -177,9 +183,9 @@ export function VirtualizedSortableList<T>({
                     );
                   })}
                 </div>
-              </RovingTabindexProvider>
             </SortableContext>
           </DndContext>
+          </RovingTabindexProvider>
         )}
       </div>
     </div>

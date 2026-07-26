@@ -22,6 +22,7 @@ import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handler
 import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useKeybindsStore } from "@/stores/keybinds-store";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useSelectionStore } from "@/stores/selection-store";
 
 const AlbumTrackRow = memo(function AlbumTrackRow({
   track,
@@ -43,7 +44,6 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   const playNext = useAudioStore((s) => s.playNext);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
-
   const menuActions = useMemo(() => ({
     onPlay: () => play(track, tracks),
     onPause:
@@ -95,7 +95,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
           {formatDuration(track.duration_ms)}
         </span>
       }
-      onClick={() => {
+      onClick={(_e: React.MouseEvent) => {
         if (currentTrack?.id === track.id) {
           if (status === "playing") pause();
           else resume();
@@ -105,6 +105,8 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
       }}
       menuActions={menuActions}
       dataItemIndex={dataItemIndex}
+      itemId={track.id}
+      selectable
     />
   );
 });
@@ -200,6 +202,12 @@ export default memo(function AlbumDetailPage() {
     }
   }, [isLoading, tracks.length]);
 
+  useEffect(() => {
+    useSelectionStore.getState().setItems(
+      tracks.map((t, i) => ({ id: t.id, index: i })),
+    );
+  }, [tracks]);
+
   const activationHandlers = useTrackActivationHandlers(tracks);
 
   const handlePlay = () => {
@@ -244,6 +252,7 @@ export default memo(function AlbumDetailPage() {
   }
 
   return (
+    <>
     <DetailPageTemplate
       title={album?.title ?? ""}
       subtitle={
@@ -286,5 +295,6 @@ export default memo(function AlbumDetailPage() {
         {...activationHandlers}
       />
     </DetailPageTemplate>
+    </>
   );
 });
