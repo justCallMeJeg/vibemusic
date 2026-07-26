@@ -32,6 +32,7 @@ export function useKeyboardShortcuts() {
   const keyboardNavOn = useSettingsStore(
     (s) => s.experimentalFeatures.keyboardNav,
   );
+  const keybindOverrides = useSettingsStore((s) => s.keybindOverrides);
   const register = useKeybindsStore((s) => s.register);
   const unregister = useKeybindsStore((s) => s.unregister);
 
@@ -255,6 +256,13 @@ export function useKeyboardShortcuts() {
     ]);
 
     for (const [id, entry] of entries) {
+      const override = keybindOverrides[id];
+      if (override) {
+        entry.combo = override;
+      }
+    }
+
+    for (const [id, entry] of entries) {
       register(id, entry, SCOPE);
     }
 
@@ -263,7 +271,7 @@ export function useKeyboardShortcuts() {
         unregister(id, SCOPE);
       }
     };
-  }, [keyboardNavOn, register, unregister]);
+  }, [keyboardNavOn, keybindOverrides, register, unregister]);
 
   // Focus region shortcuts — only registered when feature is enabled
   const focusRegionsOn = useSettingsStore(
@@ -318,6 +326,13 @@ export function useKeyboardShortcuts() {
     ];
 
     for (const [id, entry] of focusEntries) {
+      const override = keybindOverrides[id];
+      if (override) {
+        entry.combo = override;
+      }
+    }
+
+    for (const [id, entry] of focusEntries) {
       register(id, entry, SCOPE);
     }
 
@@ -326,7 +341,7 @@ export function useKeyboardShortcuts() {
         unregister(id, SCOPE);
       }
     };
-  }, [focusRegionsOn, register, unregister]);
+  }, [focusRegionsOn, keybindOverrides, register, unregister]);
 }
 
 // Global keydown listener

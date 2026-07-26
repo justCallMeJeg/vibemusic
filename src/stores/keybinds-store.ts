@@ -115,4 +115,4 @@ export const useKeybindsStore = create<KeybindsStore>((set, get) => ({
   },
 }));
 
-export { eventToCombo };
+export { eventToCombo, comboToString };

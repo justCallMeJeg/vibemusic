@@ -1,8 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { RotateCcw, Keyboard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useKeybindDialogStore } from "@/stores/keybind-dialog-store";
+import { useSettingsStore } from "@/stores/settings-store";
+import { comboToString, type KeyCombo } from "@/stores/keybinds-store";
 import { cn } from "@/lib/utils";
 
 interface ShortcutDef {
@@ -120,9 +122,34 @@ const getGroupIds = (group: ShortcutGroup) => group.shortcuts.map((s) => s.id);
 export function KeyboardShortcutsDialog() {
   const open = useKeybindDialogStore((s) => s.open);
   const setOpen = useKeybindDialogStore((s) => s.setOpen);
+  const keybindOverrides = useSettingsStore((s) => s.keybindOverrides);
 
   const [rebindingId, setRebindingId] = useState<string | null>(null);
   const [customKeys, setCustomKeys] = useState<Record<string, string>>({});
+
+  const allShortcuts = KEYBIND_GROUPS.flatMap((group) =>
+    group.shortcuts.map((s) => ({ ...s, groupLabel: group.label })),
+  );
+
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (rebindingId) return;
+    const shortcut = allShortcuts[focusedIndex];
+    if (shortcut) {
+      rowRefs.current[shortcut.id]?.focus();
+    }
+  }, [focusedIndex, rebindingId, allShortcuts]);
+
+  useEffect(() => {
+    if (!open) return;
+    const converted: Record<string, string> = {};
+    for (const [id, combo] of Object.entries(keybindOverrides)) {
+      converted[id] = comboToString(combo);
+    }
+    setCustomKeys(converted);
+  }, [open, keybindOverrides]);
 
   const hasCustom = (groupId: string) =>
     getGroupIds(KEYBIND_GROUPS.find((g) => g.label === groupId)!).some((id) => id in customKeys);
@@ -134,9 +161,12 @@ export function KeyboardShortcutsDialog() {
       for (const id of ids) delete next[id];
       return next;
     });
+    useSettingsStore.getState().resetKeybindOverrides(ids);
   }, []);
 
   const handleStartRebind = (id: string) => {
+    const idx = allShortcuts.findIndex((s) => s.id === id);
+    if (idx !== -1) setFocusedIndex(idx);
     setRebindingId(id);
   };
 
@@ -151,8 +181,48 @@ export function KeyboardShortcutsDialog() {
     if (e.altKey) parts.push("Alt");
     const key = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
     if (!["Control", "Shift", "Alt", "Meta"].includes(key)) {
-      setCustomKeys((prev) => ({ ...prev, [rebindingId]: parts.join("+") }));
+      parts.push(key);
+      const displayStr = parts.join("+");
+      setCustomKeys((prev) => ({ ...prev, [rebindingId]: displayStr }));
+
+      const combo: KeyCombo = {
+        key: e.key,
+        ctrl: e.ctrlKey || e.metaKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+      };
+      useSettingsStore.getState().setKeybindOverride(rebindingId, combo);
+
       setRebindingId(null);
+    }
+  };
+
+  const handleContainerKeyDown = (e: React.KeyboardEvent) => {
+    if (rebindingId) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setRebindingId(null);
+        return;
+      }
+      captureCombo(e);
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev + 1) % allShortcuts.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev - 1 + allShortcuts.length) % allShortcuts.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const shortcut = allShortcuts[focusedIndex];
+      if (shortcut) {
+        handleStartRebind(shortcut.id);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
     }
   };
 
@@ -166,11 +236,11 @@ export function KeyboardShortcutsDialog() {
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-2">
-          Click a shortcut to rebind it. Reset a category to restore defaults.
+          Click a shortcut to rebind it, or use arrow keys to navigate. Enter to start rebinding, Escape to cancel or close. Reset a category to restore defaults.
         </p>
         <div
           className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-4"
-          onKeyDown={captureCombo}
+          onKeyDown={handleContainerKeyDown}
         >
           {KEYBIND_GROUPS.map((group) => {
             const hasCustomInGroup = hasCustom(group.label);
@@ -194,19 +264,24 @@ export function KeyboardShortcutsDialog() {
                 </div>
                 <div className="grid gap-px">
                   {group.shortcuts.map((shortcut) => {
+                    const globalIndex = allShortcuts.findIndex((s) => s.id === shortcut.id);
+                    const isFocused = globalIndex === focusedIndex;
                     const isRebinding = rebindingId === shortcut.id;
                     const displayKeys = customKeys[shortcut.id] ?? shortcut.keys;
                     return (
                       <div
                         key={shortcut.id}
+                        ref={(el) => { rowRefs.current[shortcut.id] = el; }}
                         className={cn(
-                          "flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+                          "flex items-center justify-between px-3 py-2 rounded-lg transition-colors outline-none",
                           isRebinding
                             ? "bg-primary/10 ring-1 ring-primary cursor-default"
-                            : "hover:bg-secondary/50 cursor-pointer",
+                            : isFocused && !rebindingId
+                              ? "bg-secondary/50 ring-1 ring-ring cursor-pointer"
+                              : "hover:bg-secondary/50 cursor-pointer",
                         )}
                         onClick={() => !isRebinding && handleStartRebind(shortcut.id)}
-                        tabIndex={0}
+                        tabIndex={isFocused ? 0 : -1}
                         role="button"
                         aria-label={`${shortcut.description}: ${displayKeys}. Click to rebind.`}
                       >

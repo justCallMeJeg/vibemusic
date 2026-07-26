@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { invoke } from "@tauri-apps/api/core";
 import { useContentStore } from "@features/library/store/content-store";
 import { useAudioStore } from "./audio-store";
+import type { KeyCombo } from "./keybinds-store";
 
 const getStore = async () => {
   const state = useSettingsStore.getState();
@@ -86,6 +87,9 @@ interface SettingsState {
 
   // Experimental Features
   experimentalFeatures: ExperimentalFeatures;
+
+  // Keybind Customization
+  keybindOverrides: Record<string, KeyCombo>;
 }
 
 interface SettingsActions {
@@ -131,6 +135,10 @@ interface SettingsActions {
     key: K,
     value: ExperimentalFeatures[K],
   ) => Promise<void>;
+
+  // Keybind Customization
+  setKeybindOverride: (id: string, combo: KeyCombo) => void;
+  resetKeybindOverrides: (ids: string[]) => void;
 
   loadSettings: (profileId?: string) => Promise<void>;
 }
@@ -265,8 +273,9 @@ async function loadUISettings(store: Awaited<ReturnType<typeof load>>) {
   };
 }
 
-function loadKeybindSettings(_store: Awaited<ReturnType<typeof load>>) {
-  // Stub: ready for future Keybinds UI feature
+async function loadKeybindSettings(store: Awaited<ReturnType<typeof load>>) {
+  const keybindOverrides = await store.get<Record<string, KeyCombo>>("keybindOverrides");
+  return { keybindOverrides: keybindOverrides ?? {} };
 }
 
 /**
@@ -292,6 +301,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     miniPlayerStyle: "square",
     miniPlayerPosition: "bottom-right",
     enableMediaKeys: true,
+    keybindOverrides: {},
     experimentalFeatures: {
       keyboardNav: false,
       focusRegions: false,
@@ -508,6 +518,23 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setKeybindOverride: async (id, combo) => {
+      const next = { ...get().keybindOverrides, [id]: combo };
+      set({ keybindOverrides: next });
+      const store = await getStore();
+      await store.set("keybindOverrides", next);
+      await store.save();
+    },
+
+    resetKeybindOverrides: async (ids) => {
+      const next = { ...get().keybindOverrides };
+      for (const id of ids) delete next[id];
+      set({ keybindOverrides: next });
+      const store = await getStore();
+      await store.set("keybindOverrides", next);
+      await store.save();
+    },
+
     loadSettings: async (profileId?: string) => {
       if (!profileId) {
         return;
@@ -518,9 +545,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       try {
         const store = await load(`settings_${profileId}.json`);
 
-        loadKeybindSettings(store);
-
-        const [themeSettings, audioResult, uiSettings] = await Promise.all([
+        const [keybindSettings, themeSettings, audioResult, uiSettings] = await Promise.all([
+          loadKeybindSettings(store),
           loadThemeSettings(store),
           loadAudioSettings(store),
           loadUISettings(store),
@@ -528,6 +554,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
         set({
           currentProfileId: profileId,
+          ...keybindSettings,
           ...themeSettings,
           ...audioResult.state,
           ...uiSettings,
