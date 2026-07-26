@@ -13,6 +13,7 @@ import { useAudioStore } from "@/stores/audio-store";
 import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useInteractionStore } from "@/stores/interaction-store";
+import { useKeybindDialogStore } from "@/stores/keybind-dialog-store";
 
 const SCOPE = "app";
 
@@ -174,6 +175,20 @@ export function useKeyboardShortcuts() {
         combo: { key: "q", ctrl: true },
         handler: () => audio().toggleQueue(),
         description: "Toggle queue panel",
+        preventDefault: true,
+      },
+    ]);
+
+    // Keyboard shortcuts settings
+    entries.push([
+      "keybinds-ui",
+      {
+        combo: { key: "k", ctrl: true, shift: true },
+        handler: () => {
+          useInteractionStore.getState().setFocusSource("keyboard");
+          useKeybindDialogStore.getState().setOpen(true);
+        },
+        description: "Open keyboard shortcuts settings",
         preventDefault: true,
       },
     ]);

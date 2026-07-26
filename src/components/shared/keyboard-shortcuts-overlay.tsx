@@ -81,15 +81,41 @@ export function KeyboardShortcutsOverlay() {
       label: "System",
       shortcuts: [
         { keys: "?", description: "Show keyboard shortcuts" },
+        { keys: "Ctrl+Shift+K", description: "Open keyboard shortcuts settings" },
         { keys: "Ctrl+Shift+Q", description: "Quit app" },
       ],
     },
     {
       label: "Songs Page",
       shortcuts: [
-        { keys: "Escape", description: "Clear search / Exit batch mode" },
+        { keys: "Escape", description: "Clear selection or search" },
         { keys: "Ctrl+F", description: "Focus search input" },
-        { keys: "Ctrl+A", description: "Select all visible tracks" },
+        { keys: "Ctrl+A", description: "Select all tracks" },
+      ],
+    },
+    {
+      label: "Albums Page",
+      shortcuts: [
+        { keys: "Escape", description: "Clear selection or search" },
+        { keys: "Ctrl+F", description: "Focus search input" },
+        { keys: "Ctrl+A", description: "Select all albums" },
+      ],
+    },
+    {
+      label: "Artists Page",
+      shortcuts: [
+        { keys: "Escape", description: "Clear selection or search" },
+        { keys: "Ctrl+F", description: "Focus search input" },
+        { keys: "Ctrl+A", description: "Select all artists" },
+      ],
+    },
+    {
+      label: "Playlists Page",
+      shortcuts: [
+        { keys: "Escape", description: "Clear selection or search" },
+        { keys: "Ctrl+F", description: "Focus search input" },
+        { keys: "Ctrl+A", description: "Select all playlists" },
+        { keys: "Delete", description: "Delete selected playlists" },
       ],
     },
     {
@@ -104,7 +130,7 @@ export function KeyboardShortcutsOverlay() {
     {
       label: "Insights Page",
       shortcuts: [
-        { keys: "↑/↓", description: "Navigate within column (tracks, artists, albums)" },
+        { keys: "↑/↓", description: "Navigate within column" },
         { keys: "←/→", description: "Move between columns" },
         { keys: "Enter", description: "Play track / Open artist or album" },
         { keys: "Shift+Enter", description: "Play artist top tracks / Play album" },

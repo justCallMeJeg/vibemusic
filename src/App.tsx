@@ -10,6 +10,7 @@ import {
 import { useFocusRegionStore } from "@/stores/focus-region-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
+import { KeyboardShortcutsDialog } from "@/components/dialogs/keyboard-shortcuts-dialog";
 
 import MainContent from "@features/shell/components/main-content";
 import { BackgroundGradient } from "@features/shell/components/background-gradient";
@@ -353,6 +354,7 @@ export default function App() {
         handleConfirmRefresh={handleConfirmRefresh}
       />
       <KeyboardShortcutsOverlay />
+      <KeyboardShortcutsDialog />
     </main>
   );
 }

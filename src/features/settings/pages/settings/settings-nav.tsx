@@ -10,6 +10,7 @@ import {
   Info,
   PanelLeft,
   FlaskConical,
+  Keyboard,
 } from "lucide-react";
 
 const SETTINGS_SECTIONS = [
@@ -18,6 +19,7 @@ const SETTINGS_SECTIONS = [
   { id: "navigation", label: "Navigation", icon: PanelLeft },
   { id: "library", label: "Library", icon: FolderOpen },
   { id: "audio", label: "Audio", icon: Speaker },
+  // { id: "keyboard", label: "Keyboard", icon: Keyboard },
   { id: "experimental", label: "Experimental", icon: FlaskConical },
   { id: "about", label: "About", icon: Info },
 ] as const;
@@ -36,7 +38,9 @@ export function SettingsNav({ activeSection, onNavigate }: SettingsNavProps) {
     if (!useSettingsStore.getState().experimentalFeatures.keyboardNav) return;
     const nav = navRef.current;
     if (!nav) return;
-    const buttons = Array.from(nav.querySelectorAll<HTMLButtonElement>("button"));
+    const buttons = Array.from(
+      nav.querySelectorAll<HTMLButtonElement>("button"),
+    );
     const current = buttons.findIndex((b) => b === document.activeElement);
     if (current < 0) return;
 

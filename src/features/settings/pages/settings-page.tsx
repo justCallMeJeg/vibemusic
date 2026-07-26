@@ -10,6 +10,7 @@ import { SettingsNavigation } from "./settings/settings-navigation";
 import { SettingsLibrary } from "./settings/settings-library";
 import { SettingsAudio } from "./settings/settings-audio";
 import { SettingsExperimental } from "./settings/settings-experimental";
+import { SettingsKeyboard } from "./settings/settings-keyboard";
 import { SettingsAbout } from "./settings/settings-about";
 
 export default function SettingsPage() {
@@ -78,12 +79,16 @@ export default function SettingsPage() {
   const SCOPE = "page:settings";
   useEffect(() => {
     const { register, clearScope } = useKeybindsStore.getState();
-    register("escape", {
-      combo: { key: "Escape" },
-      handler: () => goBack(),
-      description: "Return to previous page",
-      preventDefault: true,
-    }, SCOPE);
+    register(
+      "escape",
+      {
+        combo: { key: "Escape" },
+        handler: () => goBack(),
+        description: "Return to previous page",
+        preventDefault: true,
+      },
+      SCOPE,
+    );
     return () => clearScope(SCOPE);
   }, [goBack]);
 
@@ -161,6 +166,13 @@ export default function SettingsPage() {
           >
             <SettingsExperimental />
           </section>
+          {/* <section
+            ref={setSectionRef("keyboard")}
+            id="keyboard"
+            className="scroll-mt-18"
+          >
+            <SettingsKeyboard />
+          </section> */}
           <section
             ref={setSectionRef("about")}
             id="about"
