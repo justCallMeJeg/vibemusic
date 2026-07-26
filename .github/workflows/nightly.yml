@@ -35,28 +35,17 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          npm run version:bump -- patch
+
           $pkg = Get-Content package.json | ConvertFrom-Json
           $currentVersion = $pkg.version
-          $parts = $currentVersion -split '\.'
-          $major = [int]$parts[0]
-          $minor = [int]$parts[1]
-          $patch = [int]$parts[2] + 1
-          $newVersion = "$major.$minor.$patch"
+          $newVersion = $currentVersion
 
           echo "CURRENT_VERSION=$currentVersion" >> $env:GITHUB_OUTPUT
           echo "NEW_VERSION=$newVersion" >> $env:GITHUB_OUTPUT
           echo "DISPLAY_VERSION=$newVersion-nightly" >> $env:GITHUB_OUTPUT
 
-          $pkg.version = $newVersion
-          $pkg | ConvertTo-Json -Depth 10 | Set-Content package.json
-
-          $tauriConf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
-          $tauriConf.version = $newVersion
-          $tauriConf | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
-
-          (Get-Content src-tauri/Cargo.toml) -replace '^version = ".*"', "version = `"$newVersion`"" | Set-Content src-tauri/Cargo.toml
-
-          Write-Host "Bumped version: $currentVersion -> $newVersion"
+          Write-Host "Bumped version to: $newVersion"
 
       - run: npm run verify:versions
 
