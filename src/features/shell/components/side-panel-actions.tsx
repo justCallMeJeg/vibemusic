@@ -9,7 +9,7 @@ import {
 interface SidePanelActionsProps {
   sidePanel: string;
   onToggleQueue: () => void;
-  onSetSidePanel: (panel: "none" | "queue" | "track-details" | "lyrics") => void;
+  onSetSidePanel: (panel: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer") => void;
   onToggleMiniPlayer: () => void;
 }
 

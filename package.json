@@ -100,7 +100,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/eslint__js": "^8.42.3",
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.9.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/uuid": "^10.0.0",

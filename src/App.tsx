@@ -38,6 +38,7 @@ import { useProfileTheme } from "@/hooks/use-profile-theme";
 import { useFocusTracking } from "@/hooks/use-focus-tracking";
 import { useTrackGradient } from "@/hooks/use-track-gradient";
 import { useScanOnStartup } from "@/hooks/use-scan-on-startup";
+import { useSleepTimer } from "@/hooks/use-sleep-timer";
 import { useProfileSwitch } from "@/hooks/use-profile-switch";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
@@ -202,6 +203,7 @@ export default function App() {
   useKeyboardShortcuts();
   useGlobalKeydownListener();
   useFocusTracking();
+  useSleepTimer();
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 

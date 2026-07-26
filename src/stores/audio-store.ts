@@ -36,7 +36,7 @@ interface AudioState {
   shuffle: boolean;
   repeat: RepeatMode;
 
-  sidePanel: "none" | "queue" | "track-details" | "lyrics";
+  sidePanel: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer";
 
   // Progress State (updated frequently)
   position: number;
@@ -71,7 +71,7 @@ interface AudioActions {
 
   // Queue Actions
   toggleQueue: () => void;
-  setSidePanel: (view: "none" | "queue" | "track-details" | "lyrics") => void;
+  setSidePanel: (view: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer") => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   addToQueue: (track: Track) => void;

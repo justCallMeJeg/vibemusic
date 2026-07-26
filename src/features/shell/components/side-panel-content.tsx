@@ -4,6 +4,7 @@ import { SidePanelLayout } from "@features/shell/components/side-panel-layout";
 import QueueContent from "@features/player/components/queue-menu";
 import TrackDetailContent from "@features/player/components/track-detail-panel";
 import LyricsContent from "@features/player/components/lyrics-panel";
+import SleepTimerPanel from "@features/player/components/sleep-timer-panel";
 
 interface PanelConfig {
   title: string;
@@ -15,6 +16,7 @@ const panelMap: Record<string, PanelConfig> = {
   queue: { title: "Queue", Component: QueueContent },
   "track-details": { title: "Track Details", Component: TrackDetailContent },
   lyrics: { title: "Lyrics", Component: LyricsContent, noContentPadding: true },
+  "sleep-timer": { title: "Sleep Timer", Component: SleepTimerPanel },
 };
 
 function SidePanelContent() {

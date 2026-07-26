@@ -20,6 +20,7 @@ import { ArtistLinks } from "@/components/shared/artist-links";
 import { VolumeControl } from "./volume-control";
 import { PlaybackControls } from "./playback-controls";
 import { SidePanelActions } from "@features/shell/components/side-panel-actions";
+import { SleepTimerChip } from "./sleep-timer-chip";
 
 export default function MusicControler() {
   // Use atomic selectors for minimal re-renders
@@ -53,40 +54,50 @@ export default function MusicControler() {
     }
   }, []);
 
-  const handleSeekChange = useCallback(
-    (value: number[]) => {
-      isDraggingRef.current = true;
-      useAudioStore.getState().setDraggingSlider(true);
-      setSliderValue(value);
-    },
+  const handleSeekChange = useCallback((value: number[]) => {
+    isDraggingRef.current = true;
+    useAudioStore.getState().setDraggingSlider(true);
+    setSliderValue(value);
+  }, []);
+
+  const handleSeekCommit = useCallback((value: number[]) => {
+    const s = useAudioStore.getState();
+    s.seek(value[0]);
+    isDraggingRef.current = false;
+    s.setDraggingSlider(false);
+  }, []);
+
+  const handleVolume = useCallback((value: number[]) => {
+    useAudioStore.getState().setVolume(value[0]);
+  }, []);
+
+  const onToggleShuffle = useCallback(
+    () => useAudioStore.getState().toggleShuffle(),
     [],
   );
-
-  const handleSeekCommit = useCallback(
-    (value: number[]) => {
-      const s = useAudioStore.getState();
-      s.seek(value[0]);
-      isDraggingRef.current = false;
-      s.setDraggingSlider(false);
-    },
-    [],
-  );
-
-  const handleVolume = useCallback(
-    (value: number[]) => {
-      useAudioStore.getState().setVolume(value[0]);
-    },
-    [],
-  );
-
-  const onToggleShuffle = useCallback(() => useAudioStore.getState().toggleShuffle(), []);
   const onPrevious = useCallback(() => useAudioStore.getState().previous(), []);
   const onNext = useCallback(() => useAudioStore.getState().next(), []);
-  const onToggleRepeat = useCallback(() => useAudioStore.getState().toggleRepeat(), []);
-  const onToggleMute = useCallback(() => useAudioStore.getState().toggleMute(), []);
-  const onToggleQueue = useCallback(() => useAudioStore.getState().toggleQueue(), []);
-  const onSetSidePanel = useCallback((view: "none" | "queue" | "track-details" | "lyrics") => useAudioStore.getState().setSidePanel(view), []);
-  const onToggleMiniPlayer = useCallback(() => useNavigationStore.getState().toggleMiniPlayer(), []);
+  const onToggleRepeat = useCallback(
+    () => useAudioStore.getState().toggleRepeat(),
+    [],
+  );
+  const onToggleMute = useCallback(
+    () => useAudioStore.getState().toggleMute(),
+    [],
+  );
+  const onToggleQueue = useCallback(
+    () => useAudioStore.getState().toggleQueue(),
+    [],
+  );
+  const onSetSidePanel = useCallback(
+    (view: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer") =>
+      useAudioStore.getState().setSidePanel(view),
+    [],
+  );
+  const onToggleMiniPlayer = useCallback(
+    () => useNavigationStore.getState().toggleMiniPlayer(),
+    [],
+  );
 
   return (
     <div className="bg-popover/75 backdrop-blur-md rounded-lg outline outline-border w-full ml-auto h-auto grid grid-cols-3 grid-rows-1 gap-4 p-4 transition-all duration-500 pointer-events-auto">
@@ -161,7 +172,8 @@ export default function MusicControler() {
           </p>
         </div>
       </div>
-      <div id="actions" className="flex items-center gap-2 justify-end">
+      <div id="actions" className="flex items-center justify-end">
+        <SleepTimerChip />
         <VolumeControl
           volume={volume}
           onVolumeChange={handleVolume}
