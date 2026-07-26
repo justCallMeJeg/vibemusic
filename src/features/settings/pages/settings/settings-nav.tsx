@@ -10,7 +10,8 @@ import {
   Info,
   PanelLeft,
   FlaskConical,
-  Keyboard,
+  // Keyboard,
+  PlugZap,
 } from "lucide-react";
 
 const SETTINGS_SECTIONS = [
@@ -20,6 +21,7 @@ const SETTINGS_SECTIONS = [
   { id: "library", label: "Library", icon: FolderOpen },
   { id: "audio", label: "Audio", icon: Speaker },
   // { id: "keyboard", label: "Keyboard", icon: Keyboard },
+  { id: "integrations", label: "Integrations", icon: PlugZap },
   { id: "experimental", label: "Experimental", icon: FlaskConical },
   { id: "about", label: "About", icon: Info },
 ] as const;

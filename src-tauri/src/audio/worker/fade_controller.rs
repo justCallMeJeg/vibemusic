@@ -46,6 +46,7 @@ impl AudioWorker {
             self.update_media_controls();
             self.emit_state();
         }
+        self.notify_discord_rpc();
     }
 
     pub(crate) fn resume(&mut self) {
@@ -91,6 +92,7 @@ impl AudioWorker {
             self.update_media_controls();
             self.emit_state();
         }
+        self.notify_discord_rpc();
     }
 
     pub(crate) fn stop(&mut self) {
@@ -105,6 +107,10 @@ impl AudioWorker {
         self._current_stream = None;
         self.producer = None;
         self.current_file_path = None;
+        self.current_title = None;
+        self.current_artist = None;
+        self.current_album = None;
+        self.current_artwork_path = None;
         self.current_position_ms = 0;
         self.duration_ms = 0;
         self.samples_played = 0;
@@ -137,5 +143,16 @@ impl AudioWorker {
         }
 
         self.emit_state();
+
+        #[cfg(feature = "discord-rpc")]
+        {
+            use tauri::Manager;
+            if let Some(discord_state) = self
+                .app_handle
+                .try_state::<crate::discord_rpc::DiscordRpcHandle>()
+            {
+                discord_state.send(crate::discord_rpc::RpcCommand::ClearActivity);
+            }
+        }
     }
 }

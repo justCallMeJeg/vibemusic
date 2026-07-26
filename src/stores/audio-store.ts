@@ -139,6 +139,20 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     const threshold = Math.min(30000, durationMs * 0.5);
     if (positionMs >= threshold) {
       useStatsStore.getState().recordPlayback(track.id, positionMs);
+
+      const artist = track.artist ?? "Unknown";
+      const album = track.album ?? "Unknown";
+      const durationSecs = Math.round(durationMs / 1000);
+      const timestamp = Math.floor(Date.now() / 1000);
+      invoke("scrobble_track", {
+        artist,
+        track: track.title,
+        album,
+        durationSecs,
+        timestamp,
+      }).catch(() => {
+        // Silently ignore — feature not compiled or not connected
+      });
     }
   };
 

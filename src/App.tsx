@@ -40,6 +40,7 @@ import { useFocusTracking } from "@/hooks/use-focus-tracking";
 import { useTrackGradient } from "@/hooks/use-track-gradient";
 import { useScanOnStartup } from "@/hooks/use-scan-on-startup";
 import { useSleepTimer } from "@/hooks/use-sleep-timer";
+import { useScrobbler } from "@/hooks/use-scrobbler";
 import { useProfileSwitch } from "@/hooks/use-profile-switch";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
@@ -205,6 +206,7 @@ export default function App() {
   useGlobalKeydownListener();
   useFocusTracking();
   useSleepTimer();
+  useScrobbler();
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 

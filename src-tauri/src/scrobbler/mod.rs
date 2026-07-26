@@ -1,1 +1,3 @@
-// Future: Last.fm scrobbling
+mod auth_server;
+mod client;
+pub mod commands;

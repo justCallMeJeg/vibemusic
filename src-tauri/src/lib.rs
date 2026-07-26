@@ -16,6 +16,12 @@ mod stats;
 mod updater;
 mod watcher;
 
+#[cfg(feature = "discord-rpc")]
+mod discord_rpc;
+
+#[cfg(feature = "scrobbler")]
+mod scrobbler;
+
 use audio::{AudioEngine, AudioState};
 use profile::{DbCache, ProfileState};
 use std::collections::HashMap;
@@ -63,6 +69,18 @@ pub fn run() {
             app.manage(watcher::init());
             app.manage(install_format::detect_install_format());
 
+            #[cfg(feature = "discord-rpc")]
+            {
+                let discord_handle = discord_rpc::DiscordRpcHandle::new();
+                app.manage(discord_handle);
+            }
+
+            #[cfg(feature = "scrobbler")]
+            {
+                let scrobbler_state = scrobbler::commands::ScrobblerState::new();
+                app.manage(scrobbler_state);
+            }
+
             // Initialize media events
             engine.init_media_events(app.handle().clone());
 
@@ -83,6 +101,12 @@ pub fn run() {
                     "quit" => {
                         if let Some(state) = app.try_state::<AudioState>() {
                             state.0.stop();
+                        }
+                        #[cfg(feature = "discord-rpc")]
+                        if let Some(discord_state) =
+                            app.try_state::<discord_rpc::DiscordRpcHandle>()
+                        {
+                            discord_state.shutdown();
                         }
                         app.exit(0);
                     }
@@ -175,6 +199,25 @@ pub fn run() {
             install_format::get_install_format,
             // App
             quit_app,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_enable,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_disable,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_get_status,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_start_auth,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_connect,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_disconnect,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_get_status,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::update_now_playing,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::scrobble_track,
+            get_available_features,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -183,5 +226,35 @@ pub fn run() {
 #[tauri::command]
 fn quit_app(state: tauri::State<AudioState>, app: tauri::AppHandle) {
     state.0.stop();
+    #[cfg(feature = "discord-rpc")]
+    if let Some(discord_state) = app.try_state::<discord_rpc::DiscordRpcHandle>() {
+        discord_state.shutdown();
+    }
     app.exit(0);
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_enable(state: tauri::State<discord_rpc::DiscordRpcHandle>) {
+    state.init();
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_disable(state: tauri::State<discord_rpc::DiscordRpcHandle>) {
+    state.shutdown();
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_get_status(state: tauri::State<discord_rpc::DiscordRpcHandle>) -> bool {
+    state.is_active()
+}
+
+#[tauri::command]
+fn get_available_features() -> serde_json::Value {
+    serde_json::json!({
+        "scrobbler": cfg!(feature = "scrobbler"),
+        "discord_rpc": cfg!(feature = "discord-rpc"),
+    })
 }

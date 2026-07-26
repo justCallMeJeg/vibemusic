@@ -56,6 +56,10 @@ pub(crate) struct AudioWorker {
     pub(crate) selected_device_name: Option<String>,
 
     pub(crate) current_file_path: Option<String>,
+    pub(crate) current_title: Option<String>,
+    pub(crate) current_artist: Option<String>,
+    pub(crate) current_album: Option<String>,
+    pub(crate) current_artwork_path: Option<String>,
     pub(crate) duration_ms: u64,
     pub(crate) current_position_ms: u64,
     pub(crate) samples_played: u64,
@@ -111,6 +115,10 @@ impl AudioWorker {
             device_channels: channels,
             selected_device_name: None,
             current_file_path: None,
+            current_title: None,
+            current_artist: None,
+            current_album: None,
+            current_artwork_path: None,
             duration_ms: 0,
             current_position_ms: 0,
             samples_played: 0,
@@ -284,6 +292,11 @@ impl AudioWorker {
                     self.update_media_metadata(title, artist, album, artwork_path, self.duration_ms);
                     self.emit_state();
                     self.emit_progress();
+                    self.current_title = Some(title.to_string());
+                    self.current_artist = Some(artist.to_string());
+                    self.current_album = Some(album.to_string());
+                    self.current_artwork_path = artwork_path.map(|s| s.to_string());
+                    self.notify_discord_rpc();
                 }
                 Err(e) => {
                     error!("Failed to create secondary decoder: {}", e);
@@ -356,6 +369,11 @@ impl AudioWorker {
 
         self.update_media_metadata(title, artist, album, artwork_path, self.duration_ms);
         self.emit_state();
+        self.current_title = Some(title.to_string());
+        self.current_artist = Some(artist.to_string());
+        self.current_album = Some(album.to_string());
+        self.current_artwork_path = artwork_path.map(|s| s.to_string());
+        self.notify_discord_rpc();
     }
 
     pub(crate) fn update_media_metadata(
@@ -385,6 +403,39 @@ impl AudioWorker {
             }
         }
     }
+
+    #[cfg(feature = "discord-rpc")]
+    pub(crate) fn notify_discord_rpc(&self) {
+        use crate::discord_rpc::RpcCommand;
+        use tauri::Manager;
+
+        if let Some(discord_state) = self
+            .app_handle
+            .try_state::<crate::discord_rpc::DiscordRpcHandle>()
+        {
+            if let Some(ref title) = self.current_title {
+                let elapsed = self.current_position_ms as i64 / 1000;
+                let duration = self.duration_ms as i64 / 1000;
+                let is_paused = {
+                    self.state
+                        .lock()
+                        .map(|s| !s.is_playing && s.is_paused)
+                        .unwrap_or(false)
+                };
+                discord_state.send(RpcCommand::SetActivity {
+                    title: title.clone(),
+                    artist: self.current_artist.clone().unwrap_or_default(),
+                    album: self.current_album.clone().unwrap_or_default(),
+                    elapsed_secs: elapsed,
+                    duration_secs: duration,
+                    is_paused,
+                });
+            }
+        }
+    }
+
+    #[cfg(not(feature = "discord-rpc"))]
+    pub(crate) fn notify_discord_rpc(&self) {}
 
     pub(crate) fn decode_and_push(&mut self) {
         let mut track_finished = false;

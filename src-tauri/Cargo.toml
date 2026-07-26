@@ -46,9 +46,13 @@ url = "2.5"
 notify = "8" # Latest version as of 2024
 crossbeam-channel = "0.5" # Useful for robust event handling
 regex="1"
-reqwest = { version = "0.11", features = ["stream"] }
+reqwest = { version = "0.11", features = ["stream", "blocking", "json"] }
 chrono = "0.4"
 symphonia = { version = "0.6", features = ["all"] }
+discord-rich-presence = { version = "1", optional = true }
+md-5 = { version = "0.10", optional = true }
+roxmltree = "0.20"
+open = "5"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 
@@ -59,9 +63,9 @@ needless_collect = { level = "deny", priority = 2 }
 clone_on_copy = { level = "deny", priority = 2 }
 
 [features]
-default = []
-scrobbler = []
-discord-rpc = []
+default = ["scrobbler", "discord-rpc"]
+scrobbler = ["dep:md-5"]
+discord-rpc = ["dep:discord-rich-presence"]
 
 [profile.release]
 codegen-units = 1 # Maximum optimization

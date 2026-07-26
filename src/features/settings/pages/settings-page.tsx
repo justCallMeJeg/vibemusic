@@ -3,6 +3,7 @@ import { useCurrentPage, useGoBack } from "@/stores/navigation-store";
 import { useIsPlayerVisible } from "@/stores/audio-store";
 import { cn } from "@/lib/utils";
 import { useKeybindsStore } from "@/stores/keybinds-store";
+import { invoke } from "@tauri-apps/api/core";
 import { SettingsNav, type SettingsSectionId } from "./settings/settings-nav";
 import { SettingsGeneral } from "./settings/settings-general";
 import { SettingsAppearance } from "./settings/settings-appearance";
@@ -10,8 +11,9 @@ import { SettingsNavigation } from "./settings/settings-navigation";
 import { SettingsLibrary } from "./settings/settings-library";
 import { SettingsAudio } from "./settings/settings-audio";
 import { SettingsExperimental } from "./settings/settings-experimental";
-import { SettingsKeyboard } from "./settings/settings-keyboard";
+// import { SettingsKeyboard } from "./settings/settings-keyboard";
 import { SettingsAbout } from "./settings/settings-about";
+import { SettingsIntegrations } from "./settings/settings-integrations";
 
 export default function SettingsPage() {
   const currentPage = useCurrentPage();
@@ -20,6 +22,18 @@ export default function SettingsPage() {
     useState<SettingsSectionId>("general");
   const sectionRefs = useRef<Map<SettingsSectionId, HTMLElement>>(new Map());
   const isScrolling = useRef(false);
+  const [features, setFeatures] = useState<{
+    scrobbler: boolean;
+    discord_rpc: boolean;
+  }>({ scrobbler: false, discord_rpc: false });
+
+  useEffect(() => {
+    invoke<{ scrobbler: boolean; discord_rpc: boolean }>(
+      "get_available_features",
+    )
+      .then(setFeatures)
+      .catch(() => {});
+  }, []);
 
   const setSectionRef = useCallback(
     (id: SettingsSectionId) => (el: HTMLElement | null) => {
@@ -158,6 +172,13 @@ export default function SettingsPage() {
             className="scroll-mt-18"
           >
             <SettingsAudio />
+          </section>
+          <section
+            ref={setSectionRef("integrations")}
+            id="integrations"
+            className="scroll-mt-18"
+          >
+            <SettingsIntegrations features={features} />
           </section>
           <section
             ref={setSectionRef("experimental")}

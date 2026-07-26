@@ -90,6 +90,12 @@ interface SettingsState {
 
   // Keybind Customization
   keybindOverrides: Record<string, KeyCombo>;
+
+  // Integrations
+  discordRpcEnabled: boolean;
+  lastfmEnabled: boolean;
+  lastfmSessionKey: string;
+  lastfmUsername: string;
 }
 
 interface SettingsActions {
@@ -139,6 +145,12 @@ interface SettingsActions {
   // Keybind Customization
   setKeybindOverride: (id: string, combo: KeyCombo) => void;
   resetKeybindOverrides: (ids: string[]) => void;
+
+  // Integrations
+  setDiscordRpcEnabled: (enabled: boolean) => void;
+  setLastfmEnabled: (enabled: boolean) => void;
+  setLastfmCredentials: (sessionKey: string, username: string) => void;
+  disconnectLastfm: () => void;
 
   loadSettings: (profileId?: string) => Promise<void>;
 }
@@ -278,6 +290,22 @@ async function loadKeybindSettings(store: Awaited<ReturnType<typeof load>>) {
   return { keybindOverrides: keybindOverrides ?? {} };
 }
 
+async function loadIntegrationSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [discordRpcEnabled, lastfmEnabled, lastfmSessionKey, lastfmUsername] =
+    await Promise.all([
+      store.get<boolean>("discordRpcEnabled"),
+      store.get<boolean>("lastfmEnabled"),
+      store.get<string>("lastfmSessionKey"),
+      store.get<string>("lastfmUsername"),
+    ]);
+  return {
+    discordRpcEnabled: discordRpcEnabled ?? false,
+    lastfmEnabled: lastfmEnabled ?? false,
+    lastfmSessionKey: lastfmSessionKey ?? "",
+    lastfmUsername: lastfmUsername ?? "",
+  };
+}
+
 /**
  * Store for managing application settings (theme, library paths, audio config).
  * Settings are persisted per-profile via the Tauri store plugin.
@@ -302,6 +330,10 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     miniPlayerPosition: "bottom-right",
     enableMediaKeys: true,
     keybindOverrides: {},
+    discordRpcEnabled: false,
+    lastfmEnabled: false,
+    lastfmSessionKey: "",
+    lastfmUsername: "",
     experimentalFeatures: {
       keyboardNav: false,
       focusRegions: false,
@@ -535,6 +567,49 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
+    setDiscordRpcEnabled: async (enabled) => {
+      await persistSetting(set, "discordRpcEnabled", enabled);
+      if (enabled) {
+        invoke("discord_rpc_enable").catch(() => {});
+      } else {
+        invoke("discord_rpc_disable").catch(() => {});
+      }
+    },
+
+    setLastfmEnabled: async (enabled) => {
+      await persistSetting(set, "lastfmEnabled", enabled);
+      if (!enabled) {
+        set({ lastfmSessionKey: "", lastfmUsername: "" });
+        const store = await getStore();
+        await store.set("lastfmSessionKey", "");
+        await store.set("lastfmUsername", "");
+        await store.save();
+        invoke("lastfm_disconnect").catch(() => {});
+      }
+    },
+
+    setLastfmCredentials: async (sessionKey, username) => {
+      const encoded = btoa(sessionKey);
+      set({ lastfmSessionKey: encoded, lastfmUsername: username });
+      const store = await getStore();
+      await store.set("lastfmSessionKey", encoded);
+      await store.set("lastfmUsername", username);
+      await store.save();
+      invoke("lastfm_connect", {
+        sessionKey: atob(encoded),
+      }).catch(() => {});
+    },
+
+    disconnectLastfm: async () => {
+      set({ lastfmEnabled: false, lastfmSessionKey: "", lastfmUsername: "" });
+      const store = await getStore();
+      await store.set("lastfmEnabled", false);
+      await store.set("lastfmSessionKey", "");
+      await store.set("lastfmUsername", "");
+      await store.save();
+      invoke("lastfm_disconnect").catch(() => {});
+    },
+
     loadSettings: async (profileId?: string) => {
       if (!profileId) {
         return;
@@ -545,16 +620,19 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       try {
         const store = await load(`settings_${profileId}.json`);
 
-        const [keybindSettings, themeSettings, audioResult, uiSettings] = await Promise.all([
-          loadKeybindSettings(store),
-          loadThemeSettings(store),
-          loadAudioSettings(store),
-          loadUISettings(store),
-        ]);
+        const [keybindSettings, integrationSettings, themeSettings, audioResult, uiSettings] =
+          await Promise.all([
+            loadKeybindSettings(store),
+            loadIntegrationSettings(store),
+            loadThemeSettings(store),
+            loadAudioSettings(store),
+            loadUISettings(store),
+          ]);
 
         set({
           currentProfileId: profileId,
           ...keybindSettings,
+          ...integrationSettings,
           ...themeSettings,
           ...audioResult.state,
           ...uiSettings,
@@ -591,6 +669,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
               })()
             : Promise.resolve(),
         ]);
+
+        const { discordRpcEnabled: rpcEnabled } = integrationSettings;
+        if (rpcEnabled) {
+          invoke("discord_rpc_enable").catch(() => {});
+        }
 
         invoke("watch_paths", { folders: uiSettings.rawLibraryPaths ?? [] }).catch((e) =>
           logger.error("Failed to watch paths on settings load", e),
