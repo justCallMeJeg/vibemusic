@@ -6,8 +6,6 @@ import {
   useEffect,
 } from "react";
 import { cn } from "@/lib/utils";
-import { useVirtualizer } from "@tanstack/react-virtual";
-
 import { ListItem } from "@/components/shared/list-item";
 import type { Track } from "@/lib/api";
 import {
@@ -18,8 +16,6 @@ import {
 import { ArtistLinks } from "@/components/shared/artist-links";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,15 +30,15 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ArrowUpDown, Search, Music2 } from "lucide-react";
 import { useContentStore } from "@features/library/store/content-store";
 import { usePlaylistStore } from "@features/playlists/store/playlist-store";
-import { useIsPlayerVisible } from "@/stores/audio-store";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLayout } from "@/components/shared/page-layout";
 
 import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useKeybindsStore } from "@/stores/keybinds-store";
-import { useInteractionStore } from "@/stores/interaction-store";
 import { useSongSearchAndSort } from "@/hooks/use-song-search-and-sort";
+
+import { VirtualizedList } from "@/components/shared/virtualized-list";
 
 import { formatDuration } from "@/lib/format";
 
@@ -181,24 +177,7 @@ export default memo(function SongsPage() {
   const playNext = useAudioStore((s) => s.playNext);
   const setPage = useNavigationStore((s) => s.setPage);
 
-  const parentRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useScrollMask(24, parentRef);
-
-  const virtualizer = useVirtualizer({
-    count: filteredItems.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ITEM_HEIGHT,
-    overscan: 5,
-  });
-
-  const tracksRef = useRef(filteredItems);
-  tracksRef.current = filteredItems;
-
-  const isPlayerVisible = useIsPlayerVisible();
-  const batchBarVisible = useSelectionStore((s) => s.selectedIds.length > 0);
-  const bottomPadding = (isPlayerVisible ? 156 : 24) + (batchBarVisible ? 72 : 0);
 
   const SCOPE = "page:songs";
   useSelectionEscapeKeybind(() => {}, SCOPE, () => { if (searchQuery) setSearchQuery(""); });
@@ -228,6 +207,50 @@ export default memo(function SongsPage() {
     );
     return () => clearScope(SCOPE);
   }, [searchQuery]);
+
+  const handleActivate = useCallback(
+    (index: number) => {
+      const track = filteredItems[index];
+      if (track) play(track);
+    },
+    [filteredItems, play],
+  );
+
+  const handleActivateSecondary = useCallback(
+    (index: number) => {
+      const track = filteredItems[index];
+      if (track) playNext(track);
+    },
+    [filteredItems, playNext],
+  );
+
+  const emptyState = useMemo(
+    () =>
+      searchQuery ? (
+        <EmptyState
+          icon={Search}
+          title="No matches found"
+          description={`No songs match "${searchQuery}"`}
+          action={
+            <Button variant="ghost" onClick={() => setSearchQuery("")}>
+              Clear search
+            </Button>
+          }
+        />
+      ) : (
+        <EmptyState
+          icon={Music2}
+          title="No songs found"
+          description="Import music using the sidebar button to get started."
+          action={
+            <Button onClick={() => setPage("settings")}>
+              Add Music Folder
+            </Button>
+          }
+        />
+      ),
+    [searchQuery, setSearchQuery, setPage],
+  );
 
   return (
     <PageLayout overflowHidden>
@@ -316,90 +339,22 @@ export default memo(function SongsPage() {
         </div>
       </PageHeader>
 
-      <div
-        ref={parentRef}
-        className={cn(
-          "flex-1 overflow-y-auto px-2 scroll-mask-y",
-          !isLoading && filteredItems.length === 0 && "flex flex-col gap-1",
-          !isLoading &&
-            filteredItems.length === 0 &&
-            isPlayerVisible &&
-            "pb-player-bar",
-        )}
-      >
-        {isLoading ? null : filteredItems.length === 0 ? (
-          searchQuery ? (
-            <EmptyState
-              icon={Search}
-              title="No matches found"
-              description={`No songs match "${searchQuery}"`}
-              action={
-                <Button variant="ghost" onClick={() => setSearchQuery("")}>
-                  Clear search
-                </Button>
-              }
-            />
-          ) : (
-            <EmptyState
-              icon={Music2}
-              title="No songs found"
-              description="Import music using the sidebar button to get started."
-              action={
-                <Button onClick={() => setPage("settings")}>
-                  Add Music Folder
-                </Button>
-              }
-            />
-          )
-        ) : (
-          <RovingTabindexProvider
-            containerRef={parentRef}
-            itemCount={filteredItems.length}
-            enabled={filteredItems.length > 0}
-            autoFocus={filteredItems.length > 0 && useInteractionStore.getState().focusSource === "keyboard"}
-            direction="vertical"
-            onActivate={(index: number) => {
-              const track = filteredItems[index];
-              if (track) play(track);
-            }}
-            onActivateSecondary={(index: number) => {
-              const track = filteredItems[index];
-              if (track) playNext(track);
-            }}
-            onIndexChange={(index: number) => {
-              if (index >= 0) {
-                virtualizer.scrollToIndex(index, { align: "center" });
-              }
-            }}
-          >
-            <div
-              className="relative w-full"
-              style={{
-                height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const track = filteredItems[virtualItem.index];
-                return (
-                  <div
-                    key={track.id}
-                    className="absolute top-0 left-0 w-full"
-                    style={{
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <SongListMenu
-                      track={track}
-                      dataItemIndex={virtualItem.index}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </RovingTabindexProvider>
-        )}
-      </div>
+      {isLoading ? (
+        <div className="flex-1" />
+      ) : (
+        <VirtualizedList
+          items={filteredItems}
+          renderItem={(track: Track, index: number) => (
+            <SongListMenu track={track} dataItemIndex={index} />
+          )}
+          itemHeight={ITEM_HEIGHT}
+          className="px-2"
+          keyboardNav
+          onItemActivate={handleActivate}
+          onItemActivateSecondary={handleActivateSecondary}
+          emptyState={emptyState}
+        />
+      )}
 
     </PageLayout>
   );

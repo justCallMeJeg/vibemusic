@@ -16,6 +16,8 @@ interface VirtualizedListProps<T> {
   className?: string;
   header?: React.ReactNode;
   headerHeight?: number;
+  /** Toggle header visibility without removing the header element */
+  showHeader?: boolean;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
   /** Enable keyboard navigation (arrow keys, Enter) */
   keyboardNav?: boolean;
@@ -36,6 +38,7 @@ export function VirtualizedList<T>({
   className = "",
   header,
   headerHeight = 300,
+  showHeader = true,
   onScroll,
   keyboardNav = false,
   onItemActivate,
@@ -49,7 +52,7 @@ export function VirtualizedList<T>({
   );
 
   // Virtualizer
-  const hasHeader = !!header;
+  const hasHeader = showHeader && !!header;
   const totalItems = items.length + (hasHeader ? 1 : 0);
 
   // Custom header height or default to 300
