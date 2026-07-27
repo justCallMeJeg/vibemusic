@@ -281,7 +281,13 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     },
 
     resume: async () => {
-      await invoke("audio_resume");
+      const { status, currentTrack } = get();
+      if (status === "stopped" && currentTrack) {
+        set({ status: "loading", position: 0 });
+        await playInternal(currentTrack);
+      } else if (status === "paused") {
+        await invoke("audio_resume");
+      }
     },
 
     stop: async () => {
