@@ -20,7 +20,7 @@ export function TitleBar() {
       s.isDownloading ||
       s.isReadyToInstall ||
       s.isUpdateAvailable ||
-      !!s.error
+      !!s.error,
   );
 
   useEffect(() => {
@@ -115,7 +115,13 @@ export function TitleBar() {
           </TooltipTrigger>
           <TooltipContent
             side="bottom"
-            className="bg-destructive/20 border-destructive/30 text-destructive [&_svg]:fill-destructive"
+            className="bg-destructive border-destructive/30 text-destructive-foreground"
+            style={
+              {
+                "--arrow-bg": "var(--destructive)",
+                "--arrow-fill": "var(--destructive)",
+              } as React.CSSProperties
+            }
           >
             Close
           </TooltipContent>

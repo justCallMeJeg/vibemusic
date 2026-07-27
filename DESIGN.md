@@ -15,6 +15,8 @@ colors:
   border-dark: oklch(26.9% 0 0deg)
   border-light: oklch(89.8% 0 0deg)
   destructive: oklch(57.7% 0.245 27.325deg)
+  destructive-foreground-light: oklch(98.5% 0 0deg)
+  destructive-foreground-dark: oklch(98.5% 0 0deg)
   sidebar-bg-dark: oklch(20.5% 0 0deg)
   sidebar-bg-light: oklch(97% 0 0deg)
   brand-indigo: oklch(48.8% 0.243 264.376deg)
@@ -109,7 +111,9 @@ The palette is deliberately restrained — near-zero chroma in the neutral ramp,
 - **Brand Indigo** (`oklch(48.8% 0.243 264.376deg)`): The most colorful token in the system. Used in the sidebar primary nav (dark mode), the title bar dot, and as the base for profile theme computation. When a user sets a profile color, this is the chroma target for the generated accent ramp.
 
 ### Destructive
-- **Red** (`oklch(57.7% 0.245 27.325deg)`): Buttons and indicators for destructive actions (delete, remove from library). Maps to both background and foreground for flexibility.
+
+- **Red** (`oklch(57.7% 0.245 27.325deg)`): The `--destructive` token. Used as the background for destructive buttons and as the text color for destructive indicators (`text-destructive` on neutral backgrounds).
+- **Foreground** (dark/light: `oklch(98.5% 0 0deg)`): The `--destructive-foreground` token. Near-white text rendered on top of the destructive background (e.g., button labels). Provides ≥4.5:1 contrast against the red surface.
 
 ### Named Rules
 

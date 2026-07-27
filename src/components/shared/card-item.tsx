@@ -19,7 +19,7 @@ const cardVariants = cva(
         portrait: "rounded-lg p-3 hover:bg-accent/10",
         landscape:
           "flex-row gap-4 p-2 hover:bg-accent/10 rounded-md items-center",
-        compact: "w-40 shrink-0 space-y-3",
+        compact: "w-50 shrink-0 space-y-3 p-2",
         circle: "rounded-lg p-3 hover:bg-accent/10 items-center",
       },
     },
@@ -45,11 +45,18 @@ const imageVariants = cva("relative bg-card overflow-hidden shadow-sm", {
 
 function useCardTabIndex(dataItemIndex: number | undefined) {
   const roving = useRovingTabindexContext();
-  const rovingTabIndex = dataItemIndex !== undefined ? roving?.getTabIndex(dataItemIndex) : undefined;
-  const isRovingActive = dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
-  const resolvedTabIndex = rovingTabIndex !== undefined
-    ? rovingTabIndex
-    : (dataItemIndex !== undefined && !!roving ? -1 : undefined);
+  const rovingTabIndex =
+    dataItemIndex !== undefined
+      ? roving?.getTabIndex(dataItemIndex)
+      : undefined;
+  const isRovingActive =
+    dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const resolvedTabIndex =
+    rovingTabIndex !== undefined
+      ? rovingTabIndex
+      : dataItemIndex !== undefined && !!roving
+        ? -1
+        : undefined;
   return { rovingTabIndex, isRovingActive, resolvedTabIndex };
 }
 
@@ -149,7 +156,9 @@ export const CardItem = memo(function CardItem({
     itemId: dataItemIndex ?? 0,
     index: dataItemIndex ?? 0,
   });
-  const subscribedCheckboxMode = useSelectionStore((s) => s.mode === "checkbox");
+  const subscribedCheckboxMode = useSelectionStore(
+    (s) => s.mode === "checkbox",
+  );
   const checkboxMode = checkboxModeProp ?? subscribedCheckboxMode;
 
   const CardContent = (
@@ -183,7 +192,9 @@ export const CardItem = memo(function CardItem({
         isSelected && selectable && "ring-2 ring-accent",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
       )}
-      {...(resolvedTabIndex !== undefined ? { tabIndex: resolvedTabIndex } : {})}
+      {...(resolvedTabIndex !== undefined
+        ? { tabIndex: resolvedTabIndex }
+        : {})}
     >
       {checkboxMode ? null : prefix}
       <div className={cn(imageVariants({ variant }), "overflow-visible")}>
@@ -223,7 +234,11 @@ export const CardItem = memo(function CardItem({
             <div className="absolute top-2 right-2 z-30 bg-black/60 backdrop-blur-sm rounded-md p-1">
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={() => useSelectionStore.getState().toggle(dataItemIndex ?? 0, dataItemIndex ?? 0)}
+                onCheckedChange={() =>
+                  useSelectionStore
+                    .getState()
+                    .toggle(dataItemIndex ?? 0, dataItemIndex ?? 0)
+                }
               />
             </div>
           )}

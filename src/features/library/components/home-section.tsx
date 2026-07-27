@@ -38,7 +38,7 @@ export function HomeSection<T>({
       <div
         className={
           orientation === "horizontal"
-            ? "flex overflow-x-overlay gap-4 pb-4 -mx-2 px-2"
+            ? "flex overflow-x-overlay pb-4 -mx-2 px-2"
             : "flex flex-col gap-1"
         }
       >

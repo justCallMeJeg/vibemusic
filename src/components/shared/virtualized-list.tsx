@@ -4,7 +4,6 @@ import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
 import { EmptyPanel } from "@/components/shared/empty-panel";
 import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
 import { useInteractionStore } from "@/stores/interaction-store";
-import { cn } from "@/lib/utils";
 import { ListMusic } from "lucide-react";
 
 interface VirtualizedListProps<T> {
@@ -45,11 +44,13 @@ export function VirtualizedList<T>({
   onItemActivateSecondary,
   autoFocus,
 }: VirtualizedListProps<T>) {
-  const { parentRef, effectiveKeyboardNav, bottomPadding, getScrollElement, isPlayerVisible } = useVirtualizerSetup(
-    itemHeight,
-    paddingBottom,
-    keyboardNav,
-  );
+  const {
+    parentRef,
+    effectiveKeyboardNav,
+    bottomPadding,
+    getScrollElement,
+    isPlayerVisible,
+  } = useVirtualizerSetup(itemHeight, paddingBottom, keyboardNav);
 
   // Virtualizer
   const hasHeader = showHeader && !!header;
@@ -89,7 +90,11 @@ export function VirtualizedList<T>({
         containerRef={parentRef}
         itemCount={effectiveKeyboardNav ? items.length : 0}
         enabled={!!effectiveKeyboardNav}
-        autoFocus={autoFocus ?? (effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard")}
+        autoFocus={
+          autoFocus ??
+          (effectiveKeyboardNav &&
+            useInteractionStore.getState().focusSource === "keyboard")
+        }
         direction="vertical"
         onActivate={onItemActivate}
         onActivateSecondary={onItemActivateSecondary}
@@ -123,7 +128,7 @@ export function VirtualizedList<T>({
                     key={virtualRow.index}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
-                    className={cn("absolute top-0 left-0 w-full")}
+                    className="pt-px"
                     style={{
                       position: "absolute",
                       top: 0,

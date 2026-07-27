@@ -1,9 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useMemo,
-  isValidElement,
-} from "react";
+import { useState, useEffect, useMemo, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
 import { debounce, cn } from "@/lib/utils";
@@ -75,11 +70,14 @@ export function VirtualizedGrid<T>({
   onItemActivate,
   onItemActivateSecondary,
 }: VirtualizedGridProps<T>) {
-  const { parentRef, effectiveKeyboardNav, bottomPadding, getScrollElement, estimateSize, isPlayerVisible } = useVirtualizerSetup(
-    itemHeight,
-    paddingBottom,
-    keyboardNav,
-  );
+  const {
+    parentRef,
+    effectiveKeyboardNav,
+    bottomPadding,
+    getScrollElement,
+    estimateSize,
+    isPlayerVisible,
+  } = useVirtualizerSetup(itemHeight, paddingBottom, keyboardNav);
 
   // Determine number of columns
   const columns = useGridColumns();
@@ -113,7 +111,10 @@ export function VirtualizedGrid<T>({
           containerRef={parentRef}
           itemCount={effectiveKeyboardNav ? items.length : 0}
           enabled={!!effectiveKeyboardNav}
-          autoFocus={effectiveKeyboardNav && useInteractionStore.getState().focusSource === "keyboard"}
+          autoFocus={
+            effectiveKeyboardNav &&
+            useInteractionStore.getState().focusSource === "keyboard"
+          }
           direction="grid"
           columns={columns}
           onActivate={onItemActivate}
@@ -150,7 +151,7 @@ export function VirtualizedGrid<T>({
                     transform: `translateY(${virtualRow.start}px)`,
                     gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                   }}
-                  className="grid gap-4"
+                  className="grid pt-px"
                 >
                   {rowItems.map((item, colIdx) => {
                     const itemIndex = startIndex + colIdx;
