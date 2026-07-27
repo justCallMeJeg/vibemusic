@@ -46,7 +46,16 @@ impl AudioWorker {
             self.update_media_controls();
             self.emit_state();
         }
-        self.notify_discord_rpc();
+        #[cfg(feature = "discord-rpc")]
+        {
+            use tauri::Manager;
+            if let Some(discord_state) = self
+                .app_handle
+                .try_state::<crate::discord_rpc::DiscordRpcHandle>()
+            {
+                discord_state.send(crate::discord_rpc::RpcCommand::ClearActivity);
+            }
+        }
     }
 
     pub(crate) fn resume(&mut self) {

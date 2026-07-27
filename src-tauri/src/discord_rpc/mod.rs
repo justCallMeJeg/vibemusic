@@ -13,7 +13,6 @@ pub enum RpcCommand {
         album: String,
         elapsed_secs: i64,
         duration_secs: i64,
-        is_paused: bool,
     },
     ClearActivity,
     Shutdown,

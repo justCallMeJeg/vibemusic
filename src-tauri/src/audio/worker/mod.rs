@@ -416,19 +416,12 @@ impl AudioWorker {
             if let Some(ref title) = self.current_title {
                 let elapsed = self.current_position_ms as i64 / 1000;
                 let duration = self.duration_ms as i64 / 1000;
-                let is_paused = {
-                    self.state
-                        .lock()
-                        .map(|s| !s.is_playing && s.is_paused)
-                        .unwrap_or(false)
-                };
                 discord_state.send(RpcCommand::SetActivity {
                     title: title.clone(),
                     artist: self.current_artist.clone().unwrap_or_default(),
                     album: self.current_album.clone().unwrap_or_default(),
                     elapsed_secs: elapsed,
                     duration_secs: duration,
-                    is_paused,
                 });
             }
         }
@@ -730,6 +723,7 @@ impl AudioWorker {
             }
 
             self.update_media_controls();
+            self.notify_discord_rpc();
         } else {
             error!("Seek failed");
         }

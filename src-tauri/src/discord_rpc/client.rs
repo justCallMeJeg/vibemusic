@@ -42,7 +42,6 @@ pub fn run_rpc_loop(rx: Receiver<RpcCommand>) {
                     album,
                     elapsed_secs,
                     duration_secs,
-                    is_paused,
                 }) => {
                     if client.is_none() {
                         client = Some(DiscordIpcClient::new(app_id));
@@ -77,7 +76,7 @@ pub fn run_rpc_loop(rx: Receiver<RpcCommand>) {
                     }
 
                     let mut timestamps = activity::Timestamps::new().start(start);
-                    if !is_paused && duration_secs > 0 {
+                    if duration_secs > 0 {
                         timestamps = timestamps.end(start + duration_secs);
                     }
 
@@ -95,8 +94,8 @@ pub fn run_rpc_loop(rx: Receiver<RpcCommand>) {
                         connected = false;
                     } else {
                         info!(
-                            "[discord-rpc] Presence updated: {} - {} (paused={})",
-                            title, artist, is_paused
+                            "[discord-rpc] Presence updated: {} - {}",
+                            title, artist,
                         );
                     }
                 }
