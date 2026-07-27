@@ -88,6 +88,13 @@ export function VirtualizedSortableList<T>({
   const onReorderRef = useRef(onReorder);
   onReorderRef.current = onReorder;
 
+  const handleReorderKey = useCallback((fromIndex: number, toIndex: number) => {
+    const currentItems = items;
+    const fromId = getItemId(currentItems[fromIndex]);
+    const toId = getItemId(currentItems[toIndex]);
+    onReorderRef.current?.(fromId, toId);
+  }, [items, getItemId]);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -139,6 +146,7 @@ export function VirtualizedSortableList<T>({
             onActivate={onItemActivate}
             onActivateSecondary={onItemActivateSecondary}
             onIndexChange={handleIndexChange}
+            onReorderKey={handleReorderKey}
           >
           <DndContext
             sensors={sensors}

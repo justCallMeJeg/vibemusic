@@ -21,6 +21,7 @@ interface RovingTabindexOptions {
   onActivate?: (index: number) => void;
   onActivateSecondary?: (index: number) => void;
   onIndexChange?: (index: number) => void;
+  onReorderKey?: (fromIndex: number, toIndex: number) => void;
 }
 
 const DATA_INDEX_ATTR = "data-item-index";
@@ -48,6 +49,7 @@ function useRovingTabindex({
   onActivate,
   onActivateSecondary,
   onIndexChange,
+  onReorderKey,
 }: RovingTabindexOptions) {
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const activeIndexRef = useRef(activeIndex);
@@ -68,6 +70,8 @@ function useRovingTabindex({
   onActivateSecondaryRef.current = onActivateSecondary;
   const onIndexChangeRef = useRef(onIndexChange);
   onIndexChangeRef.current = onIndexChange;
+  const onReorderKeyRef = useRef(onReorderKey);
+  onReorderKeyRef.current = onReorderKey;
 
   const activate = useCallback(
     (index: number) => {
@@ -97,6 +101,18 @@ function useRovingTabindex({
       const container = containerRef.current;
       if (!container) return;
       if (!container.contains(e.target as Node)) return;
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const current = activeIndexRef.current;
+        if (current < 0) return;
+        const dir = e.key === "ArrowDown" ? 1 : -1;
+        const target = Math.max(0, Math.min(current + dir, itemCountRef.current - 1));
+        if (target === current) return;
+        onReorderKeyRef.current?.(current, target);
+        activateRef.current(target);
+        return;
+      }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.defaultPrevented) return;
 
@@ -277,6 +293,7 @@ interface RovingTabindexProviderProps {
   onActivate?: (index: number) => void;
   onActivateSecondary?: (index: number) => void;
   onIndexChange?: (index: number) => void;
+  onReorderKey?: (fromIndex: number, toIndex: number) => void;
   autoFocus?: boolean;
 }
 
@@ -290,6 +307,7 @@ export function RovingTabindexProvider({
   onActivate,
   onActivateSecondary,
   onIndexChange,
+  onReorderKey,
   autoFocus = false,
 }: RovingTabindexProviderProps) {
   const roving = useRovingTabindex({
@@ -301,6 +319,7 @@ export function RovingTabindexProvider({
     onActivate,
     onActivateSecondary,
     onIndexChange,
+    onReorderKey,
   });
 
   const contextValue = enabled ? roving : null;
