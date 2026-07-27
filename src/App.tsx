@@ -262,7 +262,7 @@ export default function App() {
   const queue = useAudioStore((s) => s.queue);
 
   useEffect(() => {
-    if (sidePanel === "queue" && queue.length === 0) {
+    if (sidePanel !== "none" && queue.length === 0) {
       useAudioStore.getState().setSidePanel("none");
     }
   }, [sidePanel, queue.length]);
