@@ -324,6 +324,7 @@ const PlaylistCardItem = memo(function PlaylistCardItem({
       subtitle={`${playlist.track_count} tracks`}
       artworkSrc={playlist.artwork_path || undefined}
       artworkType="playlist"
+      artworkLiked={playlist.is_liked || undefined}
       variant="compact"
       onClick={() => onOpenDetail(playlist.id)}
       onPlay={() => onPlay(playlist.id)}
