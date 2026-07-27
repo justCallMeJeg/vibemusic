@@ -89,3 +89,66 @@ pub fn detect_install_format() -> InstallFormat {
 pub fn get_install_format() -> InstallFormat {
     detect_install_format()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn supports_auto_update_returns_true_for_msi() {
+        assert!(InstallFormat::Msi.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_true_for_dmg() {
+        assert!(InstallFormat::Dmg.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_true_for_appimage() {
+        assert!(InstallFormat::AppImage.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_false_for_exe() {
+        assert!(!InstallFormat::Exe.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_false_for_deb() {
+        assert!(!InstallFormat::Deb.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_false_for_rpm() {
+        assert!(!InstallFormat::Rpm.supports_auto_update());
+    }
+
+    #[test]
+    fn supports_auto_update_returns_false_for_unknown() {
+        assert!(!InstallFormat::Unknown.supports_auto_update());
+    }
+
+    #[test]
+    fn default_install_format_is_unknown() {
+        assert_eq!(InstallFormat::default(), InstallFormat::Unknown);
+    }
+
+    #[test]
+    fn install_format_serde_roundtrip() {
+        let formats = vec![
+            InstallFormat::Msi,
+            InstallFormat::Exe,
+            InstallFormat::Dmg,
+            InstallFormat::AppImage,
+            InstallFormat::Deb,
+            InstallFormat::Rpm,
+            InstallFormat::Unknown,
+        ];
+        for fmt in formats {
+            let json = serde_json::to_string(&fmt).unwrap();
+            let deserialized: InstallFormat = serde_json::from_str(&json).unwrap();
+            assert_eq!(deserialized, fmt);
+        }
+    }
+}

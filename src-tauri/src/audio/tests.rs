@@ -111,3 +111,66 @@ fn test_playback_state_send() {
     fn assert_send<T: Send>() {}
     assert_send::<PlaybackState>();
 }
+
+#[test]
+fn test_audio_device_empty_name() {
+    let device = AudioDevice {
+        name: String::new(),
+    };
+    let json = serde_json::to_string(&device).unwrap();
+    assert_eq!(json, r#"{"name":""}"#);
+}
+
+#[test]
+fn test_playback_state_volume_range() {
+    let state = PlaybackState {
+        volume: 0.0,
+        ..PlaybackState::default()
+    };
+    assert_eq!(state.volume, 0.0);
+
+    let state = PlaybackState {
+        volume: 2.0,
+        ..PlaybackState::default()
+    };
+    assert_eq!(state.volume, 2.0);
+}
+
+#[test]
+fn test_playback_state_full_serialization() {
+    let state = PlaybackState {
+        is_playing: false,
+        is_paused: true,
+        current_file: None,
+        position_ms: 0,
+        duration_ms: 0,
+        volume: 0.0,
+    };
+    let json = serde_json::to_string(&state).unwrap();
+    assert!(json.contains("\"is_playing\":false"));
+    assert!(json.contains("\"is_paused\":true"));
+    assert!(json.contains("\"volume\":0.0"));
+    assert!(json.contains("\"current_file\":null"));
+}
+
+#[test]
+fn test_audio_command_is_send() {
+    fn assert_send<T: Send>() {}
+    assert_send::<types::AudioCommand>();
+}
+
+#[test]
+fn test_playback_state_debug() {
+    let state = PlaybackState::default();
+    let debug = format!("{:?}", state);
+    assert!(debug.contains("PlaybackState"));
+}
+
+#[test]
+fn test_audio_device_serialization_special_chars() {
+    let device = AudioDevice {
+        name: "Speakers (Realtek)".into(),
+    };
+    let json = serde_json::to_string(&device).unwrap();
+    assert_eq!(json, r#"{"name":"Speakers (Realtek)"}"#);
+}

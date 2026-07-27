@@ -200,3 +200,149 @@ fn test_db_record_playback() {
 
     cleanup(&db_path);
 }
+
+#[test]
+fn test_db_upsert_and_update_track() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+    let track = make_track("/music/update_test.mp3", "Old Title", "Old Artist");
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::upsert_track(&tx, &track).unwrap();
+    tx.commit().unwrap();
+
+    let updated = TrackMetadata {
+        title: Some("New Title".into()),
+        artist: Some("New Artist".into()),
+        ..track
+    };
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::upsert_track(&tx, &updated).unwrap();
+    tx.commit().unwrap();
+
+    let paths = db.get_all_track_paths().unwrap();
+    assert_eq!(paths.len(), 1);
+
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_delete_track_and_cleanup_albums() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+    let track = make_track("/music/cleanup_test.mp3", "Cleanup", "C Artist");
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::upsert_track(&tx, &track).unwrap();
+    tx.commit().unwrap();
+
+    let all_tracks = db.get_all_track_paths().unwrap();
+    let (id, _) = all_tracks.iter().find(|(_, p)| p == "/music/cleanup_test.mp3").unwrap();
+    let id = *id;
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::delete_tracks(&tx, &[id]).unwrap();
+    let deleted_albums = DbHelper::delete_empty_albums(&tx).unwrap();
+    tx.commit().unwrap();
+
+    assert!(deleted_albums > 0, "expected at least one empty album to be deleted");
+    let albums = db.get_all_albums().unwrap();
+    assert!(albums.is_empty(), "albums should be empty after track deletion");
+
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_remove_folder_removes_tracks() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+    let track_in = make_track("/music/vibemusic_test/inside.mp3", "Inside", "I Artist");
+    let track_out = make_track("/music/outside.mp3", "Outside", "O Artist");
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::upsert_track(&tx, &track_in).unwrap();
+    DbHelper::upsert_track(&tx, &track_out).unwrap();
+    tx.commit().unwrap();
+
+    let removed = db.remove_folder("/music/vibemusic_test").unwrap();
+    assert_eq!(removed, 1);
+
+    let remaining = db.get_all_track_paths().unwrap();
+    assert_eq!(remaining.len(), 1);
+    assert!(remaining.iter().any(|(_, p)| p == "/music/outside.mp3"));
+
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_get_album_by_id_returns_none_for_missing() {
+    let (db, db_path) = create_test_db();
+    let result = db.get_album_by_id(99999).unwrap();
+    assert!(result.is_none());
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_get_artist_by_id_returns_none_for_missing() {
+    let (db, db_path) = create_test_db();
+    let result = db.get_artist_by_id(99999).unwrap();
+    assert!(result.is_none());
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_record_multiple_playbacks() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+    let track = make_track("/music/multi_play.mp3", "Multi", "M Artist");
+
+    let tx = create_test_tx(&mut db);
+    DbHelper::upsert_track(&tx, &track).unwrap();
+    tx.commit().unwrap();
+
+    let all_tracks = db.get_all_track_paths().unwrap();
+    let (id, _) = all_tracks.iter().find(|(_, p)| p == "/music/multi_play.mp3").unwrap();
+    let id = *id;
+
+    db.record_playback(id, 1000).unwrap();
+    db.record_playback(id, 2000).unwrap();
+    db.record_playback(id, 3000).unwrap();
+
+    let history = db.get_playback_history(0).unwrap();
+    assert_eq!(history.len(), 3);
+
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_delete_empty_artists_removes_orphaned() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+
+    let tx = create_test_tx(&mut db);
+    let artist_id = DbHelper::get_or_create_artist(&tx, "Orphan Artist").unwrap();
+    tx.commit().unwrap();
+
+    let tx = create_test_tx(&mut db);
+    let deleted = DbHelper::delete_empty_artists(&tx).unwrap();
+    tx.commit().unwrap();
+
+    assert!(deleted > 0, "expected orphaned artist to be removed");
+
+    let artists = db.get_all_artists().unwrap();
+    assert!(!artists.iter().any(|a| a.id == artist_id));
+
+    cleanup(&db_path);
+}
+
+#[test]
+fn test_db_get_or_create_artist_empty_name_returns_error() {
+    let (db, db_path) = create_test_db();
+    let mut db = db;
+    let tx = create_test_tx(&mut db);
+    let result = DbHelper::get_or_create_artist(&tx, "");
+    assert!(result.is_err());
+    drop(tx);
+    cleanup(&db_path);
+}

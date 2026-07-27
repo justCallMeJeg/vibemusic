@@ -55,3 +55,123 @@ pub(crate) enum AudioCommand {
         duration_ms: u64,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn audio_command_play_construct() {
+        let cmd = AudioCommand::Play {
+            path: "/music/test.mp3".into(),
+            title: "Test".into(),
+            artist: "Artist".into(),
+            album: "Album".into(),
+            artwork_path: Some("/art/test.jpg".into()),
+            crossfade: true,
+        };
+        match cmd {
+            AudioCommand::Play {
+                path,
+                title,
+                artist,
+                album,
+                artwork_path,
+                crossfade,
+            } => {
+                assert_eq!(path, "/music/test.mp3");
+                assert_eq!(title, "Test");
+                assert_eq!(artist, "Artist");
+                assert_eq!(album, "Album");
+                assert_eq!(artwork_path, Some("/art/test.jpg".into()));
+                assert!(crossfade);
+            }
+            _ => panic!("Expected Play variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_pause_construct() {
+        let cmd = AudioCommand::Pause;
+        assert!(matches!(cmd, AudioCommand::Pause));
+    }
+
+    #[test]
+    fn audio_command_resume_construct() {
+        let cmd = AudioCommand::Resume;
+        assert!(matches!(cmd, AudioCommand::Resume));
+    }
+
+    #[test]
+    fn audio_command_stop_construct() {
+        let cmd = AudioCommand::Stop;
+        assert!(matches!(cmd, AudioCommand::Stop));
+    }
+
+    #[test]
+    fn audio_command_seek_construct() {
+        let cmd = AudioCommand::Seek(45000);
+        match cmd {
+            AudioCommand::Seek(pos) => assert_eq!(pos, 45000),
+            _ => panic!("Expected Seek variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_set_volume_construct() {
+        let cmd = AudioCommand::SetVolume(0.75);
+        match cmd {
+            AudioCommand::SetVolume(v) => assert!((v - 0.75).abs() < f32::EPSILON),
+            _ => panic!("Expected SetVolume variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_set_device_construct() {
+        let cmd = AudioCommand::SetDevice("Speakers".into());
+        match cmd {
+            AudioCommand::SetDevice(name) => assert_eq!(name, "Speakers"),
+            _ => panic!("Expected SetDevice variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_set_crossfade_construct() {
+        let cmd = AudioCommand::SetCrossfade(3000);
+        match cmd {
+            AudioCommand::SetCrossfade(ms) => assert_eq!(ms, 3000),
+            _ => panic!("Expected SetCrossfade variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_set_fade_in_out_construct() {
+        let cmd = AudioCommand::SetFadeInOut {
+            enabled: true,
+            duration_ms: 2000,
+        };
+        match cmd {
+            AudioCommand::SetFadeInOut { enabled, duration_ms } => {
+                assert!(enabled);
+                assert_eq!(duration_ms, 2000);
+            }
+            _ => panic!("Expected SetFadeInOut variant"),
+        }
+    }
+
+    #[test]
+    fn audio_command_play_with_no_artwork() {
+        let cmd = AudioCommand::Play {
+            path: "/music/noart.mp3".into(),
+            title: "No Art".into(),
+            artist: "Artist".into(),
+            album: "Album".into(),
+            artwork_path: None,
+            crossfade: false,
+        };
+        match cmd {
+            AudioCommand::Play { artwork_path, .. } => assert!(artwork_path.is_none()),
+            _ => panic!("Expected Play variant"),
+        }
+    }
+}
