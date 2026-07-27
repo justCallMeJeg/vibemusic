@@ -49,7 +49,7 @@ import { PlaylistSelectorDialog } from "@/components/dialogs/playlist-selector-d
 import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { removeTrackFromPlaylist } from "@/lib/api";
+import { removeTrackFromPlaylist, addTrackToPlaylist } from "@/lib/api";
 
 const SidePanelContent = lazy(
   () => import("@features/shell/components/side-panel-content"),
@@ -124,14 +124,29 @@ function AppBatchBar() {
 
   const confirmRemoveFromPlaylist = async () => {
     const ids = useSelectionStore.getState().getSelectedIds();
-    if (!playlistId || ids.length === 0) return;
+    const currentPlaylistId = playlistId;
+    if (!currentPlaylistId || ids.length === 0) return;
     setIsRemoving(true);
     try {
       for (const trackId of ids) {
-        await removeTrackFromPlaylist(playlistId, trackId);
+        await removeTrackFromPlaylist(currentPlaylistId, trackId);
       }
       useSelectionStore.getState().disableCheckboxMode();
-      toast.success(`Removed ${ids.length} track${ids.length !== 1 ? "s" : ""} from playlist`);
+      toast(`Removed ${ids.length} track${ids.length !== 1 ? "s" : ""} from playlist`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            for (const trackId of ids) {
+              try {
+                await addTrackToPlaylist(currentPlaylistId, trackId);
+              } catch (e) {
+                logger.error("Undo: failed to re-add track", e);
+              }
+            }
+            toast.success("Restored tracks to playlist");
+          },
+        },
+      });
     } catch (e) {
       logger.error("Failed to remove tracks from playlist", e);
       toast.error("Failed to remove tracks");
@@ -152,6 +167,8 @@ function AppBatchBar() {
           onAddToPlaylist={entityType === "track" ? handleAddToPlaylist : undefined}
           onAddToQueue={entityType === "track" ? handleAddToQueue : undefined}
           onPlayNext={entityType === "track" ? handlePlayNext : undefined}
+          onPlay={entityType === "album" ? undefined : undefined}
+          onShuffle={entityType === "album" ? undefined : undefined}
           onRemove={isPlaylistDetail ? handleRemoveFromPlaylist : undefined}
         />
       </div>

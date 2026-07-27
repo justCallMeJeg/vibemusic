@@ -1,4 +1,5 @@
 import { memo, type ReactNode } from "react";
+import { useDragSelect } from "@/hooks/use-drag-select";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Play, Pin } from "lucide-react";
@@ -161,6 +162,8 @@ export const CardItem = memo(function CardItem({
   const { isRovingActive, resolvedTabIndex } = useCardTabIndex(dataItemIndex);
   const isCircle = variant === "circle";
   const isCompact = variant === "compact";
+  const { handlePointerDown: dragPointerDown, handlePointerMove: dragPointerMove, handlePointerUp: dragPointerUp } = useDragSelect();
+
   const { isSelected, onClick: selectionOnClick } = useSelection({
     itemId: dataItemIndex ?? 0,
     index: dataItemIndex ?? 0,
@@ -180,10 +183,6 @@ export const CardItem = memo(function CardItem({
             selectionOnClick(e);
             return;
           }
-          if (checkboxMode) {
-            selectionOnClick(e);
-            return;
-          }
           if (e.shiftKey) {
             useSelectionStore.getState().enableCheckboxMode();
             selectionOnClick(e);
@@ -194,6 +193,14 @@ export const CardItem = memo(function CardItem({
         }
         onClick?.(e);
       }}
+      onPointerDown={(e) => {
+        if (selectable && checkboxMode) {
+          e.preventDefault();
+          dragPointerDown(e, dataItemIndex ?? 0);
+        }
+      }}
+      onPointerMove={dragPointerMove}
+      onPointerUp={dragPointerUp}
       data-item-index={dataItemIndex}
       className={cn(
         cardVariants({ variant, className }),

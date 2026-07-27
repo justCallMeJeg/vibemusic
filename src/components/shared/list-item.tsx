@@ -1,4 +1,5 @@
 import { memo, useRef, type ReactNode } from "react";
+import { useDragSelect } from "@/hooks/use-drag-select";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
@@ -7,7 +8,7 @@ import { Play, Pause, Heart } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
 import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
-import type { TrackMenuActions } from "@/components/shared/context-menu-types";
+import type { TrackMenuActions, ContextMenuItemDef } from "@/components/shared/context-menu-types";
 import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
 import { useSelection } from "@/hooks/use-selection";
 import { useSelectionStore } from "@/stores/selection-store";
@@ -248,6 +249,7 @@ export const ListItem = memo(function ListItem({
   const resolvedIsLiked = menuActions?.isLiked ?? isLiked;
 
   const pointerDownHandled = useRef(false);
+  const { handlePointerDown: dragPointerDown, handlePointerMove: dragPointerMove, handlePointerUp: dragPointerUp } = useDragSelect();
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === "l" || e.key === "L") && resolvedToggleLike) {
@@ -273,7 +275,13 @@ export const ListItem = memo(function ListItem({
   const handlePointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('[data-checkbox-column="true"]')) return;
-    if (selectable && (checkboxMode || e.ctrlKey || e.shiftKey || e.metaKey)) {
+    if (target.closest("button, a, input, [role='button']")) return;
+    if (selectable && checkboxMode) {
+      dragPointerDown(e, dataItemIndex ?? index ?? 0);
+      pointerDownHandled.current = true;
+      return;
+    }
+    if (selectable && (e.ctrlKey || e.shiftKey || e.metaKey)) {
       selectionOnClick(e as unknown as React.MouseEvent);
       pointerDownHandled.current = true;
     }
@@ -285,6 +293,8 @@ export const ListItem = memo(function ListItem({
       data-active={active}
       data-item-index={dataItemIndex}
       onPointerDown={handlePointerDown}
+      onPointerMove={dragPointerMove}
+      onPointerUp={dragPointerUp}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role={onClick ? "button" : undefined}
@@ -386,6 +396,8 @@ export const ListItem = memo(function ListItem({
     </div>
   );
 
+  const selectedCount = useSelectionStore((s) => s.selectedIds.length);
+
   const menuItems = useTrackContextMenu({
     onPlay: menuActions?.onPlay,
     onPause: menuActions?.onPause,
@@ -399,6 +411,23 @@ export const ListItem = memo(function ListItem({
     isLiked: menuActions?.isLiked ?? isLiked,
     playlists: menuActions?.playlists,
   });
+
+  const batchMenuItems: ContextMenuItemDef[] = selectedCount > 1 && isSelected
+    ? [
+        { type: "action", id: "batch-count", label: `${selectedCount} selected`, onSelect: () => {}, disabled: true },
+        { type: "separator" },
+        { type: "action", id: "batch-add-queue", label: "Add to Queue", onSelect: () => menuActions?.onAddToQueue?.() },
+        { type: "action", id: "batch-play-next", label: "Play Next", onSelect: () => menuActions?.onPlayNext?.() },
+        { type: "action", id: "batch-add-playlist", label: "Add to Playlist", onSelect: () => menuActions?.onAddToPlaylist?.(0) },
+        { type: "separator" },
+        { type: "action", id: "batch-select-all", label: "Select All", onSelect: () => useSelectionStore.getState().selectAll() },
+        { type: "action", id: "batch-clear", label: "Clear Selection", onSelect: () => useSelectionStore.getState().clearSelection() },
+      ]
+    : [];
+
+  if (batchMenuItems.length > 0) {
+    return <UnifiedContextMenu items={batchMenuItems}>{row}</UnifiedContextMenu>;
+  }
 
   if (menuItems.length > 0) {
     return <UnifiedContextMenu items={menuItems}>{row}</UnifiedContextMenu>;

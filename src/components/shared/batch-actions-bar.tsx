@@ -2,13 +2,15 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useSelectionStore } from "@/stores/selection-store";
 import { cn } from "@/lib/utils";
-import { ListMusic, ListPlus, Minus, X, Check, SkipForward } from "lucide-react";
+import { ListMusic, ListPlus, Minus, X, Check, SkipForward, Play, Shuffle } from "lucide-react";
 
 interface BatchActionsBarProps {
   entityType: "track" | "album" | "artist" | "playlist";
   onAddToPlaylist?: () => void;
   onAddToQueue?: () => void;
   onPlayNext?: () => void;
+  onPlay?: () => void;
+  onShuffle?: () => void;
   onRemove?: () => void;
 }
 
@@ -24,6 +26,8 @@ export function BatchActionsBar({
   onAddToPlaylist,
   onAddToQueue,
   onPlayNext,
+  onPlay,
+  onShuffle,
   onRemove,
 }: BatchActionsBarProps) {
   const selectionCount = useSelectionStore((s) => s.selectedIds.length);
@@ -75,6 +79,18 @@ export function BatchActionsBar({
           </span>
 
           <div className="flex items-center gap-1.5 ml-auto">
+            {onPlay && (
+              <Button variant="ghost" size="sm" onClick={onPlay}>
+                <Play className="size-4 mr-1.5" />
+                Play
+              </Button>
+            )}
+            {onShuffle && (
+              <Button variant="ghost" size="sm" onClick={onShuffle}>
+                <Shuffle className="size-4 mr-1.5" />
+                Shuffle
+              </Button>
+            )}
             {onAddToPlaylist && (
               <Button variant="ghost" size="sm" onClick={onAddToPlaylist}>
                 <ListPlus className="size-4 mr-1.5" />
