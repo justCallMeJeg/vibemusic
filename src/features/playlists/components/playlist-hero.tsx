@@ -20,6 +20,7 @@ interface PlaylistHeroProps {
   onShuffle: () => void;
   className?: string;
   children?: ReactNode;
+  isSystemPlaylist?: boolean;
 }
 
 export function PlaylistHero({
@@ -35,6 +36,7 @@ export function PlaylistHero({
   onShuffle,
   className,
   children,
+  isSystemPlaylist,
 }: PlaylistHeroProps) {
   const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
   const showImage = !!coverUrl && failedCoverUrl !== coverUrl;
@@ -51,7 +53,9 @@ export function PlaylistHero({
             onError={() => setFailedCoverUrl(coverUrl ?? null)}
           />
         ) : (
-          <DynamicPlaceholder type="playlist" title={title} />
+          <div className={cn("w-full h-full", isSystemPlaylist && "bg-gradient-to-b from-primary/30 to-transparent")}>
+            <DynamicPlaceholder type="playlist" title={title} liked={isSystemPlaylist} />
+          </div>
         )}
       </div>
       <div className="flex flex-col justify-center min-w-0">
@@ -92,23 +96,27 @@ export function PlaylistHero({
             Shuffle
           </Button>
           {children}
-          <Button
-            variant="outline"
-            size="icon-lg"
-            onClick={onEdit}
-            title="Edit Playlist"
-          >
-            <Pencil size={20} />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-lg"
-            className="text-destructive hover:text-destructive hover:border-destructive/50"
-            title="Delete Playlist"
-            onClick={onDelete}
-          >
-            <Trash2 size={20} />
-          </Button>
+          {!isSystemPlaylist && (
+            <>
+              <Button
+                variant="outline"
+                size="icon-lg"
+                onClick={onEdit}
+                title="Edit Playlist"
+              >
+                <Pencil size={20} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-lg"
+                className="text-destructive hover:text-destructive hover:border-destructive/50"
+                title="Delete Playlist"
+                onClick={onDelete}
+              >
+                <Trash2 size={20} />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

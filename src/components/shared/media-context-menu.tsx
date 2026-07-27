@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Play, Shuffle, ListPlus, Pencil, Trash2 } from "lucide-react";
+import { Play, Shuffle, ListPlus, Pencil, Trash2, Pin, PinOff } from "lucide-react";
 import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
 import type { ContextMenuItemDef } from "@/components/shared/context-menu-types";
 
@@ -11,6 +11,8 @@ interface MediaContextMenuProps {
   onAddToQueue?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
 }
 
 export function MediaContextMenu({
@@ -21,6 +23,8 @@ export function MediaContextMenu({
   onAddToQueue,
   onEdit,
   onDelete,
+  onTogglePin,
+  isPinned,
 }: MediaContextMenuProps) {
   const items: ContextMenuItemDef[] = [];
 
@@ -58,6 +62,16 @@ export function MediaContextMenu({
       icon: <ListPlus size={16} />,
       label: "Add to Queue",
       onSelect: onAddToQueue,
+    });
+  }
+  if (onTogglePin) {
+    if (items.length > 0) items.push({ type: "separator" });
+    items.push({
+      type: "action",
+      id: "toggle-pin",
+      icon: isPinned ? <PinOff size={16} /> : <Pin size={16} />,
+      label: isPinned ? "Unpin" : "Pin",
+      onSelect: onTogglePin,
     });
   }
   if (onEdit) {

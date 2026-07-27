@@ -1,4 +1,4 @@
-import { Play, Pause, Shuffle, ListPlus, ListMusic, Pencil, Trash2, Disc3, User, FolderOpen, Copy, Share2 } from "lucide-react";
+import { Play, Pause, Shuffle, ListPlus, ListMusic, Pencil, Trash2, Disc3, User, FolderOpen, Copy, Share2, Heart } from "lucide-react";
 import type { ContextMenuItemDef, TrackMenuActions } from "@/components/shared/context-menu-types";
 
 interface UseTrackContextMenuOptions extends TrackMenuActions {
@@ -194,6 +194,19 @@ function buildExportGroup(
   return items;
 }
 
+function buildLikeGroup(onToggleLike?: () => void, isLiked?: boolean): ContextMenuItemDef[] {
+  if (!onToggleLike) return [];
+  return [
+    {
+      type: "action",
+      id: "toggle-like",
+      icon: <Heart size={16} className={isLiked ? "fill-red-500 text-red-500" : ""} />,
+      label: isLiked ? "Remove from Liked" : "Add to Liked",
+      onSelect: onToggleLike,
+    },
+  ];
+}
+
 function buildDeleteGroup(onDelete?: () => void): ContextMenuItemDef[] {
   if (!onDelete) return [];
   return [
@@ -225,11 +238,14 @@ export function useTrackContextMenu(options: UseTrackContextMenuOptions): Contex
     onCopyArtist,
     onCopyFilePath,
     onShare,
+    onToggleLike,
+    isLiked,
     playlists,
   } = options;
 
   const items: ContextMenuItemDef[] = [];
 
+  addSeparator(items, buildLikeGroup(onToggleLike, isLiked));
   addSeparator(items, buildPlaybackGroup(onPlay, onPause, onShuffle));
   addSeparator(items, buildQueueGroup(onPlayNext, onAddToQueue, onAddToPlaylist, playlists));
   addSeparator(items, buildNavGroup(onGoToAlbum, onGoToArtist));

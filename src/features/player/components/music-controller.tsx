@@ -12,6 +12,7 @@ import {
 } from "@/stores/audio-store";
 
 import { useNavigationStore } from "@/stores/navigation-store";
+import { useLikedTrackIds, useToggleLike } from "@/features/playlists/store/playlist-store";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { formatDuration } from "@/lib/format";
 import { ArtworkImage } from "@/components/shared/artwork-image";
@@ -21,6 +22,8 @@ import { VolumeControl } from "./volume-control";
 import { PlaybackControls } from "./playback-controls";
 import { SidePanelActions } from "@features/shell/components/side-panel-actions";
 import { SleepTimerChip } from "./sleep-timer-chip";
+import { Heart } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function MusicControler() {
   // Use atomic selectors for minimal re-renders
@@ -35,6 +38,9 @@ export default function MusicControler() {
   const duration = useDuration();
 
   const isPlaying = status === "playing";
+  const likedTrackIds = useLikedTrackIds();
+  const toggleLike = useToggleLike();
+  const isCurrentLiked = currentTrack ? likedTrackIds.has(currentTrack.id) : false;
   const [sliderValue, setSliderValue] = useState([0]);
   const isDraggingRef = useRef(false);
 
@@ -129,6 +135,20 @@ export default function MusicControler() {
                 />
               </div>
             </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); toggleLike(currentTrack.id); }}
+              className="flex items-center justify-center size-9 rounded-full border border-border/50 hover:bg-accent/20 transition-colors shrink-0"
+              aria-label={isCurrentLiked ? "Unlike" : "Like"}
+            >
+              <Heart
+                size={20}
+                className={cn(
+                  "transition-colors",
+                  isCurrentLiked ? "fill-red-500 text-red-500" : "text-muted-foreground",
+                )}
+              />
+            </button>
           </>
         ) : (
           <>

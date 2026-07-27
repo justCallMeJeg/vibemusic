@@ -113,6 +113,10 @@ pub struct Playlist {
     pub artwork_path: Option<String>,
     pub track_count: i64,
     pub created_at: String,
+    pub is_liked: bool,
+    pub is_system: bool,
+    pub pinned: bool,
+    pub pinned_at: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

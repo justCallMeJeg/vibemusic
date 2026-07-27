@@ -18,6 +18,7 @@ import { DetailHero } from "@features/library/components/detail-hero";
 import { useContentStore } from "@features/library/store/content-store";
 import { formatDuration } from "@/lib/format";
 import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { useTrackActivationHandlers } from "@/hooks/use-track-activation-handlers";
 import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useKeybindsStore } from "@/stores/keybinds-store";
@@ -44,6 +45,8 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
   const playNext = useAudioStore((s) => s.playNext);
   const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
   const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
+  const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
+  const toggleLike = usePlaylistStore((s) => s.toggleLike);
   const menuActions = useMemo(() => ({
     onPlay: () => play(track, tracks),
     onPause:
@@ -65,7 +68,9 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
     onCopyTitle: () => navigator.clipboard.writeText(track.title),
     onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
     onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
-  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail, openAlbumDetail]);
+    onToggleLike: () => toggleLike(track.id),
+    isLiked: likedTrackIds.has(track.id),
+  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail, openAlbumDetail, likedTrackIds, toggleLike]);
 
   return (
     <ListItem

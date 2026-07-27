@@ -166,6 +166,8 @@ const HomeTrackRow = memo(function HomeTrackRow({
 }) {
   const isActive = currentTrackId === track.id;
   const isCurrentlyPlaying = isActive && status === "playing";
+  const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
+  const toggleLike = usePlaylistStore((s) => s.toggleLike);
 
   const handleClick = useCallback(() => {
     if (isActive) {
@@ -194,8 +196,10 @@ const HomeTrackRow = memo(function HomeTrackRow({
         id: p.id,
         name: p.name,
       })),
+      onToggleLike: () => toggleLike(track.id),
+      isLiked: likedTrackIds.has(track.id),
     }),
-    [isActive, status, pause, resume, play, track, playNext, addToQueue, addToPlaylist, playlists],
+    [isActive, status, pause, resume, play, track, playNext, addToQueue, addToPlaylist, playlists, likedTrackIds, toggleLike],
   );
 
   const trailing = useMemo(

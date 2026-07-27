@@ -1,4 +1,12 @@
-import { useState, useMemo, memo, useCallback, useDeferredValue, useRef, useEffect } from "react";
+import {
+  useState,
+  useMemo,
+  memo,
+  useCallback,
+  useDeferredValue,
+  useRef,
+  useEffect,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -35,6 +43,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue,
   onEdit,
   onDelete,
+  onTogglePin,
   dataItemIndex,
 }: {
   playlist: Playlist;
@@ -44,6 +53,7 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
   onAddToQueue: (id: number) => Promise<void>;
   onEdit: (p: Playlist) => void;
   onDelete: (p: Playlist) => void;
+  onTogglePin?: (p: Playlist) => void;
   dataItemIndex?: number;
 }) {
   useSelection({ itemId: playlist.id, index: dataItemIndex ?? 0 });
@@ -59,8 +69,10 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
       onAddToQueue: () => onAddToQueue(playlist.id),
       onEdit: () => onEdit(playlist),
       onDelete: () => onDelete(playlist),
+      onTogglePin: () => onTogglePin?.(playlist),
+      isPinned: playlist.pinned,
     }),
-    [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete],
+    [playlist, onPlay, onPlayNext, onAddToQueue, onEdit, onDelete, onTogglePin],
   );
 
   return (
@@ -69,6 +81,8 @@ const PlaylistGridCard = memo(function PlaylistGridCard({
       subtitle={`${playlist.track_count} tracks`}
       artworkSrc={playlist.artwork_path || undefined}
       artworkType="playlist"
+      artworkLiked={playlist.is_liked || undefined}
+      pinned={playlist.pinned}
       variant="portrait"
       onClick={handleClick}
       onPlay={() => onPlay(playlist.id)}
@@ -84,6 +98,7 @@ export default memo(function PlaylistsPage() {
   const playlists = usePlaylistStore((s) => s.playlists);
   const isLoading = usePlaylistStore((s) => s.isLoading);
   const deletePlaylist = usePlaylistStore((s) => s.deletePlaylist);
+  const togglePin = usePlaylistStore((s) => s.togglePin);
 
   const playlistsSortKey = useSettingsStore((s) => s.playlistsSortKey);
   const playlistsSortDirection = useSettingsStore(
@@ -97,14 +112,22 @@ export default memo(function PlaylistsPage() {
   const filteredAndSortedPlaylists = useMemo(() => {
     let result = [...playlists];
 
-    // Filter
     if (deferredQuery) {
       const query = deferredQuery.toLowerCase();
       result = result.filter((p) => p.name.toLowerCase().includes(query));
     }
 
-    // Sort
+    // Sort: pinned first (by pinned_at desc), then by user's sort key
     return result.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      if (a.pinned && b.pinned) {
+        if (a.pinned_at && b.pinned_at)
+          return b.pinned_at.localeCompare(a.pinned_at);
+        if (a.pinned_at) return -1;
+        if (b.pinned_at) return 1;
+      }
+
       let valA: string | number = "";
       let valB: string | number = "";
 
@@ -118,7 +141,7 @@ export default memo(function PlaylistsPage() {
           valB = b.track_count;
           break;
         case "created_at":
-          valA = a.created_at; // ISO string comparison works for dates
+          valA = a.created_at;
           valB = b.created_at;
           break;
         default:
@@ -132,7 +155,11 @@ export default memo(function PlaylistsPage() {
   }, [playlists, playlistsSortKey, playlistsSortDirection, deferredQuery]);
 
   useEffect(() => {
-    useSelectionStore.getState().setItems(filteredAndSortedPlaylists.map((p, i) => ({ id: p.id, index: i })));
+    useSelectionStore
+      .getState()
+      .setItems(
+        filteredAndSortedPlaylists.map((p, i) => ({ id: p.id, index: i })),
+      );
   }, [filteredAndSortedPlaylists]);
 
   // Create Dialog State
@@ -152,17 +179,20 @@ export default memo(function PlaylistsPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const SCOPE = "page:playlists";
   useIndexPageKeybinds(searchQuery, setSearchQuery, searchInputRef, SCOPE, [
-    ["delete", {
-      combo: { key: "Delete" },
-      handler: () => {
-        const sel = useSelectionStore.getState();
-        if (sel.selectionCount() > 0) {
-          setBatchDeleteDialogOpen(true);
-        }
+    [
+      "delete",
+      {
+        combo: { key: "Delete" },
+        handler: () => {
+          const sel = useSelectionStore.getState();
+          if (sel.selectionCount() > 0) {
+            setBatchDeleteDialogOpen(true);
+          }
+        },
+        description: "Delete selected playlists",
+        preventDefault: true,
       },
-      description: "Delete selected playlists",
-      preventDefault: true,
-    }],
+    ],
   ]);
 
   const handlePlayPlaylist = useCallback(
@@ -242,7 +272,9 @@ export default memo(function PlaylistsPage() {
         await deletePlaylist(playlistId);
       }
       useSelectionStore.getState().disableCheckboxMode();
-      toast.success(`Deleted ${ids.length} playlist${ids.length !== 1 ? "s" : ""}`);
+      toast.success(
+        `Deleted ${ids.length} playlist${ids.length !== 1 ? "s" : ""}`,
+      );
     } catch (error) {
       logger.error("Failed to delete playlists", error);
       toast.error("Failed to delete some playlists");
@@ -335,6 +367,7 @@ export default memo(function PlaylistsPage() {
               onAddToQueue={handleAddToQueue}
               onEdit={setEditingPlaylist}
               onDelete={handleDeleteRequest}
+              onTogglePin={(p) => togglePin(p.id, !p.pinned)}
               dataItemIndex={index}
             />
           )}

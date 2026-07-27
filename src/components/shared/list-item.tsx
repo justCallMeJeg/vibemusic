@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { ScrollingText } from "@/components/shared/scrolling-text";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Heart } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
 import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
@@ -171,6 +171,8 @@ interface ListItemProps
   placeholderType?: "artist" | "track";
   onClick?: (e: React.MouseEvent) => void;
   menuActions?: TrackMenuActions;
+  onToggleLike?: () => void;
+  isLiked?: boolean;
 
   /**
    * Index within the parent list for arrow-key sibling navigation.
@@ -204,6 +206,8 @@ export const ListItem = memo(function ListItem({
   placeholderType,
   onClick,
   menuActions,
+  onToggleLike,
+  isLiked,
   dataItemIndex,
   selectable,
   itemId,
@@ -240,8 +244,17 @@ export const ListItem = memo(function ListItem({
     (s) => s.mode === "checkbox",
   );
   const checkboxMode = checkboxModeProp ?? subscribedCheckboxMode;
+  const resolvedToggleLike = menuActions?.onToggleLike ?? onToggleLike;
+  const resolvedIsLiked = menuActions?.isLiked ?? isLiked;
 
   const pointerDownHandled = useRef(false);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "l" || e.key === "L") && resolvedToggleLike) {
+      e.stopPropagation();
+      resolvedToggleLike();
+    }
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -273,6 +286,7 @@ export const ListItem = memo(function ListItem({
       data-item-index={dataItemIndex}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       role={onClick ? "button" : undefined}
       className={cn(
         rowVariants({ variant, active }),
@@ -346,11 +360,29 @@ export const ListItem = memo(function ListItem({
 
       {checkboxMode ? null : suffix}
 
-      {trailing && (
-        <div className="flex items-center gap-2 shrink-0 text-muted-foreground text-sm">
-          {trailing}
-        </div>
-      )}
+      <div className="flex items-center gap-2 shrink-0 text-muted-foreground text-sm">
+        {resolvedToggleLike && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); resolvedToggleLike(); }}
+            className={cn(
+              "flex items-center justify-center size-7 rounded-full border border-border/50 hover:bg-accent/20 transition-all",
+              resolvedIsLiked || isRovingActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+              "focus-visible:outline-2 focus-visible:outline-ring",
+            )}
+            aria-label={resolvedIsLiked ? "Unlike" : "Like"}
+          >
+            <Heart
+              size={14}
+              className={cn(
+                "transition-colors",
+                resolvedIsLiked ? "fill-red-500 text-red-500" : "text-muted-foreground",
+              )}
+            />
+          </button>
+        )}
+        {trailing}
+      </div>
     </div>
   );
 
@@ -363,6 +395,8 @@ export const ListItem = memo(function ListItem({
     onAddToPlaylist: menuActions?.onAddToPlaylist,
     onEdit: menuActions?.onEdit,
     onDelete: menuActions?.onDelete,
+    onToggleLike: menuActions?.onToggleLike ?? onToggleLike,
+    isLiked: menuActions?.isLiked ?? isLiked,
     playlists: menuActions?.playlists,
   });
 

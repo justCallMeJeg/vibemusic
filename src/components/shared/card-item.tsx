@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { Play } from "lucide-react";
+import { Play, Pin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { MediaContextMenu } from "@/components/shared/media-context-menu";
@@ -64,10 +64,12 @@ function CardArtwork({
   artworkSrc,
   artworkType,
   title,
+  liked,
 }: {
   artworkSrc?: string;
   artworkType: "album" | "artist" | "playlist";
   title: string;
+  liked?: boolean;
 }) {
   if (artworkSrc) {
     return (
@@ -84,6 +86,7 @@ function CardArtwork({
       <DynamicPlaceholder
         type="playlist"
         title={title}
+        liked={liked}
         className="group-hover:scale-[1.02] transition-transform"
       />
     );
@@ -107,7 +110,9 @@ interface CardItemProps
   tertiaryText?: string;
   artworkSrc?: string;
   artworkType?: "album" | "artist" | "playlist";
+  artworkLiked?: boolean;
   rank?: number;
+  pinned?: boolean;
   onPlay?: () => void;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   menuActions?: {
@@ -117,6 +122,8 @@ interface CardItemProps
     onAddToQueue?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
+    onTogglePin?: () => void;
+    isPinned?: boolean;
   };
   /** Index within a keyboard-navigable list/grid. Consumed by RovingTabindexContext. */
   dataItemIndex?: number;
@@ -136,8 +143,10 @@ export const CardItem = memo(function CardItem({
   tertiaryText,
   artworkSrc,
   artworkType = "album",
+  artworkLiked,
   variant,
   rank,
+  pinned,
   className,
   onPlay,
   onClick,
@@ -208,6 +217,7 @@ export const CardItem = memo(function CardItem({
             artworkSrc={artworkSrc}
             artworkType={artworkType}
             title={title}
+            liked={artworkLiked}
           />
           {onPlay && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
@@ -246,6 +256,11 @@ export const CardItem = memo(function CardItem({
         {rank !== undefined && (
           <div className="absolute -top-1 -left-1 bg-black/60 backdrop-blur-md text-white shadow-sm rounded-full w-6 h-6 flex items-center justify-center font-bold text-[10px] z-20 ring-1 ring-white/20">
             {rank}
+          </div>
+        )}
+        {pinned && (
+          <div className="absolute -top-1 -right-1 bg-black/60 backdrop-blur-md text-white shadow-sm rounded-full w-8 h-8 flex items-center justify-center z-20 ring-1 ring-white/20">
+            <Pin size={18} className="fill-primary text-primary rotate-45" />
           </div>
         )}
       </div>

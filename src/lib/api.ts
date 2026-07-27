@@ -50,6 +50,10 @@ export interface Playlist {
   artwork_path: string | null;
   track_count: number;
   created_at: string;
+  is_liked: boolean;
+  is_system: boolean;
+  pinned: boolean;
+  pinned_at: string | null;
 }
 
 export interface Artist {
@@ -204,6 +208,22 @@ export async function reorderPlaylist(
   newOrder: number[]
 ): Promise<void> {
   return await invoke("reorder_playlist", { id, newOrder });
+}
+
+// --- Liked Music ---
+
+export async function toggleLikeTrack(trackId: number): Promise<boolean> {
+  return await invoke("toggle_like_track", { trackId });
+}
+
+export async function getLikedTrackIds(): Promise<number[]> {
+  return await dedupeInvoke("get_liked_track_ids");
+}
+
+// --- Pin ---
+
+export async function togglePinPlaylist(id: number, pinned: boolean): Promise<void> {
+  return await invoke("toggle_pin_playlist", { id, pinned });
 }
 
 export interface SearchResults {

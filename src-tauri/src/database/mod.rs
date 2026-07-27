@@ -71,6 +71,19 @@ impl DbHelper {
                 let _ = conn.execute("ALTER TABLE playlists ADD COLUMN artwork_path TEXT", []);
             }
 
+            let has_is_system: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('playlists') WHERE name='is_system'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            if has_is_system == 0 {
+                warn!("Applying migration 004: liked and pinned columns to playlists...");
+                let _ = conn.execute_batch(include_str!("../../migrations/004_add_liked_and_pinned.sql"));
+            }
+
             let has_mtime: i64 = conn
                 .query_row(
                     "SELECT COUNT(*) FROM pragma_table_info('tracks') WHERE name='modification_time'",

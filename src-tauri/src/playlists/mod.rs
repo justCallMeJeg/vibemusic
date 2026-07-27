@@ -69,3 +69,29 @@ pub fn remove_track_from_playlist(
 pub fn reorder_playlist(app: AppHandle, id: i64, new_order: Vec<i64>) -> Result<(), AppError> {
     with_db_mut(&app, |db| db.reorder_playlist(id, new_order))
 }
+
+// ------------------------------------------------------------------
+// Liked Music
+// ------------------------------------------------------------------
+
+/// Toggle like status for a track. Returns `true` if now liked, `false` if unliked.
+#[command]
+pub fn toggle_like_track(app: AppHandle, track_id: i64) -> Result<bool, AppError> {
+    with_db(&app, |db| db.toggle_liked_track(track_id))
+}
+
+/// Returns all track IDs in the liked playlist.
+#[command]
+pub fn get_liked_track_ids(app: AppHandle) -> Result<Vec<i64>, AppError> {
+    with_db(&app, |db| db.get_liked_track_ids())
+}
+
+// ------------------------------------------------------------------
+// Pin
+// ------------------------------------------------------------------
+
+/// Pin or unpin a playlist.
+#[command]
+pub fn toggle_pin_playlist(app: AppHandle, id: i64, pinned: bool) -> Result<(), AppError> {
+    with_db(&app, |db| db.toggle_pin_playlist(id, pinned))
+}

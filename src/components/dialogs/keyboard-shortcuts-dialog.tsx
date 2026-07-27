@@ -36,6 +36,7 @@ const KEYBIND_GROUPS: ShortcutGroup[] = [
       { id: "prev-track", keys: "Ctrl+←", description: "Previous track" },
       { id: "vol-up", keys: "Ctrl+↑", description: "Volume up" },
       { id: "vol-down", keys: "Ctrl+↓", description: "Volume down" },
+      { id: "like-track", keys: "L", description: "Like / Unlike track" },
       { id: "mute", keys: "M", description: "Mute / Unmute" },
       { id: "repeat", keys: "R", description: "Toggle repeat mode" },
       { id: "shuffle", keys: "S", description: "Toggle shuffle" },

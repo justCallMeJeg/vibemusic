@@ -103,7 +103,11 @@ impl DbHelper {
                 p.description,
                 p.artwork_path,
                 p.created_at,
-                COUNT(pt.id) as track_count
+                COUNT(pt.id) as track_count,
+                p.is_liked,
+                p.is_system,
+                p.pinned,
+                p.pinned_at
             FROM playlists p
             LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
             WHERE p.name LIKE ?
@@ -119,8 +123,12 @@ impl DbHelper {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     artwork_path: row.get(3)?,
-                    created_at: row.get(4)?,
+                    created_at: row.get::<_, String>(4)?,
                     track_count: row.get(5)?,
+                    is_liked: row.get::<_, i32>(6)? != 0,
+                    is_system: row.get::<_, i32>(7)? != 0,
+                    pinned: row.get::<_, i32>(8)? != 0,
+                    pinned_at: row.get(9)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -136,7 +144,11 @@ impl DbHelper {
                 p.description,
                 p.artwork_path,
                 p.created_at,
-                COUNT(pt.id) as track_count
+                COUNT(pt.id) as track_count,
+                p.is_liked,
+                p.is_system,
+                p.pinned,
+                p.pinned_at
             FROM playlists p
             LEFT JOIN playlist_tracks pt ON p.id = pt.playlist_id
             WHERE p.name LIKE ?
@@ -152,8 +164,12 @@ impl DbHelper {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     artwork_path: row.get(3)?,
-                    created_at: row.get(4)?,
+                    created_at: row.get::<_, String>(4)?,
                     track_count: row.get(5)?,
+                    is_liked: row.get::<_, i32>(6)? != 0,
+                    is_system: row.get::<_, i32>(7)? != 0,
+                    pinned: row.get::<_, i32>(8)? != 0,
+                    pinned_at: row.get(9)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;

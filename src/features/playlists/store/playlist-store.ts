@@ -7,6 +7,9 @@ import {
   addTrackToPlaylist,
   reorderPlaylist,
   deletePlaylist,
+  toggleLikeTrack,
+  getLikedTrackIds,
+  togglePinPlaylist,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -14,6 +17,7 @@ import { logger } from "@/lib/logger";
 interface PlaylistState {
   playlists: Playlist[];
   isLoading: boolean;
+  likedTrackIds: Set<number>;
 
   fetchPlaylists: () => Promise<void>;
   refreshPlaylists: () => Promise<void>;
@@ -29,22 +33,31 @@ interface PlaylistState {
   addToPlaylist: (playlistId: number, trackId: number) => Promise<void>;
   reorderPlaylist: (id: number, newOrder: number[]) => Promise<void>;
 
+  toggleLike: (trackId: number) => Promise<boolean>;
+  fetchLikedTrackIds: () => Promise<void>;
+
+  togglePin: (playlistId: number, pinned: boolean) => Promise<void>;
+
   resetPlaylists: () => void;
 }
 
 export const usePlaylistStore = create<PlaylistState>((set, get) => ({
   playlists: [],
   isLoading: false,
+  likedTrackIds: new Set<number>(),
 
   resetPlaylists: () => {
-    set({ playlists: [], isLoading: false });
+    set({ playlists: [], isLoading: false, likedTrackIds: new Set() });
   },
 
   fetchPlaylists: async () => {
     set({ isLoading: true });
     try {
-      const playlists = await getPlaylists();
-      set({ playlists, isLoading: false });
+      const [playlists, likedIds] = await Promise.all([
+        getPlaylists(),
+        getLikedTrackIds(),
+      ]);
+      set({ playlists, likedTrackIds: new Set(likedIds), isLoading: false });
     } catch (error) {
       logger.error("Failed to fetch playlists", error);
       set({ isLoading: false });
@@ -53,8 +66,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
 
   refreshPlaylists: async () => {
     try {
-      const playlists = await getPlaylists();
-      set({ playlists });
+      const [playlists, likedIds] = await Promise.all([
+        getPlaylists(),
+        getLikedTrackIds(),
+      ]);
+      set({ playlists, likedTrackIds: new Set(likedIds) });
     } catch (error) {
       logger.error("Failed to refresh playlists", error);
     }
@@ -90,6 +106,11 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
   },
 
   deletePlaylist: async (id) => {
+    const playlist = get().playlists.find((p) => p.id === id);
+    if (playlist?.is_system) {
+      toast.error("Cannot delete a system playlist");
+      return false;
+    }
     try {
       await deletePlaylist(id);
       await get().refreshPlaylists();
@@ -118,4 +139,60 @@ export const usePlaylistStore = create<PlaylistState>((set, get) => ({
       logger.error("Failed to reorder playlist", error);
     }
   },
+
+  toggleLike: async (trackId) => {
+    const prev = get().likedTrackIds;
+    const optimistic = new Set(prev);
+    const wasLiked = prev.has(trackId);
+    if (wasLiked) {
+      optimistic.delete(trackId);
+    } else {
+      optimistic.add(trackId);
+    }
+    set({ likedTrackIds: optimistic });
+    try {
+      const nowLiked = await toggleLikeTrack(trackId);
+      if (nowLiked !== !wasLiked) {
+        const corrected = new Set(optimistic);
+        if (nowLiked) {
+          corrected.add(trackId);
+        } else {
+          corrected.delete(trackId);
+        }
+        set({ likedTrackIds: corrected });
+      }
+      return nowLiked;
+    } catch (error) {
+      set({ likedTrackIds: prev });
+      logger.error("Failed to toggle like", error);
+      toast.error("Failed to update like");
+      return false;
+    }
+  },
+
+  fetchLikedTrackIds: async () => {
+    try {
+      const ids = await getLikedTrackIds();
+      set({ likedTrackIds: new Set(ids) });
+    } catch (error) {
+      logger.error("Failed to fetch liked track IDs", error);
+    }
+  },
+
+  togglePin: async (playlistId, pinned) => {
+    try {
+      await togglePinPlaylist(playlistId, pinned);
+      await get().refreshPlaylists();
+      if (pinned) {
+        toast.success("Playlist pinned");
+      } else {
+        toast.success("Playlist unpinned");
+      }
+    } catch (error) {
+      logger.error("Failed to toggle pin", error);
+    }
+  },
 }));
+
+export const useLikedTrackIds = () => usePlaylistStore((s) => s.likedTrackIds);
+export const useToggleLike = () => usePlaylistStore((s) => s.toggleLike);

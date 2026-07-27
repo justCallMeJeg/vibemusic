@@ -66,6 +66,7 @@ export function KeyboardShortcutsOverlay() {
         { keys: "Ctrl+↑", description: "Volume up" },
         { keys: "Ctrl+↓", description: "Volume down" },
         { keys: "M", description: "Mute / Unmute" },
+        { keys: "L", description: "Like / Unlike track" },
         { keys: "R", description: "Toggle repeat" },
         { keys: "S", description: "Toggle shuffle" },
       ],

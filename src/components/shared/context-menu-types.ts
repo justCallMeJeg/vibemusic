@@ -31,6 +31,8 @@ export interface TrackMenuActions {
   onGoToAlbum?: () => void;
   onGoToArtist?: () => void;
   onShowInFolder?: () => void;
+  onToggleLike?: () => void;
+  isLiked?: boolean;
   onCopyTitle?: () => void;
   onCopyArtist?: () => void;
   onCopyFilePath?: () => void;
@@ -71,6 +73,8 @@ export interface PlaylistMenuActions {
   onCopyName?: () => void;
   onShare?: () => void;
   onDelete?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
 }
 
 export interface QueueMenuActions {

@@ -62,6 +62,8 @@ const SongListMenu = memo(function SongListMenu({
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
   const playlists = usePlaylistStore((s) => s.playlists);
+  const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
+  const toggleLike = usePlaylistStore((s) => s.toggleLike);
 
   const isCurrent = currentTrack?.id === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
@@ -121,6 +123,8 @@ const SongListMenu = memo(function SongListMenu({
         id: p.id,
         name: p.name,
       })),
+      onToggleLike: () => toggleLike(track.id),
+      isLiked: likedTrackIds.has(track.id),
     }),
     [
       isCurrent,
@@ -133,6 +137,8 @@ const SongListMenu = memo(function SongListMenu({
       addToQueue,
       addToPlaylist,
       playlists,
+      likedTrackIds,
+      toggleLike,
     ],
   );
 

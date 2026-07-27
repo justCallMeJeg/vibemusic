@@ -29,6 +29,7 @@ import { registerSelectAllAndCleanup } from "@/lib/keybinds";
 import { useSelectionEscapeKeybind } from "@/hooks/use-selection-escape-keybind";
 import { AlbumCarousel } from "@features/library/components/album-carousel";
 import { useArtistKeyboardNav } from "@/hooks/use-artist-keyboard-nav";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 
 const ArtistTrackRow = memo(function ArtistTrackRow({
   track,
@@ -224,6 +225,9 @@ export default memo(function ArtistDetailPage() {
     );
   }, [tracks]);
 
+  const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
+  const toggleLike = usePlaylistStore((s) => s.toggleLike);
+
   const renderItem = useCallback(
     (track: Track, index: number) => {
       const isCurrent = currentTrack?.id === track.id;
@@ -246,6 +250,8 @@ export default memo(function ArtistDetailPage() {
         onCopyTitle: () => navigator.clipboard.writeText(track.title),
         onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
         onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
+        onToggleLike: () => toggleLike(track.id),
+        isLiked: likedTrackIds.has(track.id),
       };
 
       return (
@@ -264,7 +270,7 @@ export default memo(function ArtistDetailPage() {
         />
       );
     },
-    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openAlbumDetail, openArtistDetail],
+    [currentTrack?.id, status, tracks, play, pause, resume, addToQueue, playNext, openAlbumDetail, openArtistDetail, likedTrackIds, toggleLike],
   );
 
   const activationHandlers = useTrackActivationHandlers(tracks);

@@ -134,6 +134,10 @@ describe("createPlaylist", () => {
       artwork_path: null,
       track_count: 0,
       created_at: "2024-01-01",
+      is_liked: false,
+      is_system: false,
+      pinned: false,
+      pinned_at: null,
     };
     mockInvoke.mockResolvedValue(playlist);
     const result = await createPlaylist("My Playlist", "A test playlist");

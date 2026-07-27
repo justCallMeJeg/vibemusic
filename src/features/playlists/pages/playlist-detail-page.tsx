@@ -36,6 +36,8 @@ interface PlaylistTrackRowProps {
   dataItemIndex?: number;
   removeTrack: (trackId: number, e: React.MouseEvent) => void;
   checkboxMode?: boolean;
+  isLiked?: boolean;
+  onToggleLike?: (trackId: number) => void;
 }
 
 const PlaylistTrackRow = memo(function PlaylistTrackRow({
@@ -44,6 +46,8 @@ const PlaylistTrackRow = memo(function PlaylistTrackRow({
   dataItemIndex,
   removeTrack,
   checkboxMode: checkboxModeProp,
+  isLiked,
+  onToggleLike,
 }: PlaylistTrackRowProps) {
   const currentTrack = useCurrentTrack();
   const play = useAudioStore((s) => s.play);
@@ -118,6 +122,10 @@ const PlaylistTrackRow = memo(function PlaylistTrackRow({
     position: "relative" as const,
   };
 
+  const handleToggleLike = useCallback(() => {
+    onToggleLike?.(track.id);
+  }, [onToggleLike, track.id]);
+
   const menuActions = useMemo(() => ({
     onPlay: () => play(track),
     onPause: isCurrentTrack ? () => pause() : undefined,
@@ -131,7 +139,9 @@ const PlaylistTrackRow = memo(function PlaylistTrackRow({
     onCopyTitle: () => navigator.clipboard.writeText(track.title),
     onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
     onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
-  }), [track, isCurrentTrack, play, pause, playNext, addToQueue, openAlbumDetail, openArtistDetail]);
+    onToggleLike: handleToggleLike,
+    isLiked,
+  }), [track, isCurrentTrack, play, pause, playNext, addToQueue, openAlbumDetail, openArtistDetail, handleToggleLike, isLiked]);
 
   return (
     <div
@@ -172,6 +182,8 @@ const PlaylistTrackRow = memo(function PlaylistTrackRow({
         trailing={trailing}
         onClick={handleClick}
         menuActions={menuActions}
+        onToggleLike={handleToggleLike}
+        isLiked={isLiked}
         dataItemIndex={dataItemIndex}
         itemId={track.id}
         checkboxMode={checkboxModeProp}
@@ -334,6 +346,9 @@ export default memo(function PlaylistDetailPage() {
     [tracks, playlistId, reorderPlaylist, loadData],
   );
 
+  const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
+  const toggleLike = usePlaylistStore((s) => s.toggleLike);
+
   const handleRenderItem = useCallback(
     (track: Track, index: number) => (
       <PlaylistTrackRow
@@ -343,9 +358,11 @@ export default memo(function PlaylistDetailPage() {
         dataItemIndex={index}
         checkboxMode={checkboxMode}
         removeTrack={handleRemoveTrack}
+        isLiked={likedTrackIds.has(track.id)}
+        onToggleLike={toggleLike}
       />
     ),
-    [handleRemoveTrack, checkboxMode],
+    [handleRemoveTrack, checkboxMode, likedTrackIds, toggleLike],
   );
 
   const activationHandlers = useTrackActivationHandlers(tracks);
@@ -398,6 +415,7 @@ export default memo(function PlaylistDetailPage() {
             onDelete={() => setIsDeleteDialogOpen(true)}
             onPlayAll={handlePlay}
             onShuffle={handleShuffle}
+            isSystemPlaylist={playlist?.is_system ?? false}
           >
             <Button
               variant="outline"
