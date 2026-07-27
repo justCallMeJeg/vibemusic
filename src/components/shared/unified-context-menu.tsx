@@ -10,10 +10,12 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import type { ContextMenuItemDef } from "./context-menu-types";
+import { logger } from "@/lib/logger";
 
 interface UnifiedContextMenuProps {
   children: ReactNode;
   items: ContextMenuItemDef[];
+  onOpenChange?: (open: boolean) => void;
 }
 
 function renderItems(items: ContextMenuItemDef[]) {
@@ -26,7 +28,10 @@ function renderItems(items: ContextMenuItemDef[]) {
           <ContextMenuItem
             key={item.id}
             disabled={item.disabled}
-            onSelect={item.onSelect}
+            onSelect={() => {
+              logger.debug(`[context-menu] action: ${item.id}`);
+              item.onSelect();
+            }}
             className={item.destructive ? "text-destructive focus:text-destructive focus:bg-destructive/10" : undefined}
           >
             {item.icon && <span className="mr-2 h-4 w-4">{item.icon}</span>}
@@ -49,11 +54,11 @@ function renderItems(items: ContextMenuItemDef[]) {
   });
 }
 
-export function UnifiedContextMenu({ children, items }: UnifiedContextMenuProps) {
+export function UnifiedContextMenu({ children, items, onOpenChange }: UnifiedContextMenuProps) {
   if (items.length === 0) return <>{children}</>;
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={onOpenChange}>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         {renderItems(items)}

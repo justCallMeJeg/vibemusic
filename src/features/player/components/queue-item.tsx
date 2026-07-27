@@ -12,10 +12,11 @@ import { useAudioStore, usePlayerStatus } from "@/stores/audio-store";
 
 interface QueueItemProps {
   track: Track;
+  index: number;
   isActive?: boolean;
 }
 
-export default function QueueItem({ track, isActive }: QueueItemProps) {
+export default function QueueItem({ track, index, isActive }: QueueItemProps) {
   const removeFromQueue = useAudioStore((s) => s.removeFromQueue);
   const play = useAudioStore((s) => s.play);
   const pause = useAudioStore((s) => s.pause);
@@ -65,6 +66,7 @@ export default function QueueItem({ track, isActive }: QueueItemProps) {
       <button
         type="button"
         ref={setNodeRef}
+        data-item-index={index}
         style={style}
         onClick={handlePlayClick}
         onKeyDown={(e) => {

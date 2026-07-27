@@ -8,6 +8,8 @@ import {
   EmptyContent,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
+import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
+import type { ContextMenuItemDef } from "@/components/shared/context-menu-types";
 
 interface EmptyStateProps {
   icon: ElementType;
@@ -16,6 +18,7 @@ interface EmptyStateProps {
   action?: ReactNode;
   className?: string;
   emptyClassName?: string;
+  menuItems?: ContextMenuItemDef[];
 }
 
 export function EmptyState({
@@ -25,8 +28,9 @@ export function EmptyState({
   action,
   className,
   emptyClassName,
+  menuItems,
 }: EmptyStateProps) {
-  return (
+  const content = (
     <div
       className={cn(
         "flex-1 w-full flex flex-col items-center justify-center min-h-0",
@@ -45,4 +49,10 @@ export function EmptyState({
       </Empty>
     </div>
   );
+
+  if (menuItems && menuItems.length > 0) {
+    return <UnifiedContextMenu items={menuItems}>{content}</UnifiedContextMenu>;
+  }
+
+  return content;
 }

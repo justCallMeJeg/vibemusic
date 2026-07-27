@@ -247,6 +247,9 @@ export default memo(function ArtistDetailPage() {
           track.artist_ids?.[0] || track.artist_id
             ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
             : undefined,
+        onGoToArtists: track.artist_ids?.length
+          ? track.artist_ids.map((id, i) => ({ name: track.artist_names[i] ?? track.artist ?? "Unknown", onSelect: () => openArtistDetail(id) }))
+          : undefined,
         onCopyTitle: () => navigator.clipboard.writeText(track.title),
         onCopyArtist: () => navigator.clipboard.writeText(track.artist ?? ""),
         onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,

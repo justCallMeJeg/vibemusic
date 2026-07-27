@@ -21,9 +21,9 @@ export default function QueueContent() {
   const { reorderQueue, clearQueue } = getQueueActions();
 
   const renderItem = useCallback(
-    (track: Track) => {
+    (track: Track, index: number) => {
       const isCurrent = currentTrack?.id === track.id;
-      return <QueueItem key={track.id} track={track} isActive={isCurrent} />;
+      return <QueueItem key={track.id} track={track} index={index} isActive={isCurrent} />;
     },
     [currentTrack?.id],
   );

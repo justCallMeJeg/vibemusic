@@ -1,6 +1,5 @@
 import { Play, Pause, Shuffle, ListPlus, ListMusic, Pencil, Trash2, Disc3, User, FolderOpen, Copy, Share2, Heart } from "lucide-react";
 import type { ContextMenuItemDef, TrackMenuActions } from "@/components/shared/context-menu-types";
-
 interface UseTrackContextMenuOptions extends TrackMenuActions {
   isCurrentTrack?: boolean;
   isPlaying?: boolean;
@@ -89,6 +88,7 @@ function buildQueueGroup(
 function buildNavGroup(
   onGoToAlbum?: () => void,
   onGoToArtist?: () => void,
+  onGoToArtists?: { name: string; onSelect: () => void }[],
 ): ContextMenuItemDef[] {
   const items: ContextMenuItemDef[] = [];
   if (onGoToAlbum) {
@@ -100,7 +100,22 @@ function buildNavGroup(
       onSelect: onGoToAlbum,
     });
   }
-  if (onGoToArtist) {
+  if (onGoToArtists && onGoToArtists.length > 1) {
+    const artistItems: ContextMenuItemDef[] = onGoToArtists.map((a) => ({
+      type: "action",
+      id: `go-to-artist-${a.name}`,
+      icon: <User size={16} />,
+      label: a.name,
+      onSelect: a.onSelect,
+    }));
+    items.push({
+      type: "submenu",
+      id: "go-to-artist",
+      icon: <User size={16} />,
+      label: "Go to Artist",
+      items: artistItems,
+    });
+  } else if (onGoToArtist) {
     items.push({
       type: "action",
       id: "go-to-artist",
@@ -233,6 +248,7 @@ export function useTrackContextMenu(options: UseTrackContextMenuOptions): Contex
     onDelete,
     onGoToAlbum,
     onGoToArtist,
+    onGoToArtists,
     onShowInFolder,
     onCopyTitle,
     onCopyArtist,
@@ -248,7 +264,7 @@ export function useTrackContextMenu(options: UseTrackContextMenuOptions): Contex
   addSeparator(items, buildLikeGroup(onToggleLike, isLiked));
   addSeparator(items, buildPlaybackGroup(onPlay, onPause, onShuffle));
   addSeparator(items, buildQueueGroup(onPlayNext, onAddToQueue, onAddToPlaylist, playlists));
-  addSeparator(items, buildNavGroup(onGoToAlbum, onGoToArtist));
+  addSeparator(items, buildNavGroup(onGoToAlbum, onGoToArtist, onGoToArtists));
   addSeparator(items, buildEditGroup(onEdit, onShowInFolder));
   addSeparator(items, buildExportGroup(onCopyTitle, onCopyArtist, onCopyFilePath, onShare));
   addSeparator(items, buildDeleteGroup(onDelete));

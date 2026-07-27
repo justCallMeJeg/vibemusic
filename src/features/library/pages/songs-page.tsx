@@ -64,6 +64,8 @@ const SongListMenu = memo(function SongListMenu({
   const playlists = usePlaylistStore((s) => s.playlists);
   const likedTrackIds = usePlaylistStore((s) => s.likedTrackIds);
   const toggleLike = usePlaylistStore((s) => s.toggleLike);
+  const openAlbumDetail = useNavigationStore((s) => s.openAlbumDetail);
+  const openArtistDetail = useNavigationStore((s) => s.openArtistDetail);
 
   const isCurrent = currentTrack?.id === track.id;
   const isCurrentlyPlaying = isCurrent && status === "playing";
@@ -123,6 +125,14 @@ const SongListMenu = memo(function SongListMenu({
         id: p.id,
         name: p.name,
       })),
+      onGoToAlbum: track.album_id != null ? () => openAlbumDetail(track.album_id!) : undefined,
+      onGoToArtist:
+        track.artist_ids?.[0] || track.artist_id
+          ? () => openArtistDetail(track.artist_ids?.[0] ?? track.artist_id!)
+          : undefined,
+      onGoToArtists: track.artist_ids?.length
+        ? track.artist_ids.map((id, i) => ({ name: track.artist_names[i] ?? track.artist ?? "Unknown", onSelect: () => openArtistDetail(id) }))
+        : undefined,
       onToggleLike: () => toggleLike(track.id),
       isLiked: likedTrackIds.has(track.id),
     }),
@@ -137,6 +147,8 @@ const SongListMenu = memo(function SongListMenu({
       addToQueue,
       addToPlaylist,
       playlists,
+      openAlbumDetail,
+      openArtistDetail,
       likedTrackIds,
       toggleLike,
     ],

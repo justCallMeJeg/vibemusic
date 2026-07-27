@@ -30,6 +30,7 @@ export interface TrackMenuActions {
   onDelete?: () => void;
   onGoToAlbum?: () => void;
   onGoToArtist?: () => void;
+  onGoToArtists?: { name: string; onSelect: () => void }[];
   onShowInFolder?: () => void;
   onToggleLike?: () => void;
   isLiked?: boolean;
