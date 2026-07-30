@@ -73,7 +73,7 @@ const AlbumTrackRow = memo(function AlbumTrackRow({
     onCopyFilePath: track.file_path ? () => navigator.clipboard.writeText(track.file_path) : undefined,
     onToggleLike: () => toggleLike(track.id),
     isLiked: likedTrackIds.has(track.id),
-  }), [track, tracks, currentTrack?.id, status, play, pause, resume, addToQueue, playNext, openArtistDetail, openAlbumDetail, likedTrackIds, toggleLike]);
+  }), [track, tracks, currentTrack?.id, status, play, pause, addToQueue, playNext, openArtistDetail, openAlbumDetail, likedTrackIds, toggleLike]);
 
   return (
     <ListItem

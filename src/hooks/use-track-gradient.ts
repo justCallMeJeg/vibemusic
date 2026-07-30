@@ -28,7 +28,7 @@ export function useTrackGradient(): string {
     } else {
       setGradientColor("transparent");
     }
-  }, [currentTrack?.id, isPlaybackActive]);
+  }, [currentTrack, isPlaybackActive]);
 
   return gradientColor;
 }
