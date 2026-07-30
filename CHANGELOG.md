@@ -2,163 +2,183 @@
 
 All notable changes to Vibe Music will be documented in this file.
 
-## [Unreleased]
+## [1.1.12] - 2026-07-30
+
+Highlights: keyboard navigation overhaul, multi-select and batch operations, Discord Rich Presence and Last.fm scrobbling, playlist pinning and liked music system, sleep timer, customizable keybindings, crossfade and fade-in/out, app updater improvements, lyrics panel overhaul, and major performance work across both frontend and backend.
 
 ### ✨ Features
 
-- **dx**: Add git wizard cli
+**Playback**
 
-- **dx**: Impeccable init
+- Add track fade in and out on play and pause events
+- Add sleep timer (duration / end-of-track / end-of-album modes)
+- Improve crossfade logic and ring buffer draining
+- Improve track playback on artist detail and insights pages
 
-- **ui**: Add dynamic placeholder
+**Player & Queue**
 
-- **nav**: Change to location-based breadcrumb
+- Detail panel closes automatically when queue or playback ends
+- Side panel content modularization with track metadata panel
 
-- **ui**: Improve navigation using breadcrumb and architecture for ui consistency
+**Navigation & Keyboard Controls**
 
-- **ui**: Improve progressive loading for various pages
+- Full keyboard navigation system with focus regions, roving tabindex, and auto-focus on list and grid items
+- Page-specific keyboard shortcuts with on-screen overlay
+- Visual keybind editor with persistent per-profile overrides
+- Location-based breadcrumb navigation with history
+- Improved focus indicator behavior across all pages
 
-- **ui**: Update skeleton ui for insights page
+**Library & Playlists**
 
+- Multi-select with batch operations (add to queue, play next, add to playlist, remove from playlist)
+- Playlist pinning and liked music system
+- Keyboard-driven playlist reorder
+- Expanded context menu with new actions
+- Dynamic placeholder for album/artist images without artwork
+- Improved artist and album parsing logic
+
+**Search**
+
+- Deferred search query for smoother typing experience
+
+**Integrations**
+
+- Discord Rich Presence (now-playing status, optional feature)
+- Last.fm scrobbling with OAuth flow and now-playing updates (optional feature)
+
+**Settings & UX**
+
+- Settings page modularization and UI/UX overhaul
+- App updater UI/UX improvements (check, download, install, manual download fallback, channel switching)
+- Empty state UI/UX across all pages
+- Progressive loading and skeleton UI for insights, home, and detail pages
+- Experimental features support
+
+**Landing Page**
+
+- Accessibility improvements and manual controls for screenshot carousel
 
 ### 🐛 Bug Fixes
 
-- **ci**: Escape powershell newlines in release body generation [skip ci]
+**Playback & Audio**
 
-- Use single-quoted backticks for code fences in release body
+- Fix stopped track playback not resuming properly
+- Fix seeking resuming a paused track
+- Fix track crossfade edge cases
+- Fix ring buffer drain and switch to coarse seek mode for lower seek latency
+- Cache decoder sample rate to prevent repeated initialization
 
-- Fix promise cleanup pattern
+**UI & State**
 
-- **perf**: Move find func inside zustand selector to prevent rescan on every root render
+- Switching profiles now properly resets UI states
+- Fix stale active styling on cards and list items when changing focus
+- Fix double close button on search
+- Fix liked music card style on home page
+- Fix unlayered CSS overriding transition animations
+- Handle risky conditional rendering paths
 
-- Handle risky conditional rendering
+**Library & Playlists**
 
-- **perf**: Improve render by using map lookups
+- Fix playlists not fetched on first load
+- Handle unique constraint error on duplicate playlist creation
+- Fix consistent virtualized list behavior on songs page
+- Fix lyric cache not updating when LRC file is downloaded
 
+**Infrastructure**
+
+- Fix CI release body generation (PowerShell newline escaping, code fence formatting)
+- Fix CNAME change issue in landing page deployment
+- Fix version parser for landing page
+- Add Cargo.lock to version bump script
 
 ### ⚡ Performance
 
-- Add audio listener cleanup
+**Frontend**
 
-- Add homepage array subscriptions with useshallow
-
-- Improve app init on startup
-
-- Cache crossfade duration locally in audio-store
-
-- Add passive true value to resize listener
-
+- Add shallow subscriptions for homepage store selectors to prevent unnecessary re-renders
+- Deferred search query value
+- Memoization across multiple pages (track lists, grids, detail views)
+- Lazy-load side panel components and deep dependencies
+- Lazy loading with temporary skeleton placeholders
 - Refactor inline callbacks to stable references
+- Add request deduplication layer to API calls
+- Refactor array lookups to use map indexes
+- Add one-time event listeners
+- Reduce React re-renders with memo and component-scope hoisting
 
-- Add lazy load to side panel components
+**Backend**
 
-- Add usedeferred for search query
-
-- Memoization of various pages
-
-- Add lazy load to deep dependencies
-
-- **api**: Add request dedup layer
-
-- Add lazy loading and temp skeleton
-
-- Add once true listeners
-
-- Refactor to map indexes for improved lookups
-
-- Use memo for improved performance
-
+- Add in-memory probe cache to reduce redundant file probing
+- Pre-decode audio in worker before creating CPAL stream
+- SQL query optimization
 
 ### ♻️ Refactoring
 
-- **ci**: 3 column table layout for assets
+**Frontend**
 
-- Replace local formatduration defs with format.ts import
-
-- **skeleton**: Replace old skeletons with skeleton primitives
-
-- Add album for dynamic placeholder and removed unused assets
-
+- Replace ad-hoc skeleton implementations with skeleton primitives
 - Remove prop drilling for dialogs
+- Consolidate format utilities into centralized module
+- Flatten IIFEs for readability
+- CSS-driven opacity instead of JS
+- Remove lazy imports in favor of eager loading with skeletons
+- Modularize avatar colors
 
-- Iife flattening
+**Backend**
 
-- Usememo cleanup
-
-- Change to css driven opacity
-
-- Remove lazy importing and update various page ui skeleton
-
+- Refactor backend architecture for better modularity and maintainability
+- Refactor frontend architecture for better modularity and maintainability
+- Unify app error types and split god files into focused modules
+- Reduce code complexity across the codebase
 
 ### 🎨 Styling
 
-- **landing**: Improve accessibility and add manual controls for screenshot carousel
+- Fix hardcoded color values throughout
+- Add relevant semantic color tokens
+- Remove dead custom scrollbar class
+- Add motion-safe and content-visibility to skeleton components
+- Replace raw text placeholders with proper loader components
+- Improve scrollbar behavior across the app
+- Center insight page empty state
+- Update destructive and spacing tokens for consistency
+- Reduce side panel content padding
+- Fix unlayered CSS overriding every transition animation
 
-- **ui**: Fix hardcoded color values
+### 🧪 Testing
 
-- **skeleton**: Add motion safe and content visiblity
-
-- **loader**: Replace raw text with loaders
-
-- Add margin in x axis for visiblity
-
+- Expand test coverage across various pages and stores
 
 ### 🔧 Miscellaneous
 
-- Update changelog and artifact name format
-
-- **ui**: Design critique post v1
-
-- **ui**: Update various ui for consistency
-
-- **ui**: Remove debug class in prod
-
-- **style**: Remove dead custom scrollbar class
-
-- Remove redundant error toast calls
-
-- Version bump
+- Design audit and critique post-v1.0
+- Remove debug classes from production builds
+- Remove dead code, pruned unused exports and dependencies
+- Add environment configuration for social integrations
+- Update artifact name format for CI builds
 
 ## [1.0.0] - 2026-06-30
 
 ### ✨ Features
 
 - On-save and pre-commit linting
-
 - Shadcn setup
-
 
 ### 🐛 Bug Fixes
 
 - Project version to 0.0.1
-
 - Nightly build trigger branch to 'dev'
-
 
 ### 🔧 Miscellaneous
 
 - Add recommended extensions for DX
-
 - Init readme
-
 - V1.0.0 release — merge dev to master (#4)
-
 - Fix release-please config and landing deploy [skip ci]
-
 - Force fresh landing deploy [skip ci]
-
 - **master**: Release 1.0.0 (#5)
-
 - Fix release-please manifest to match master version
-
 - Force fresh landing deploy [skip ci]
-
 - Trigger landing deploy
-
 - Add google search console verification meta tag
-
 - Add kofi for donations [skip ci]
-
 - Tauri version bump to match actual stable version [skip ci]
-
-
