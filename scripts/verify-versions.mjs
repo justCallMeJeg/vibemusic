@@ -12,7 +12,7 @@ const cargoMatch = cargoToml.match(/^version = "([^"]+)"/m);
 const cargoVersion = cargoMatch ? cargoMatch[1] : null;
 
 const cargoLock = readFileSync("src-tauri/Cargo.lock", "utf-8");
-const lockMatch = cargoLock.match(/^name = "vibemusic"\nversion = "([^"]+)"/m);
+const lockMatch = cargoLock.match(/^name = "vibemusic"\r?\nversion = "([^"]+)"/m);
 const lockVersion = lockMatch ? lockMatch[1] : null;
 
 const versions = [
