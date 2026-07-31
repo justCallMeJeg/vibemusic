@@ -18,8 +18,10 @@ pub enum AppError {
     #[error("HTTP: {0}")]
     Http(#[from] reqwest::Error),
     #[error("Not found: {0}")]
+    #[allow(dead_code)]
     NotFound(String),
     #[error("Validation: {0}")]
+    #[allow(dead_code)]
     Validation(String),
     #[error("{0}")]
     Internal(String),
