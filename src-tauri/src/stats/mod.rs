@@ -8,7 +8,6 @@ pub mod queries;
 #[cfg(test)]
 mod tests;
 
-use crate::database::repository::StatsRepository;
 use crate::database::DbHelper;
 use crate::profile::with_db;
 use crate::shared::error::AppError;

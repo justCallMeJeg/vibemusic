@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use crate::audio::decoder::SymphoniaDecoder;
-
 use super::AudioWorker;
 
 impl AudioWorker {
@@ -84,15 +82,5 @@ impl AudioWorker {
         }
 
         output_frames * channels
-    }
-
-    pub(crate) fn try_create_decoder(&mut self, path: &str) -> Option<(SymphoniaDecoder, Vec<f32>)> {
-        match SymphoniaDecoder::new(path) {
-            Ok(d) => Some(d),
-            Err(e) => {
-                log::error!("Failed to create decoder: {}", e);
-                None
-            }
-        }
     }
 }

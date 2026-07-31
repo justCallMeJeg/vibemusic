@@ -7,7 +7,6 @@ pub mod albums;
 pub mod artists;
 pub mod history;
 pub mod playlists_db;
-pub mod repository;
 pub mod search;
 #[cfg(test)]
 mod tests;
