@@ -2,6 +2,13 @@
 
 All notable changes to Vibe Music will be documented in this file.
 
+## [1.1.0](https://github.com/gjpgabayeron/vibemusic/compare/v1.0.0...v1.1.0) (2026-07-31)
+
+
+### Features
+
+* enhance ui and performance with new features and refactoring ([#7](https://github.com/gjpgabayeron/vibemusic/issues/7)) ([9ffdd10](https://github.com/gjpgabayeron/vibemusic/commit/9ffdd10a9eb429840f160a567ccfbf4f95d632a7))
+
 ## [1.1.12] - 2026-07-30
 
 Highlights: keyboard navigation overhaul, multi-select and batch operations, Discord Rich Presence and Last.fm scrobbling, playlist pinning and liked music system, sleep timer, customizable keybindings, crossfade and fade-in/out, app updater improvements, lyrics panel overhaul, and major performance work across both frontend and backend.
