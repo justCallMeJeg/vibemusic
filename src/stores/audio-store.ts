@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useSettingsStore } from "./settings-store";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
 import { toast } from "sonner";
-import { Track } from "@/lib/api";
+import { Track, getLyrics, probeFile } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import { useStatsStore } from "./stats-store";
 
@@ -37,7 +36,7 @@ interface AudioState {
   shuffle: boolean;
   repeat: RepeatMode;
 
-  sidePanel: "none" | "queue" | "track-details" | "lyrics";
+  sidePanel: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer";
 
   // Progress State (updated frequently)
   position: number;
@@ -50,6 +49,11 @@ interface AudioState {
   _lastProgressUpdate: number; // For throttling
   _lastSeekTime: number; // To ignore legacy progress events after seeking
   _isTransitioning: boolean;
+  _crossfadeDuration: number;
+  _fadeInOutEnabled: boolean;
+  _fadeInOutDuration: number;
+  _queueIndexMap: Map<number, number>;
+  _trackVersion: number;
 }
 
 // --- Store Actions Interface ---
@@ -59,7 +63,7 @@ interface AudioActions {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   stop: () => Promise<void>;
-  next: () => Promise<void>;
+  next: (crossfade?: boolean) => Promise<void>;
   previous: () => Promise<void>;
   seek: (positionMs: number) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
@@ -67,7 +71,7 @@ interface AudioActions {
 
   // Queue Actions
   toggleQueue: () => void;
-  setSidePanel: (view: "none" | "queue" | "track-details" | "lyrics") => void;
+  setSidePanel: (view: "none" | "queue" | "track-details" | "lyrics" | "sleep-timer") => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   addToQueue: (track: Track) => void;
@@ -79,6 +83,13 @@ interface AudioActions {
   // Progress Actions
   setPosition: (position: number) => void;
   setDraggingSlider: (isDragging: boolean) => void;
+
+  // Crossfade
+  setCrossfadeDuration: (durationMs: number) => void;
+  setFadeInOut: (enabled: boolean, durationMs: number) => void;
+
+  // Reset
+  resetAudio: () => void;
 
   // Initialization
   initListeners: () => () => void;
@@ -93,7 +104,7 @@ type AudioStore = AudioState & AudioActions;
  */
 export const useAudioStore = create<AudioStore>((set, get) => {
   // Internal helper for playing a track
-  const playInternal = async (track: Track) => {
+  const playInternal = async (track: Track, crossfade: boolean = false) => {
     try {
       await invoke("audio_play", {
         path: track.file_path,
@@ -101,7 +112,16 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         artist: track.artist,
         album: track.album,
         artworkPath: track.artwork_path,
+        crossfade,
       });
+
+      // Background pre-fetch: lyrics + metadata
+      // These fire-and-forget so they don't block playback.
+      // The Rust backend caches results (lyrics → .lrc, metadata → 5s memory TTL),
+      // so subsequent calls from the UI panels are near-instant.
+      set({ _trackVersion: get()._trackVersion + 1 });
+      probeFile(track.file_path).catch(() => {});
+      getLyrics(track.file_path).catch(() => {});
     } catch (e) {
       logger.error("Failed to play", e);
       set({ status: "stopped" });
@@ -119,11 +139,25 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     const threshold = Math.min(30000, durationMs * 0.5);
     if (positionMs >= threshold) {
       useStatsStore.getState().recordPlayback(track.id, positionMs);
+
+      const artist = track.artist ?? "Unknown";
+      const album = track.album ?? "Unknown";
+      const durationSecs = Math.round(durationMs / 1000);
+      const timestamp = Math.floor(Date.now() / 1000);
+      invoke("scrobble_track", {
+        artist,
+        track: track.title,
+        album,
+        durationSecs,
+        timestamp,
+      }).catch(() => {
+        // Silently ignore — feature not compiled or not connected
+      });
     }
   };
 
   // Internal next handler
-  const handleNext = async () => {
+  const handleNext = async (crossfade: boolean = false) => {
     const state = get();
     // Record stats for the finishing track
     checkAndRecordStats(state.currentTrack, state.duration, state.position);
@@ -138,7 +172,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     if (state.queue.length === 0) {
       logger.debug("[handleNext] Queue empty -> Stop");
       // Don't clear currentTrack so UI can still show last played song
-      set({ status: "stopped", position: 0 });
+      set({ status: "stopped", position: 0, sidePanel: "none" });
       await invoke("audio_stop");
       return;
     }
@@ -162,7 +196,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         nextIndex = 0;
       } else {
         logger.debug("[handleNext] End of queue -> Stop");
-        set({ status: "stopped", position: 0 });
+        set({ status: "stopped", position: 0, sidePanel: "none" });
         await invoke("audio_stop");
         return;
       }
@@ -176,9 +210,11 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       currentIndex: nextIndex,
       status: "loading",
       position: 0,
+      _lastSeekTime: Date.now(),
+      _isTransitioning: true,
     });
 
-    await playInternal(nextTrack);
+    await playInternal(nextTrack, crossfade);
   };
 
   return {
@@ -201,6 +237,11 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     _lastProgressUpdate: 0,
     _lastSeekTime: 0,
     _isTransitioning: false,
+    _crossfadeDuration: 0,
+  _fadeInOutEnabled: false,
+  _fadeInOutDuration: 1000,
+    _queueIndexMap: new Map(),
+    _trackVersion: 0,
 
     // Player Actions
     play: async (track, newQueue?) => {
@@ -229,6 +270,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         queue,
         currentIndex: index,
         position: 0,
+        _queueIndexMap: new Map(queue.map((t, i) => [t.id, i])),
       });
 
       await playInternal(track);
@@ -239,7 +281,13 @@ export const useAudioStore = create<AudioStore>((set, get) => {
     },
 
     resume: async () => {
-      await invoke("audio_resume");
+      const { status, currentTrack } = get();
+      if (status === "stopped" && currentTrack) {
+        set({ status: "loading", position: 0 });
+        await playInternal(currentTrack);
+      } else if (status === "paused") {
+        await invoke("audio_resume");
+      }
     },
 
     stop: async () => {
@@ -316,7 +364,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
 
     addToQueue: (track) =>
       set((s) => {
-        const existingIndex = s.queue.findIndex((t) => t.id === track.id);
+        const existingIndex = s._queueIndexMap.get(track.id) ?? -1;
         if (existingIndex !== -1) {
           // Track exists - move it to the end
           const newQueue = [...s.queue];
@@ -327,14 +375,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           if (existingIndex < s.currentIndex) {
             newIndex--;
           }
-          return { queue: newQueue, currentIndex: newIndex };
+          return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
         }
-        return { queue: [...s.queue, track] };
+        const newQueue = [...s.queue, track];
+        return { queue: newQueue, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     playNext: (track) =>
       set((s) => {
-        const existingIndex = s.queue.findIndex((t) => t.id === track.id);
+        const existingIndex = s._queueIndexMap.get(track.id) ?? -1;
         const targetIndex = s.currentIndex + 1;
 
         if (existingIndex !== -1) {
@@ -358,24 +407,24 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           ) {
             newIndex++;
           }
-          return { queue: newQueue, currentIndex: newIndex };
+          return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
         }
 
         // Track doesn't exist - insert at play next position
         const newQueue = [...s.queue];
         newQueue.splice(targetIndex, 0, track);
-        return { queue: newQueue };
+        return { queue: newQueue, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     removeFromQueue: (trackId) =>
       set((s) => {
         const newQueue = s.queue.filter((t) => t.id !== trackId);
         let newIndex = s.currentIndex;
-        const removedIndex = s.queue.findIndex((t) => t.id === trackId);
+        const removedIndex = s._queueIndexMap.get(trackId) ?? -1;
         if (removedIndex !== -1 && removedIndex < s.currentIndex) {
           newIndex--;
         }
-        return { queue: newQueue, currentIndex: newIndex };
+        return { queue: newQueue, currentIndex: newIndex, _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])) };
       }),
 
     reorderQueue: (newQueue) =>
@@ -385,21 +434,50 @@ export const useAudioStore = create<AudioStore>((set, get) => {
         return {
           queue: newQueue,
           currentIndex: newIndex !== -1 ? newIndex : s.currentIndex,
+          _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])),
         };
       }),
 
     clearQueue: () =>
       set((s) => {
-        if (!s.currentTrack) return { queue: [], currentIndex: -1 };
+        if (!s.currentTrack) return { queue: [], currentIndex: -1, _queueIndexMap: new Map() };
+        const newQueue = [s.currentTrack];
         return {
-          queue: [s.currentTrack],
+          queue: newQueue,
           currentIndex: 0,
+          _queueIndexMap: new Map(newQueue.map((t, i) => [t.id, i])),
         };
       }),
 
     // Progress Actions
     setPosition: (position) => set({ position }),
     setDraggingSlider: (isDragging) => set({ _isDraggingSlider: isDragging }),
+    setCrossfadeDuration: (durationMs) => set({ _crossfadeDuration: durationMs }),
+    setFadeInOut: (enabled, durationMs) => set({ _fadeInOutEnabled: enabled, _fadeInOutDuration: durationMs }),
+
+    // Reset
+    resetAudio: () =>
+      set({
+        status: "stopped",
+        currentTrack: null,
+        queue: [],
+        currentIndex: -1,
+        shuffle: false,
+        repeat: "off",
+        sidePanel: "none",
+        position: 0,
+        duration: 0,
+        _previousVolume: 1.0,
+        _isDraggingSlider: false,
+        _lastProgressUpdate: 0,
+        _lastSeekTime: 0,
+        _isTransitioning: false,
+        _crossfadeDuration: 0,
+        _fadeInOutEnabled: false,
+        _fadeInOutDuration: 1000,
+        _queueIndexMap: new Map(),
+        _trackVersion: 0,
+      }),
 
     // Initialization
     initListeners: () => {
@@ -443,33 +521,15 @@ export const useAudioStore = create<AudioStore>((set, get) => {
           const state = get();
           if (state._isDraggingSlider) return;
 
-          // Throttle: only update if at least 500ms has passed
-          const now = Date.now();
-          if (now - state._lastProgressUpdate < 500) return;
-
-          // Ignore updates shortly after seeking to prevent jumping back
-          if (now - state._lastSeekTime < 1000) return;
-
           const s = event.payload;
-          set({
-            position: s.position_ms,
-            duration: s.duration_ms,
-            _lastProgressUpdate: now,
-          });
+          const now = Date.now();
 
-          // Automatic Crossfade Logic
-          const crossfadeMs =
-            useSettingsStore.getState().crossfadeDuration || 0;
+          // Automatic Crossfade Logic — must run BEFORE throttle for timely triggering
+          const crossfadeMs = state._crossfadeDuration || 0;
+          const IPC_BUFFER_MS = 100;
           if (crossfadeMs > 0 && s.duration_ms > 0) {
-            // Small buffer to compensate for IPC latency between frontend trigger
-            // and backend receiving the play command
-            const IPC_BUFFER_MS = 100;
             const threshold = s.duration_ms - crossfadeMs - IPC_BUFFER_MS;
-
-            // Check if we reached the transition point
-            // Also ensure we aren't already transitioning
             if (s.position_ms >= threshold && !state._isTransitioning) {
-              // Verify we have a next track
               const hasNext =
                 state.queue.length > 0 &&
                 (state.repeat !== "off" ||
@@ -481,14 +541,30 @@ export const useAudioStore = create<AudioStore>((set, get) => {
                   threshold,
                 );
                 set({ _isTransitioning: true });
-                get().next();
+                get().next(true);
+                return;
               }
             }
-
-            // Reset transition flag if we are at the beginning of a track
-            if (state._isTransitioning && s.position_ms < threshold * 0.5) {
+            if (state._isTransitioning && s.position_ms < crossfadeMs + 500) {
               set({ _isTransitioning: false });
             }
+          }
+
+          // Throttle: only update if at least 500ms has passed
+          if (now - state._lastProgressUpdate < 500) return;
+
+          // Ignore updates shortly after seeking to prevent jumping back
+          if (now - state._lastSeekTime < 1000) return;
+
+          // Block position display during crossfade transition to prevent stale
+          // old-track events from overwriting position, but allow the event to
+          // flow through for rearm and auto-crossfade logic below.
+          if (!state._isTransitioning) {
+            set({
+              position: s.position_ms,
+              duration: s.duration_ms,
+              _lastProgressUpdate: now,
+            });
           }
         },
       );
@@ -598,7 +674,7 @@ export const useAudioStore = create<AudioStore>((set, get) => {
               // File is genuinely missing - safe to auto-delete
               try {
                 await invoke("delete_track", { trackId: track.id });
-                useLibraryStore.getState().fetchLibrary();
+                useContentStore.getState().fetchContent();
 
                 toast("File not found", {
                   description: `Removed "${track.title}" from library.`,
@@ -623,24 +699,28 @@ export const useAudioStore = create<AudioStore>((set, get) => {
       );
 
       return () => {
-        unlistenState.then((f) => f());
-        unlistenProgress.then((f) => f());
-        unlistenFinished.then((f) => f());
-        unlistenError.then((f) => f());
-
-        unlistenMediaPlay.then((f) => f());
-        unlistenMediaPause.then((f) => f());
-        unlistenMediaToggle.then((f) => f());
-        unlistenMediaNext.then((f) => f());
-        unlistenMediaPrev.then((f) => f());
-        unlistenMediaStop.then((f) => f());
-        unlistenMediaSeek.then((f) => f());
-        unlistenMediaSeekBy.then((f) => f());
-        unlistenMediaSetPos.then((f) => f());
-        unlistenMediaSetVol.then((f) => f());
-        unlistenMediaRaise.then((f) => f());
-        unlistenMediaQuit.then((f) => f());
-
+        Promise.allSettled([
+          unlistenState,
+          unlistenProgress,
+          unlistenFinished,
+          unlistenError,
+          unlistenMediaPlay,
+          unlistenMediaPause,
+          unlistenMediaToggle,
+          unlistenMediaNext,
+          unlistenMediaPrev,
+          unlistenMediaStop,
+          unlistenMediaSeek,
+          unlistenMediaSeekBy,
+          unlistenMediaSetPos,
+          unlistenMediaSetVol,
+          unlistenMediaRaise,
+          unlistenMediaQuit,
+        ]).then((results) => {
+          for (const r of results) {
+            if (r.status === "fulfilled") r.value();
+          }
+        });
         set({ _listenersInitialized: false });
       };
     },
@@ -657,6 +737,7 @@ export const useRepeat = () => useAudioStore((s) => s.repeat);
 export const useShuffle = () => useAudioStore((s) => s.shuffle);
 export const usePosition = () => useAudioStore((s) => s.position);
 export const useDuration = () => useAudioStore((s) => s.duration);
+export const useTrackVersion = () => useAudioStore((s) => s._trackVersion);
 
 // Derived selector for player visibility (used for dynamic bottom padding)
 export const useIsPlayerVisible = () =>

@@ -8,6 +8,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatListeningTime } from "@/lib/format";
 import type { WeeklyWrapData, TimeRange } from "@/stores/stats-store";
 
 interface WeeklyWrapProps {
@@ -23,13 +24,6 @@ const RANGE_LABELS: Record<TimeRange, string> = {
   "1y": "Year Overview",
   all: "All Time Overview",
 };
-
-function formatTime(ms: number) {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours === 0) return `${minutes}m`;
-  return `${hours}h ${minutes}m`;
-}
 
 function formatDay(dateStr: string | null): string {
   if (!dateStr) return "—";
@@ -90,7 +84,7 @@ export function WeeklyWrap({ data, timeRange, isLoading }: WeeklyWrapProps) {
   return (
     <div className="bg-linear-to-br from-card/50 via-card/30 to-card/10 border border-border rounded-xl p-5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-48 h-48 bg-primary/2 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/3 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-warning/3 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
       <div className="relative z-10">
         <div className="flex items-center gap-2 text-muted-foreground mb-4">
@@ -105,7 +99,7 @@ export function WeeklyWrap({ data, timeRange, isLoading }: WeeklyWrapProps) {
           <StatTile
             icon={Music}
             label="Time Listened"
-            value={formatTime(data.total_listening_ms)}
+            value={formatListeningTime(data.total_listening_ms)}
           />
           <StatTile
             icon={Disc}

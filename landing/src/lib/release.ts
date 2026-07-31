@@ -61,17 +61,22 @@ function parseAssets(
     name: string;
     browser_download_url: string;
   }[],
+  version?: string,
 ): {
   version: string;
   platforms: Record<string, PlatformAsset>;
 } {
-  let version = "";
+  let ver = version ?? "";
   const platforms: Record<string, PlatformAsset> = {};
   for (const asset of assets) {
     const name: string = asset.name;
-    if (!version) {
-      const m = name.match(/_(\d+\.\d+\.\d+)_/);
-      if (m) version = m[1];
+    if (!ver) {
+      const m = name.match(/_(\d+\.\d+\.\d+)/);
+      if (m) ver = m[1];
+    }
+    if (!ver) {
+      const m = name.match(/-v(\d+\.\d+\.\d+)/);
+      if (m) ver = m[1];
     }
     const match64 = name.includes("x64") || name.includes("amd64");
     if (name.endsWith(".msi") && match64) {
@@ -84,7 +89,17 @@ function parseAssets(
       platforms["darwin-x86_64"] = { url: asset.browser_download_url };
     }
   }
-  return { version, platforms };
+  return { version: ver, platforms };
+}
+
+function extractVersion(data: {
+  tag_name?: string;
+  name?: string;
+}): string | undefined {
+  const fromTag = (data.tag_name ?? "").match(/^v?(\d+\.\d+\.\d+)/);
+  if (fromTag) return fromTag[1];
+  const fromName = (data.name ?? "").match(/(\d+\.\d+\.\d+)/);
+  if (fromName) return fromName[1];
 }
 
 async function fetchFromApi(url: string): Promise<ReleaseData | null> {
@@ -94,7 +109,8 @@ async function fetchFromApi(url: string): Promise<ReleaseData | null> {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return parseAssets(data.assets ?? []);
+    const version = extractVersion(data);
+    return parseAssets(data.assets ?? [], version);
   } catch {
     return null;
   }

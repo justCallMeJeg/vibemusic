@@ -4,7 +4,9 @@ import { logger } from "@/lib/logger";
 
 // Lazy store initialization
 import { invoke } from "@tauri-apps/api/core";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
+import { useAudioStore } from "./audio-store";
+import type { KeyCombo } from "./keybinds-store";
 
 const getStore = async () => {
   const state = useSettingsStore.getState();
@@ -17,6 +19,12 @@ const getStore = async () => {
 export interface SidebarItem {
   id: string;
   hidden: boolean;
+}
+
+interface ExperimentalFeatures {
+  keyboardNav: boolean;
+  focusRegions: boolean;
+  showFocusIndicator: boolean;
 }
 
 // Helper to get system theme preference
@@ -48,6 +56,8 @@ interface SettingsState {
   currentProfileId: string | null;
 
   crossfadeDuration: number; // Audio
+  fadeInOutEnabled: boolean;
+  fadeInOutDuration: number;
   // ... (rest)
   // Behavior
   closeToTray: boolean;
@@ -74,6 +84,18 @@ interface SettingsState {
 
   // Media Keys
   enableMediaKeys: boolean;
+
+  // Experimental Features
+  experimentalFeatures: ExperimentalFeatures;
+
+  // Keybind Customization
+  keybindOverrides: Record<string, KeyCombo>;
+
+  // Integrations
+  discordRpcEnabled: boolean;
+  lastfmEnabled: boolean;
+  lastfmSessionKey: string;
+  lastfmUsername: string;
 }
 
 interface SettingsActions {
@@ -93,6 +115,7 @@ interface SettingsActions {
   setAudioDevice: (deviceName: string) => void;
   refreshAudioDevices: () => Promise<void>;
   setCrossfadeDuration: (duration: number) => void;
+  setFadeInOut: (enabled: boolean, durationMs: number) => Promise<void>;
 
   // Behavior Actions
   setCloseToTray: (enabled: boolean) => void;
@@ -111,11 +134,176 @@ interface SettingsActions {
 
   setMiniPlayerStyle: (style: "square" | "wide" | "bar") => void;
   setMiniPlayerPosition: (
-    position: "bottom-right" | "bottom-left" | "top-right" | "top-left"
+    position: "bottom-right" | "bottom-left" | "top-right" | "top-left",
   ) => void;
   setEnableMediaKeys: (enabled: boolean) => Promise<void>;
+  setExperimentalFeature: <K extends keyof ExperimentalFeatures>(
+    key: K,
+    value: ExperimentalFeatures[K],
+  ) => Promise<void>;
+
+  // Keybind Customization
+  setKeybindOverride: (id: string, combo: KeyCombo) => void;
+  resetKeybindOverrides: (ids: string[]) => void;
+
+  // Integrations
+  setDiscordRpcEnabled: (enabled: boolean) => void;
+  setLastfmEnabled: (enabled: boolean) => void;
+  setLastfmCredentials: (sessionKey: string, username: string) => void;
+  disconnectLastfm: () => void;
 
   loadSettings: (profileId?: string) => Promise<void>;
+}
+
+async function persistSetting(
+  setter: (partial: Partial<SettingsState & SettingsActions>) => void,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  setter({ [key]: value } as unknown as Partial<SettingsState & SettingsActions>);
+  const store = await getStore();
+  await store.set(key, value);
+  await store.save();
+}
+
+async function loadThemeSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [theme, dynamicGradient] = await Promise.all([
+    store.get<"dark" | "light" | "system">("theme"),
+    store.get<boolean>("dynamicGradient"),
+  ]);
+  const themeValue = theme ?? "system";
+  return {
+    theme: themeValue,
+    resolvedTheme: applyThemeClass(themeValue),
+    dynamicGradient: dynamicGradient ?? true,
+  };
+}
+
+async function loadAudioSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration] =
+    await Promise.all([
+      store.get<string>("selectedDevice"),
+      store.get<number>("crossfadeDuration"),
+      store.get<boolean>("fadeInOutEnabled"),
+      store.get<number>("fadeInOutDuration"),
+    ]);
+
+  return {
+    state: {
+      selectedDevice: selectedDevice ?? null,
+      crossfadeDuration: crossfadeDuration ?? 0,
+      fadeInOutEnabled: fadeInOutEnabled ?? true,
+      fadeInOutDuration: fadeInOutDuration ?? 300,
+    },
+    raw: { selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration },
+  };
+}
+
+async function loadUISettings(store: Awaited<ReturnType<typeof load>>) {
+  const [
+    libraryPaths,
+    closeToTray,
+    scanOnStartup,
+    autoplay,
+    _sidebarItems,
+    defaultPage,
+    songsSortKey,
+    songsSortDirection,
+    albumsSortKey,
+    albumsSortDirection,
+    artistsSortKey,
+    artistsSortDirection,
+    playlistsSortKey,
+    playlistsSortDirection,
+    miniPlayerStyle,
+    miniPlayerPosition,
+    enableMediaKeys,
+    experimentalFeatures,
+  ] = await Promise.all([
+    store.get<string[]>("libraryPaths"),
+    store.get<boolean>("closeToTray"),
+    store.get<boolean>("scanOnStartup"),
+    store.get<boolean>("autoplay"),
+    store.get<{ id: string; hidden: boolean }[]>("sidebarItems"),
+    store.get<string>("defaultPage"),
+    store.get<string>("songsSortKey"),
+    store.get<string>("songsSortDirection"),
+    store.get<string>("albumsSortKey"),
+    store.get<string>("albumsSortDirection"),
+    store.get<string>("artistsSortKey"),
+    store.get<string>("artistsSortDirection"),
+    store.get<string>("playlistsSortKey"),
+    store.get<string>("playlistsSortDirection"),
+    store.get<"square" | "wide" | "bar">("miniPlayerStyle"),
+    store.get<"bottom-right" | "bottom-left" | "top-right" | "top-left">(
+      "miniPlayerPosition",
+    ),
+    store.get<boolean>("enableMediaKeys"),
+    store.get<ExperimentalFeatures>("experimentalFeatures"),
+  ]);
+
+  let sidebarItems = _sidebarItems;
+  if (sidebarItems) {
+    sidebarItems = sidebarItems.map((item) =>
+      item.id === "settings" ? { ...item, hidden: false } : item,
+    );
+  }
+
+  return {
+    libraryPaths: libraryPaths ?? [],
+    closeToTray: closeToTray ?? false,
+    scanOnStartup: scanOnStartup ?? false,
+    autoplay: autoplay ?? false,
+    sidebarItems: sidebarItems ?? [
+      { id: "home", hidden: false },
+      { id: "search", hidden: false },
+      { id: "songs", hidden: false },
+      { id: "albums", hidden: false },
+      { id: "playlists", hidden: false },
+      { id: "artists", hidden: false },
+      { id: "insights", hidden: false },
+      { id: "settings", hidden: false },
+    ],
+    defaultPage: defaultPage ?? "home",
+    songsSortKey: songsSortKey ?? "date_added",
+    songsSortDirection: songsSortDirection ?? "desc",
+    albumsSortKey: albumsSortKey ?? "title",
+    albumsSortDirection: albumsSortDirection ?? "asc",
+    artistsSortKey: artistsSortKey ?? "name",
+    artistsSortDirection: artistsSortDirection ?? "asc",
+    playlistsSortKey: playlistsSortKey ?? "name",
+    playlistsSortDirection: playlistsSortDirection ?? "asc",
+    miniPlayerStyle: miniPlayerStyle ?? "square",
+    miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
+    enableMediaKeys: enableMediaKeys ?? true,
+    experimentalFeatures: experimentalFeatures ?? {
+      keyboardNav: false,
+      focusRegions: false,
+      showFocusIndicator: false,
+    },
+    rawLibraryPaths: libraryPaths,
+  };
+}
+
+async function loadKeybindSettings(store: Awaited<ReturnType<typeof load>>) {
+  const keybindOverrides = await store.get<Record<string, KeyCombo>>("keybindOverrides");
+  return { keybindOverrides: keybindOverrides ?? {} };
+}
+
+async function loadIntegrationSettings(store: Awaited<ReturnType<typeof load>>) {
+  const [discordRpcEnabled, lastfmEnabled, lastfmSessionKey, lastfmUsername] =
+    await Promise.all([
+      store.get<boolean>("discordRpcEnabled"),
+      store.get<boolean>("lastfmEnabled"),
+      store.get<string>("lastfmSessionKey"),
+      store.get<string>("lastfmUsername"),
+    ]);
+  return {
+    discordRpcEnabled: discordRpcEnabled ?? false,
+    lastfmEnabled: lastfmEnabled ?? false,
+    lastfmSessionKey: lastfmSessionKey ?? "",
+    lastfmUsername: lastfmUsername ?? "",
+  };
 }
 
 /**
@@ -132,13 +320,25 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     audioDevices: [],
     isLoading: true,
     currentProfileId: null,
-    crossfadeDuration: 0,
+    crossfadeDuration: 1500,
+    fadeInOutEnabled: true,
+    fadeInOutDuration: 300,
     closeToTray: false,
     scanOnStartup: false,
     autoplay: false,
     miniPlayerStyle: "square",
     miniPlayerPosition: "bottom-right",
     enableMediaKeys: true,
+    keybindOverrides: {},
+    discordRpcEnabled: false,
+    lastfmEnabled: false,
+    lastfmSessionKey: "",
+    lastfmUsername: "",
+    experimentalFeatures: {
+      keyboardNav: false,
+      focusRegions: false,
+      showFocusIndicator: false,
+    },
 
     // Sidebar Defaults
     sidebarItems: [
@@ -175,10 +375,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     setDynamicGradient: async (enabled) => {
-      set({ dynamicGradient: enabled });
-      const store = await getStore();
-      await store.set("dynamicGradient", enabled);
-      await store.save();
+      await persistSetting(set, "dynamicGradient", enabled);
     },
 
     addLibraryPath: async (path) => {
@@ -190,7 +387,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         await store.set("libraryPaths", newPaths);
         await store.save();
         invoke("watch_paths", { folders: newPaths }).catch((e) =>
-          logger.error("Failed to watch paths", e)
+          logger.error("Failed to watch paths", e),
         );
 
         // Auto-scan the new path
@@ -200,7 +397,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
             success_count: number;
             error_count: number;
           }>("scan_music_library", { folders: [path] });
-          await useLibraryStore.getState().fetchLibrary();
+          await useContentStore.getState().fetchContent();
           return stats;
         } catch (e) {
           logger.error("Failed to scan new library path", e);
@@ -228,11 +425,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
       // Update watcher
       invoke("watch_paths", { folders: newPaths }).catch((e) =>
-        logger.error("Failed to watch paths", e)
+        logger.error("Failed to watch paths", e),
       );
 
       // Refresh UI to reflect removal
-      useLibraryStore.getState().fetchLibrary();
+      useContentStore.getState().fetchContent();
     },
 
     setAudioDevice: async (device) => {
@@ -254,6 +451,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
 
     setCrossfadeDuration: async (durationMs) => {
       set({ crossfadeDuration: durationMs });
+      useAudioStore.getState().setCrossfadeDuration(durationMs);
       // Send milliseconds directly to backend
       await invoke("audio_set_crossfade", { durationMs });
       const store = await getStore();
@@ -261,39 +459,34 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       await store.save();
     },
 
-    setCloseToTray: async (enabled) => {
-      set({ closeToTray: enabled });
+    setFadeInOut: async (enabled, durationMs) => {
+      set({ fadeInOutEnabled: enabled, fadeInOutDuration: durationMs });
+      useAudioStore.getState().setFadeInOut(enabled, durationMs);
+      await invoke("audio_set_fade_in_out", { enabled, durationMs });
       const store = await getStore();
-      await store.set("closeToTray", enabled);
+      await store.set("fadeInOutEnabled", enabled);
+      await store.set("fadeInOutDuration", durationMs);
       await store.save();
+    },
+
+    setCloseToTray: async (enabled) => {
+      await persistSetting(set, "closeToTray", enabled);
     },
 
     setScanOnStartup: async (enabled) => {
-      set({ scanOnStartup: enabled });
-      const store = await getStore();
-      await store.set("scanOnStartup", enabled);
-      await store.save();
+      await persistSetting(set, "scanOnStartup", enabled);
     },
 
     setAutoplay: async (enabled) => {
-      set({ autoplay: enabled });
-      const store = await getStore();
-      await store.set("autoplay", enabled);
-      await store.save();
+      await persistSetting(set, "autoplay", enabled);
     },
 
     setSidebarItems: async (items) => {
-      set({ sidebarItems: items });
-      const store = await getStore();
-      await store.set("sidebarItems", items);
-      await store.save();
+      await persistSetting(set, "sidebarItems", items);
     },
 
     setDefaultPage: async (page) => {
-      set({ defaultPage: page });
-      const store = await getStore();
-      await store.set("defaultPage", page);
-      await store.save();
+      await persistSetting(set, "defaultPage", page);
     },
 
     // Sorting
@@ -339,23 +532,82 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
     },
 
     setMiniPlayerStyle: async (style) => {
-      set({ miniPlayerStyle: style });
-      const store = await getStore();
-      await store.set("miniPlayerStyle", style);
-      await store.save();
+      await persistSetting(set, "miniPlayerStyle", style);
     },
 
     setMiniPlayerPosition: async (position) => {
-      set({ miniPlayerPosition: position });
-      const store = await getStore();
-      await store.set("miniPlayerPosition", position);
-      await store.save();
+      await persistSetting(set, "miniPlayerPosition", position);
     },
     setEnableMediaKeys: async (enabled) => {
-      set({ enableMediaKeys: enabled });
+      await persistSetting(set, "enableMediaKeys", enabled);
+    },
+    setExperimentalFeature: async (key, value) => {
+      const current = get().experimentalFeatures;
+      const next = { ...current, [key]: value };
+      set({ experimentalFeatures: next });
       const store = await getStore();
-      await store.set("enableMediaKeys", enabled);
+      await store.set("experimentalFeatures", next);
       await store.save();
+    },
+
+    setKeybindOverride: async (id, combo) => {
+      const next = { ...get().keybindOverrides, [id]: combo };
+      set({ keybindOverrides: next });
+      const store = await getStore();
+      await store.set("keybindOverrides", next);
+      await store.save();
+    },
+
+    resetKeybindOverrides: async (ids) => {
+      const next = { ...get().keybindOverrides };
+      for (const id of ids) delete next[id];
+      set({ keybindOverrides: next });
+      const store = await getStore();
+      await store.set("keybindOverrides", next);
+      await store.save();
+    },
+
+    setDiscordRpcEnabled: async (enabled) => {
+      await persistSetting(set, "discordRpcEnabled", enabled);
+      if (enabled) {
+        invoke("discord_rpc_enable").catch(() => {});
+      } else {
+        invoke("discord_rpc_disable").catch(() => {});
+      }
+    },
+
+    setLastfmEnabled: async (enabled) => {
+      await persistSetting(set, "lastfmEnabled", enabled);
+      if (!enabled) {
+        set({ lastfmSessionKey: "", lastfmUsername: "" });
+        const store = await getStore();
+        await store.set("lastfmSessionKey", "");
+        await store.set("lastfmUsername", "");
+        await store.save();
+        invoke("lastfm_disconnect").catch(() => {});
+      }
+    },
+
+    setLastfmCredentials: async (sessionKey, username) => {
+      const encoded = btoa(sessionKey);
+      set({ lastfmSessionKey: encoded, lastfmUsername: username });
+      const store = await getStore();
+      await store.set("lastfmSessionKey", encoded);
+      await store.set("lastfmUsername", username);
+      await store.save();
+      invoke("lastfm_connect", {
+        sessionKey: atob(encoded),
+      }).catch(() => {});
+    },
+
+    disconnectLastfm: async () => {
+      set({ lastfmEnabled: false, lastfmSessionKey: "", lastfmUsername: "" });
+      const store = await getStore();
+      await store.set("lastfmEnabled", false);
+      await store.set("lastfmSessionKey", "");
+      await store.set("lastfmUsername", "");
+      await store.save();
+      invoke("lastfm_disconnect").catch(() => {});
     },
 
     loadSettings: async (profileId?: string) => {
@@ -368,103 +620,63 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
       try {
         const store = await load(`settings_${profileId}.json`);
 
-        const getVal = async <T>(
-          key: string
-        ): Promise<T | null | undefined> => {
-          return await store.get<T>(key);
-        };
+        const [keybindSettings, integrationSettings, themeSettings, audioResult, uiSettings] =
+          await Promise.all([
+            loadKeybindSettings(store),
+            loadIntegrationSettings(store),
+            loadThemeSettings(store),
+            loadAudioSettings(store),
+            loadUISettings(store),
+          ]);
 
-        const theme = await getVal<"dark" | "light" | "system">("theme");
-        const dynamicGradient = await getVal<boolean>("dynamicGradient");
-        const libraryPaths = await getVal<string[]>("libraryPaths");
-        const selectedDevice = await getVal<string>("selectedDevice");
-        const crossfadeDuration = await getVal<number>("crossfadeDuration");
-
-        const closeToTray = await getVal<boolean>("closeToTray");
-        const scanOnStartup = await getVal<boolean>("scanOnStartup");
-        const autoplay = await getVal<boolean>("autoplay");
-
-        let sidebarItems = await getVal<{ id: string; hidden: boolean }[]>(
-          "sidebarItems"
-        );
-
-        if (sidebarItems) {
-          sidebarItems = sidebarItems.map((item) =>
-            item.id === "settings" ? { ...item, hidden: false } : item
-          );
-        }
-        const defaultPage = await getVal<string>("defaultPage");
-
-        const songsSortKey = await getVal<string>("songsSortKey");
-        const songsSortDirection = await getVal<string>("songsSortDirection");
-
-        const albumsSortKey = await getVal<string>("albumsSortKey");
-        const albumsSortDirection = await getVal<string>("albumsSortDirection");
-        const artistsSortKey = await getVal<string>("artistsSortKey");
-        const artistsSortDirection = await getVal<string>(
-          "artistsSortDirection"
-        );
-        const playlistsSortKey = await getVal<string>("playlistsSortKey");
-        const playlistsSortDirection = await getVal<string>(
-          "playlistsSortDirection"
-        );
-        const miniPlayerStyle = await getVal<"square" | "wide" | "bar">(
-          "miniPlayerStyle"
-        );
-        const miniPlayerPosition = await getVal<
-          "bottom-right" | "bottom-left" | "top-right" | "top-left"
-        >("miniPlayerPosition");
-        const enableMediaKeys = await getVal<boolean>("enableMediaKeys");
-
-        const themeValue = theme ?? "system";
-        const resolvedTheme = applyThemeClass(themeValue);
         set({
           currentProfileId: profileId,
-          theme: themeValue,
-          resolvedTheme,
-          dynamicGradient: dynamicGradient ?? true,
-          libraryPaths: libraryPaths ?? [],
-          selectedDevice: selectedDevice ?? null,
-          crossfadeDuration: crossfadeDuration ?? 0,
-          closeToTray: closeToTray ?? false,
-          scanOnStartup: scanOnStartup ?? false,
-          autoplay: autoplay ?? false,
-          sidebarItems: sidebarItems ?? [
-            { id: "home", hidden: false },
-            { id: "search", hidden: false },
-            { id: "songs", hidden: false },
-            { id: "albums", hidden: false },
-            { id: "playlists", hidden: false },
-            { id: "artists", hidden: false },
-            { id: "insights", hidden: false },
-            { id: "settings", hidden: false },
-          ],
-          defaultPage: defaultPage ?? "home",
-          songsSortKey: songsSortKey ?? "date_added",
-          songsSortDirection: songsSortDirection ?? "desc",
-          albumsSortKey: albumsSortKey ?? "title",
-          albumsSortDirection: albumsSortDirection ?? "asc",
-          artistsSortKey: artistsSortKey ?? "name",
-          artistsSortDirection: artistsSortDirection ?? "asc",
-          playlistsSortKey: playlistsSortKey ?? "name",
-          playlistsSortDirection: playlistsSortDirection ?? "asc",
-          miniPlayerStyle: miniPlayerStyle ?? "square",
-          miniPlayerPosition: miniPlayerPosition ?? "bottom-right",
-          enableMediaKeys: enableMediaKeys ?? true,
+          ...keybindSettings,
+          ...integrationSettings,
+          ...themeSettings,
+          ...audioResult.state,
+          ...uiSettings,
           isLoading: false,
         });
 
-        if (selectedDevice) {
-          await invoke("audio_set_device", { deviceName: selectedDevice });
-        }
-        if (typeof crossfadeDuration === "number") {
-          await invoke("audio_set_crossfade", {
-            durationMs: crossfadeDuration,
-          });
+        const { selectedDevice, crossfadeDuration, fadeInOutEnabled, fadeInOutDuration } =
+          audioResult.raw;
+
+        await Promise.all([
+          selectedDevice
+            ? invoke("audio_set_device", { deviceName: selectedDevice })
+            : Promise.resolve(),
+          typeof crossfadeDuration === "number"
+            ? (() => {
+                useAudioStore
+                  .getState()
+                  .setCrossfadeDuration(crossfadeDuration);
+                return invoke("audio_set_crossfade", {
+                  durationMs: crossfadeDuration,
+                });
+              })()
+            : Promise.resolve(),
+          typeof fadeInOutDuration === "number" &&
+          typeof fadeInOutEnabled === "boolean"
+            ? (() => {
+                useAudioStore
+                  .getState()
+                  .setFadeInOut(fadeInOutEnabled, fadeInOutDuration);
+                return invoke("audio_set_fade_in_out", {
+                  enabled: fadeInOutEnabled,
+                  durationMs: fadeInOutDuration,
+                });
+              })()
+            : Promise.resolve(),
+        ]);
+
+        const { discordRpcEnabled: rpcEnabled } = integrationSettings;
+        if (rpcEnabled) {
+          invoke("discord_rpc_enable").catch(() => {});
         }
 
-        invoke("watch_paths", { folders: libraryPaths ?? [] }).catch((e) =>
-          logger.error("Failed to watch paths on settings load", e)
+        invoke("watch_paths", { folders: uiSettings.rawLibraryPaths ?? [] }).catch((e) =>
+          logger.error("Failed to watch paths on settings load", e),
         );
 
         get().refreshAudioDevices();
@@ -473,5 +685,5 @@ export const useSettingsStore = create<SettingsState & SettingsActions>(
         set({ isLoading: false });
       }
     },
-  })
+  }),
 );

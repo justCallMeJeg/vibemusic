@@ -1,9 +1,9 @@
 use image::ImageFormat;
+use log::warn;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use log::warn;
 
 /// Extract and cache cover art from ID3 tags
 /// Returns the absolute path to the cached image
@@ -48,7 +48,11 @@ pub fn extract_and_cache_cover(
     };
 
     const MAX_COVER_SIZE: u32 = 500;
-    let resized = img.resize(MAX_COVER_SIZE, MAX_COVER_SIZE, image::imageops::FilterType::Lanczos3);
+    let resized = img.resize(
+        MAX_COVER_SIZE,
+        MAX_COVER_SIZE,
+        image::imageops::FilterType::Lanczos3,
+    );
 
     // 6. Save as optimized JPEG using Atomic Write (Write temp -> Rename)
     // unique temp name to avoid collisions between threads processing same image

@@ -24,10 +24,9 @@ function isValidHex(hex: string): boolean {
 }
 
 export function useProfileTheme() {
-  const activeProfile = useProfileStore((s) => {
-    const id = s.activeProfileId;
-    return id ? s.profiles.find((p) => p.id === id) : undefined;
-  });
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const profilesMap = useProfileStore((s) => s.profilesMap);
+  const activeProfile = activeProfileId ? profilesMap.get(activeProfileId) : undefined;
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
 
   useEffect(() => {

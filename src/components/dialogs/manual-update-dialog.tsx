@@ -44,7 +44,8 @@ export function ManualUpdateDialog({
               onOpenChange(false);
               openDownloadPage();
             }}
-            className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px]"
+            variant="default"
+            className="min-w-[140px]"
           >
             <ExternalLink className="mr-2 h-4 w-4" />
             Download from GitHub
@@ -54,12 +55,12 @@ export function ManualUpdateDialog({
       contentClassName="max-w-lg"
     >
       <div className="space-y-4 py-2">
-        <div className="flex items-start gap-3 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
-          <div className="mt-0.5 shrink-0 text-amber-400">
+        <div className="flex items-start gap-3 p-3 rounded-md bg-warning/10 border border-warning/20">
+          <div className="mt-0.5 shrink-0 text-warning-foreground/80">
             <Download className="h-5 w-5" />
           </div>
-          <div className="text-sm text-amber-200 space-y-1">
-            <p className="font-medium text-amber-100">
+          <div className="text-sm text-warning-foreground/70 space-y-1">
+            <p className="font-medium text-warning-foreground/90">
               Auto-update not supported for {formatLabel}
             </p>
             <p>

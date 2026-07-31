@@ -1,188 +1,259 @@
 import "@fontsource/instrument-sans";
 import "./styles/globals.css";
-import MusicController from "./components/music-controller";
-import { useEffect, useState, useRef } from "react";
+import MusicController from "@features/player/components/music-controller";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useAudioStore } from "./stores/audio-store";
+import {
+  useKeyboardShortcuts,
+  useGlobalKeydownListener,
+} from "@/hooks/use-keyboard-shortcuts";
+import { useFocusRegionStore } from "@/stores/focus-region-store";
+import { useSettingsStore } from "@/stores/settings-store";
+import { KeyboardShortcutsOverlay } from "@/components/shared/keyboard-shortcuts-overlay";
+import { KeyboardShortcutsDialog } from "@/components/dialogs/keyboard-shortcuts-dialog";
 
-import QueueMenu from "./components/queue-menu";
-import TrackDetailPanel from "./components/track-detail-panel";
-import LyricsPanel from "./components/lyrics-panel";
-import MainContent from "./components/main-content";
-import { BackgroundGradient } from "./components/background-gradient";
-import { SidebarSection } from "./components/sidebar-section";
-import { GlobalSearch } from "./components/dialogs/global-search";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import MainContent from "@features/shell/components/main-content";
+import { BackgroundGradient } from "@features/shell/components/background-gradient";
+import { SidebarSection } from "@features/shell/components/sidebar-section";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { getDominantColor } from "./lib/color-utils";
 import {
   useWindowCloseHandler,
   useRefreshInterceptor,
   useScanProgressListener,
+  useAppInit,
 } from "@/hooks/use-app-init";
 import type { CloseAction } from "@/hooks/use-app-init";
-import { useFolderImport } from "@/hooks/use-folder-import";
-import { useSettingsStore } from "@/stores/settings-store";
-import { useNavigationStore, Page } from "@/stores/navigation-store";
+import { useFolderImport } from "@features/settings/hooks/use-folder-import";
 
-import { TitleBar } from "./components/titlebar";
+import { TitleBar } from "@features/shell/components/titlebar";
 import { useProfileStore } from "@/stores/profile-store";
-import { AppDialogs } from "./components/app-dialogs";
-import { ShellStates } from "@/components/shell-states";
+import { AppDialogs } from "@features/shell/components/app-dialogs";
+import { ShellStates } from "@features/shell/components/shell-states";
+import { useDialogStore } from "@/stores/dialog-store";
 
-import { useLibraryStore } from "@/stores/library-store";
-import { logger } from "@/lib/logger";
+import { useContentStore } from "@features/library/store/content-store";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
 import { useProfileTheme } from "@/hooks/use-profile-theme";
+import { useFocusTracking } from "@/hooks/use-focus-tracking";
+import { useTrackGradient } from "@/hooks/use-track-gradient";
+import { useScanOnStartup } from "@/hooks/use-scan-on-startup";
+import { useSleepTimer } from "@/hooks/use-sleep-timer";
+import { useScrobbler } from "@/hooks/use-scrobbler";
+import { useProfileSwitch } from "@/hooks/use-profile-switch";
+import { useSelectionStore } from "@/stores/selection-store";
+import { useCurrentPage, useDetailView } from "@/stores/navigation-store";
+import { BatchActionsBar } from "@/components/shared/batch-actions-bar";
+import { PlaylistSelectorDialog } from "@/components/dialogs/playlist-selector-dialog";
+import { ConfirmDialog } from "@/components/dialogs/confirm-dialog";
 import { toast } from "sonner";
-import { useUpdateStore } from "./stores/update-store";
+import { logger } from "@/lib/logger";
+import { removeTrackFromPlaylist, addTrackToPlaylist } from "@/lib/api";
 
+const SidePanelContent = lazy(
+  () => import("@features/shell/components/side-panel-content"),
+);
+const GlobalSearch = lazy(() =>
+  import("@features/search/components/global-search").then((m) => ({
+    default: m.GlobalSearch,
+  })),
+);
 
+function AppBatchBar() {
+  const currentPage = useCurrentPage();
+  const detailView = useDetailView();
+  const isPlayerVisible = useAudioStore(
+    (s) => !!(s.currentTrack && s.status !== "stopped"),
+  );
+  const tracks = useContentStore((s) => s.tracks);
+  const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  let entityType: "track" | "album" | "artist" | "playlist" | null = null;
+
+  if (detailView?.type === "playlist") entityType = "track";
+  else if (detailView?.type === "album") entityType = "track";
+  else if (detailView?.type === "artist") entityType = "track";
+  else if (currentPage === "songs") entityType = "track";
+  else if (currentPage === "albums") entityType = "album";
+  else if (currentPage === "artists") entityType = "artist";
+  else if (currentPage === "playlists") entityType = "playlist";
+
+  if (!entityType) return null;
+
+  const handleAddToQueue = () => {
+    const ids = useSelectionStore.getState().getSelectedIds();
+    const addToQueue = useAudioStore.getState().addToQueue;
+    if (entityType === "track") {
+      ids.forEach((id) => {
+        const track = tracks.find((t) => t.id === id);
+        if (track) addToQueue(track);
+      });
+    }
+    useSelectionStore.getState().disableCheckboxMode();
+  };
+
+  const handlePlayNext = () => {
+    const ids = useSelectionStore.getState().getSelectedIds();
+    const playNext = useAudioStore.getState().playNext;
+    if (entityType === "track") {
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const track = tracks.find((t) => t.id === ids[i]);
+        if (track) playNext(track);
+      }
+    }
+    useSelectionStore.getState().disableCheckboxMode();
+  };
+
+  const handleAddToPlaylist = () => {
+    setPlaylistDialogOpen(true);
+  };
+
+  const handlePlaylistDialogComplete = () => {
+    useSelectionStore.getState().disableCheckboxMode();
+  };
+
+  const isPlaylistDetail = detailView?.type === "playlist";
+  const playlistId = isPlaylistDetail ? detailView.id : null;
+
+  const handleRemoveFromPlaylist = () => {
+    setRemoveDialogOpen(true);
+  };
+
+  const confirmRemoveFromPlaylist = async () => {
+    const ids = useSelectionStore.getState().getSelectedIds();
+    const currentPlaylistId = playlistId;
+    if (!currentPlaylistId || ids.length === 0) return;
+    setIsRemoving(true);
+    try {
+      for (const trackId of ids) {
+        await removeTrackFromPlaylist(currentPlaylistId, trackId);
+      }
+      useSelectionStore.getState().disableCheckboxMode();
+      toast(`Removed ${ids.length} track${ids.length !== 1 ? "s" : ""} from playlist`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            for (const trackId of ids) {
+              try {
+                await addTrackToPlaylist(currentPlaylistId, trackId);
+              } catch (e) {
+                logger.error("Undo: failed to re-add track", e);
+              }
+            }
+            toast.success("Restored tracks to playlist");
+          },
+        },
+      });
+    } catch (e) {
+      logger.error("Failed to remove tracks from playlist", e);
+      toast.error("Failed to remove tracks");
+    } finally {
+      setIsRemoving(false);
+      setRemoveDialogOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className="absolute left-0 right-0 z-40"
+        style={{ bottom: isPlayerVisible ? "156px" : "0" }}
+      >
+        <BatchActionsBar
+          entityType={entityType}
+          onAddToPlaylist={entityType === "track" ? handleAddToPlaylist : undefined}
+          onAddToQueue={entityType === "track" ? handleAddToQueue : undefined}
+          onPlayNext={entityType === "track" ? handlePlayNext : undefined}
+          onPlay={entityType === "album" ? undefined : undefined}
+          onShuffle={entityType === "album" ? undefined : undefined}
+          onRemove={isPlaylistDetail ? handleRemoveFromPlaylist : undefined}
+        />
+      </div>
+      <PlaylistSelectorDialog
+        open={playlistDialogOpen}
+        onOpenChange={setPlaylistDialogOpen}
+        onComplete={handlePlaylistDialogComplete}
+      />
+      <ConfirmDialog
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        title="Remove Tracks?"
+        description="This will remove the selected tracks from this playlist. The tracks will remain in your library."
+        confirmText="Remove"
+        variant="destructive"
+        onConfirm={confirmRemoveFromPlaylist}
+        isLoading={isRemoving}
+        loadingText="Removing..."
+      />
+    </>
+  );
+}
 
 export default function App() {
   const sidePanel = useAudioStore((s) => s.sidePanel);
   const initListeners = useAudioStore((s) => s.initListeners);
   const currentTrack = useAudioStore((s) => s.currentTrack);
   const status = useAudioStore((s) => s.status);
-  const [gradientColor, setGradientColor] = useState<string>("transparent");
-  const [isQuitDialogOpen, setIsQuitDialogOpen] = useState(false);
-  const [isCloseToTrayDialogOpen, setIsCloseToTrayDialogOpen] = useState(false);
-  const [showProfileSwitchWarning, setShowProfileSwitchWarning] = useState(false);
-
-  const hasCheckedForUpdate = useRef(false);
-  const hasDoneInitialScan = useRef(false); // Prevent scan on profile switch
-  const stop = useAudioStore((s) => s.stop);
-
-  // Refresh Warning State
-  const [isRefreshWarningOpen, setIsRefreshWarningOpen] = useState(false);
-  const isPlaying = status === "playing";
 
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme);
-  const loadSettings = useSettingsStore((s) => s.loadSettings);
-  const isSettingsLoading = useSettingsStore((s) => s.isLoading);
-  const initSystemThemeListener = useSettingsStore(
-    (s) => s.initSystemThemeListener,
+  const isPlaying = status === "playing";
+
+  useRefreshInterceptor(isPlaying, () =>
+    useDialogStore.getState().setIsRefreshWarningOpen(true),
   );
 
-
-  useRefreshInterceptor(isPlaying, () => setIsRefreshWarningOpen(true));
-
   const handleConfirmRefresh = async () => {
-    await stop();
-    setIsRefreshWarningOpen(false);
+    await useAudioStore.getState().stop();
+    useDialogStore.getState().setIsRefreshWarningOpen(false);
     window.location.reload();
   };
 
-  const fetchLibrary = useLibraryStore((s) => s.fetchLibrary);
-
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
-  const profiles = useProfileStore((s) => s.profiles);
-  const loadProfiles = useProfileStore((s) => s.loadProfiles);
-  const selectProfile = useProfileStore((s) => s.selectProfile);
   const isProfilesLoading = useProfileStore((s) => s.isLoading);
-
-  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+  const profilesMap = useProfileStore((s) => s.profilesMap);
+  const activeProfile = activeProfileId
+    ? profilesMap.get(activeProfileId)
+    : undefined;
 
   useProfileTheme();
+  useKeyboardShortcuts();
+  useGlobalKeydownListener();
+  useFocusTracking();
+  useSleepTimer();
+  useScrobbler();
 
   const isPlayerVisible = !!currentTrack && status !== "stopped";
 
-  const handleProfileClick = () => {
-    // Check if playback is active
-    if (currentTrack && (status === "playing" || status === "paused")) {
-      setShowProfileSwitchWarning(true);
-    } else {
-      selectProfile(null);
-    }
-  };
+  const { handleProfileClick, confirmProfileSwitch } = useProfileSwitch();
 
-  const confirmProfileSwitch = async () => {
-    await stop();
-    setShowProfileSwitchWarning(false);
-    selectProfile(null);
-  };
+  useAppInit();
 
-  // Load profiles on mount
-  useEffect(() => {
-    loadProfiles();
-  }, [loadProfiles]);
+  const { handleFolderImport, isScanning, setIsScanning } = useFolderImport();
+  useScanOnStartup(activeProfileId, setIsScanning);
 
-  // Load settings when profile changes
-  useEffect(() => {
-    if (activeProfileId) {
-      loadSettings(activeProfileId);
-    }
-  }, [activeProfileId, loadSettings]);
-
-
-  useEffect(() => {
-    if (!isSettingsLoading && activeProfileId) {
-      // Apply settings logic
-      const settings = useSettingsStore.getState();
-      if (settings.defaultPage) {
-        useNavigationStore.getState().setPage(settings.defaultPage as Page);
-      }
-
-      // Only run scanOnStartup on INITIAL app load, not when switching profiles
-      if (
-        !hasDoneInitialScan.current &&
-        settings.scanOnStartup &&
-        settings.libraryPaths.length > 0
-      ) {
-        hasDoneInitialScan.current = true;
-        logger.info(
-          "Auto-scanning library paths on startup:",
-          settings.libraryPaths,
-        );
-        setIsScanning(true);
-        invoke("scan_music_library", { folders: settings.libraryPaths })
-          .then(async () => {
-            await fetchLibrary();
-          })
-          .catch((err) => logger.error("Startup scan failed:", err))
-          .finally(() => setIsScanning(false));
-      }
-
-      // Check for updates
-      if (!hasCheckedForUpdate.current) {
-        hasCheckedForUpdate.current = true;
-        const updateStore = useUpdateStore.getState();
-        updateStore.check(true).then((hasUpdate) => {
-          if (hasUpdate) {
-            toast.info("Update Available", {
-              description: "A new version of vibemusic is available.",
-              action: {
-                label: "View",
-                onClick: () => {
-                  useNavigationStore.getState().setPage("about"); // Navigate to settings/about
-                },
-              },
-              duration: 10000,
-            });
-          }
-        });
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSettingsLoading, activeProfileId, fetchLibrary]);
+  const gradientColor = useTrackGradient();
 
   const handleQuitApp = async () => {
-    setIsQuitDialogOpen(false);
-    setIsCloseToTrayDialogOpen(false);
+    useDialogStore.getState().closeQuitDialog();
+    useDialogStore.getState().closeCloseToTrayDialog();
     await invoke("quit_app");
   };
 
   const handleCloseToTrayHide = async () => {
-    setIsCloseToTrayDialogOpen(false);
+    useDialogStore.getState().closeCloseToTrayDialog();
     await getCurrentWindow().hide();
   };
 
   useWindowCloseHandler((action: CloseAction) => {
     switch (action) {
       case "show-quit-dialog":
-        setIsQuitDialogOpen(true);
+        useDialogStore.getState().openQuitDialog();
         break;
       case "show-close-to-tray-dialog":
-        setIsCloseToTrayDialogOpen(true);
+        useDialogStore.getState().openCloseToTrayDialog();
         break;
       case "quit-directly":
         handleQuitApp();
@@ -190,71 +261,37 @@ export default function App() {
     }
   });
 
-  // Listen for global scan progress to refresh library - extracted to custom hook
-  useScanProgressListener(fetchLibrary);
+  useScanProgressListener(async () => {
+    await useContentStore.getState().fetchContent();
+    await usePlaylistStore.getState().fetchPlaylists();
+  });
 
-  const isPlaybackActive = status === "playing" || status === "paused";
-
-  // Update gradient when track changes - only show when actually playing/paused
-  useEffect(() => {
-    if (!isPlaybackActive) {
-      setGradientColor("transparent");
-      return;
-    }
-
-    if (currentTrack?.artwork_path) {
-      const src = convertFileSrc(currentTrack.artwork_path);
-      let cancelled = false;
-      getDominantColor(src).then((color) => {
-        if (!cancelled) setGradientColor(color);
-      });
-      return () => { cancelled = true; };
-    } else {
-      setGradientColor("transparent");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTrack?.id, isPlaybackActive]);
-
-  // Initialize audio event listeners
   useEffect(() => {
     const cleanup = initListeners();
     return cleanup;
   }, [initListeners]);
 
-  // Initialize system theme listener
   useEffect(() => {
-    const cleanup = initSystemThemeListener();
+    const cleanup = useSettingsStore.getState().initSystemThemeListener();
     return cleanup;
-  }, [initSystemThemeListener]);
+  }, []);
 
-  const { handleFolderImport, isScanning, setIsScanning } = useFolderImport();
-
-  // Auto-close queue when empty
   const queue = useAudioStore((s) => s.queue);
-  const setSidePanel = useAudioStore((s) => s.setSidePanel);
 
   useEffect(() => {
-    if (sidePanel === "queue" && queue.length === 0) {
-      setSidePanel("none");
+    if (sidePanel !== "none" && queue.length === 0) {
+      useAudioStore.getState().setSidePanel("none");
     }
-  }, [sidePanel, queue.length, setSidePanel]);
+  }, [sidePanel, queue.length]);
 
   if (isProfilesLoading || !activeProfileId) {
     return (
       <ShellStates
         isProfilesLoading={isProfilesLoading}
         activeProfileId={activeProfileId}
-        isQuitDialogOpen={isQuitDialogOpen}
-        setIsQuitDialogOpen={setIsQuitDialogOpen}
         onConfirmQuit={handleQuitApp}
-        isCloseToTrayDialogOpen={isCloseToTrayDialogOpen}
-        setIsCloseToTrayDialogOpen={setIsCloseToTrayDialogOpen}
         onConfirmCloseToTrayHide={handleCloseToTrayHide}
-        showProfileSwitchWarning={showProfileSwitchWarning}
-        setShowProfileSwitchWarning={setShowProfileSwitchWarning}
         confirmProfileSwitch={confirmProfileSwitch}
-        isRefreshWarningOpen={isRefreshWarningOpen}
-        setIsRefreshWarningOpen={setIsRefreshWarningOpen}
         handleConfirmRefresh={handleConfirmRefresh}
       />
     );
@@ -279,49 +316,64 @@ export default function App() {
           isScanning={isScanning}
         />
 
-        {/* Main Content */}
         <div className="flex-1 min-w-0 min-h-0 flex">
-          <MainContent />
-
-          {/* Queue Menu / Track Detail Panel */}
           <div
-            className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
-              sidePanel !== "none" ? "w-96 p-1" : "w-0 p-0"
-            } ${isPlayerVisible ? "pb-39" : "pb-6"}`}
+            data-region="main"
+            tabIndex={-1}
+            className="flex-1 min-w-0 min-h-0 flex flex-col relative"
+            onFocus={() =>
+              useFocusRegionStore.getState().setActiveRegion("main")
+            }
           >
-            <QueueMenu />
-            <TrackDetailPanel />
-            <LyricsPanel />
+            <div className="flex-1 min-h-0">
+              <MainContent />
+            </div>
+            <AppBatchBar />
+          </div>
+
+          <div
+            data-region="sidepanel"
+            data-region-visible={sidePanel !== "none" ? "true" : "false"}
+            tabIndex={-1}
+            className={`pt-6 shrink-0 h-full min-h-0 overflow-hidden transition-all duration-300 ease-in-out z-40 ${
+              sidePanel !== "none" ? "w-96 p-px" : "w-0 p-0"
+            } ${isPlayerVisible ? "pb-player-bar" : "pb-6"}`}
+            onFocus={() =>
+              useFocusRegionStore.getState().setActiveRegion("sidepanel")
+            }
+          >
+            <Suspense fallback={null}>
+              <SidePanelContent />
+            </Suspense>
           </div>
         </div>
       </div>
 
-      {/* Music Controller */}
       <div
+        data-region="player"
+        data-region-visible={isPlayerVisible ? "true" : "false"}
+        tabIndex={-1}
         className={`fixed bottom-0 left-0 right-0 p-6 transition-all duration-300 ease-in-out z-50 pointer-events-none ${
           isPlayerVisible
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0"
         }`}
+        onFocus={() => useFocusRegionStore.getState().setActiveRegion("player")}
       >
         <MusicController />
       </div>
-      <GlobalSearch />
+      <Suspense fallback={null}>
+        <GlobalSearch />
+      </Suspense>
 
       <AppDialogs
-        isQuitDialogOpen={isQuitDialogOpen}
-        setIsQuitDialogOpen={setIsQuitDialogOpen}
         onConfirmQuit={handleQuitApp}
-        isCloseToTrayDialogOpen={isCloseToTrayDialogOpen}
-        setIsCloseToTrayDialogOpen={setIsCloseToTrayDialogOpen}
         onConfirmCloseToTrayHide={handleCloseToTrayHide}
-        showProfileSwitchWarning={showProfileSwitchWarning}
-        setShowProfileSwitchWarning={setShowProfileSwitchWarning}
         confirmProfileSwitch={confirmProfileSwitch}
-        isRefreshWarningOpen={isRefreshWarningOpen}
-        setIsRefreshWarningOpen={setIsRefreshWarningOpen}
         handleConfirmRefresh={handleConfirmRefresh}
       />
+      <KeyboardShortcutsOverlay />
+      <KeyboardShortcutsDialog />
     </main>
   );
 }

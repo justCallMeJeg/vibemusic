@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { ErrorBoundary } from "@/components/error-boundary";
-import { PlaybackControls } from "@/components/shared/playback-controls";
-import { VolumeControl } from "@/components/shared/volume-control";
+import { ErrorBoundary } from "@features/shell/components/error-boundary";
+import { PlaybackControls } from "@features/player/components/playback-controls";
+import { VolumeControl } from "@features/player/components/volume-control";
 import { EmptyState } from "@/components/shared/empty-state";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import { Music, VolumeX } from "lucide-react";

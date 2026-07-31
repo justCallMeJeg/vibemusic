@@ -5,7 +5,7 @@ on:
     types: [published]
 
 env:
-  VIBEMUSIC_NIGHTLY_ENDPOINT: "https://github.com/justCallMeJeg/vibemusic/releases/download/nightly/latest.json"
+  VIBEMUSIC_NIGHTLY_ENDPOINT: "https://github.com/gjpgabayeron/vibemusic/releases/download/nightly/latest.json"
 
 jobs:
   prepare:
@@ -86,19 +86,45 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          DISCORD_APP_ID: ${{ secrets.DISCORD_APP_ID }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
         run: npm run tauri build -- ${{ matrix.args }}
 
-      - name: Rename macOS updater artifact for architecture
-        if: matrix.platform == 'macos-latest'
+      - name: Rename artifacts to canonical format
         shell: pwsh
         run: |
-          $arch = if ('${{ matrix.args }}' -match 'aarch64') { 'aarch64' } else { 'x86_64' }
+          $version = "${{ needs.prepare.outputs.VERSION }}"
           $bundle = '${{ matrix.bundle-path }}'
-          Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -eq 'Vibe Music.app.tar.gz' } | ForEach-Object {
-            Rename-Item -Path $_.FullName -NewName "Vibe Music_$arch.app.tar.gz"
-          }
-          Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -eq 'Vibe Music.app.tar.gz.sig' } | ForEach-Object {
-            Rename-Item -Path $_.FullName -NewName "Vibe Music_$arch.app.tar.gz.sig"
+          switch ('${{ matrix.artifact-name }}') {
+            'macos-aarch64' {
+              Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -match '\.tar\.gz' } | ForEach-Object {
+                $suffix = if ($_.Name -match '\.sig$') { '.sig' } else { '' }
+                Rename-Item -Path $_.FullName -NewName "VibeMusic-darwin-aarch64-v$version.app.tar.gz$suffix"
+              }
+            }
+            'macos-x86_64' {
+              Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -match '\.tar\.gz' } | ForEach-Object {
+                $suffix = if ($_.Name -match '\.sig$') { '.sig' } else { '' }
+                Rename-Item -Path $_.FullName -NewName "VibeMusic-darwin-x64-v$version.app.tar.gz$suffix"
+              }
+            }
+            'windows-x86_64' {
+              Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -match '\.(msi|exe)(\.sig)?$' } | ForEach-Object {
+                if ($_.Name -match '\.msi\.sig$')   { Rename-Item -Path $_.FullName -NewName "VibeMusic-x64-v$version.msi.sig" }
+                elseif ($_.Name -match '\.exe\.sig$') { Rename-Item -Path $_.FullName -NewName "VibeMusic-x64-v$version.exe.sig" }
+                elseif ($_.Name -match '\.msi$')    { Rename-Item -Path $_.FullName -NewName "VibeMusic-x64-v$version.msi" }
+                elseif ($_.Name -match '\.exe$')    { Rename-Item -Path $_.FullName -NewName "VibeMusic-x64-v$version.exe" }
+              }
+            }
+            'linux-x86_64' {
+              Get-ChildItem $bundle -Recurse -File | Where-Object { $_.Name -match '\.AppImage' } | ForEach-Object {
+                if ($_.Name -match '\.AppImage\.tar\.gz\.sig$') { Rename-Item -Path $_.FullName -NewName "VibeMusic-linux-x86_64-v$version.AppImage.tar.gz.sig" }
+                elseif ($_.Name -match '\.AppImage\.tar\.gz$')  { Rename-Item -Path $_.FullName -NewName "VibeMusic-linux-x86_64-v$version.AppImage.tar.gz" }
+                elseif ($_.Name -match '\.AppImage\.sig$')     { Rename-Item -Path $_.FullName -NewName "VibeMusic-linux-x86_64-v$version.AppImage.sig" }
+                elseif ($_.Name -match '\.AppImage$')          { Rename-Item -Path $_.FullName -NewName "VibeMusic-linux-x86_64-v$version.AppImage" }
+              }
+            }
           }
 
       - name: Upload bundle artifacts
@@ -125,15 +151,6 @@ jobs:
           merge-multiple: true
           path: artifacts
 
-      - name: Normalize filenames for GitHub API
-        shell: pwsh
-        run: |
-          Get-ChildItem artifacts -Recurse -File | Where-Object { $_.Name -match ' ' } | ForEach-Object {
-            $newName = $_.Name -replace ' ', '.'
-            Write-Host "$($_.Name) -> $newName"
-            Rename-Item -Path $_.FullName -NewName $newName
-          }
-
       - name: Upload artifacts to release
         shell: pwsh
         env:
@@ -141,11 +158,75 @@ jobs:
         run: |
           $tag = "${{ github.event.release.tag_name }}"
           Get-ChildItem -Path artifacts -Recurse -File | Where-Object {
-            $_.Name -match '^Vibe\.Music[_-]' -or $_.Name -eq 'latest.json'
+            $_.Name -match '^VibeMusic-' -or $_.Name -eq 'latest.json'
           } | ForEach-Object {
             Write-Host "Uploading: $($_.Name)"
             gh release upload $tag "$($_.FullName)" --clobber
           }
+
+      - name: Generate release body with download table
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --tags --depth=100 2>$null
+          $version = "${{ needs.prepare.outputs.VERSION }}"
+          $tag = "${{ github.event.release.tag_name }}"
+          $repo = "${{ github.repository }}"
+          $baseUrl = "https://github.com/$repo/releases/download/$tag"
+
+          $changelog = git cliff --latest --strip header 2>$null
+          if (-not $changelog) { $changelog = "No changelog available." }
+
+          $patterns = @{
+            'windows-x86_64' = '^VibeMusic-x64-v[\d.]+\.(msi|exe)$'
+            'darwin-x86_64'  = '^VibeMusic-darwin-x64-v[\d.]+\.app\.tar\.gz$'
+            'darwin-aarch64' = '^VibeMusic-darwin-aarch64-v[\d.]+\.app\.tar\.gz$'
+            'linux-x86_64'   = '^VibeMusic-linux-x86_64-v[\d.]+\.AppImage(\.tar\.gz)?$'
+          }
+          $osLabels = @{
+            'windows-x86_64' = 'Windows x64'
+            'darwin-x86_64'  = 'macOS Intel'
+            'darwin-aarch64' = 'macOS Apple Silicon'
+            'linux-x86_64'   = 'Linux x64'
+          }
+
+          $rows = @()
+          Get-ChildItem -Path artifacts -Recurse -File | Where-Object { $_.Name -match '^VibeMusic-' -and $_.Name -notmatch '\.sig$' -and $_.Name -ne 'latest.json' } | ForEach-Object {
+            $filename = $_.Name
+            $url = "$baseUrl/$([Uri]::EscapeDataString($filename))"
+            $osLabel = ""
+            foreach ($key in $patterns.Keys) {
+              if ($filename -match $patterns[$key]) {
+                $osLabel = $osLabels[$key]
+                break
+              }
+            }
+            $installerType = if ($filename -match '\.msi$') { '.msi' }
+              elseif ($filename -match '\.exe$') { '.exe' }
+              elseif ($filename -match '\.app\.tar\.gz$') { '.app.tar.gz' }
+              elseif ($filename -match '\.AppImage\.tar\.gz$') { '.AppImage.tar.gz' }
+              elseif ($filename -match '\.AppImage$') { '.AppImage' }
+              else { $filename -replace '^VibeMusic-[^-]+-', '' }
+            $rows += "| $osLabel | $installerType | [$filename]($url) |"
+          }
+
+          $nl = [Environment]::NewLine
+          $bodyLines = @(
+            "## What's Changed",
+            "",
+            $changelog,
+            "",
+            "## Downloads",
+            "",
+            "| OS | Installer Type | Download |",
+            "|---|---|---|"
+          )
+          foreach ($r in $rows) { $bodyLines += $r }
+          $body = $bodyLines -join $nl
+          $bodyPath = Join-Path artifacts "body.md"
+          Set-Content $bodyPath $body
+          gh release edit $tag --notes-file $bodyPath
 
       - name: Generate and upload combined latest.json
         shell: pwsh
@@ -169,15 +250,15 @@ jobs:
           }
 
           $patterns = @{
-            'windows-x86_64' = '_x64_en-US\.(msi|exe)(\.zip)?$'
-            'darwin-x86_64'  = '_x86_64\.app\.tar\.gz$'
-            'darwin-aarch64' = '_aarch64\.app\.tar\.gz$'
-            'linux-x86_64'   = '_amd64\.AppImage(\.tar\.gz)?$'
+            'windows-x86_64' = '^VibeMusic-x64-v[\d.]+\.(msi|exe)$'
+            'darwin-x86_64'  = '^VibeMusic-darwin-x64-v[\d.]+\.app\.tar\.gz$'
+            'darwin-aarch64' = '^VibeMusic-darwin-aarch64-v[\d.]+\.app\.tar\.gz$'
+            'linux-x86_64'   = '^VibeMusic-linux-x86_64-v[\d.]+\.AppImage(\.tar\.gz)?$'
           }
 
           $platforms = @{}
           Get-ChildItem -Path artifacts -Recurse -File | Where-Object {
-            $_.Name -match '^Vibe\.Music[_-]'
+            $_.Name -match '^VibeMusic-'
           } | ForEach-Object {
             $filename = $_.Name
             foreach ($key in $patterns.Keys) {

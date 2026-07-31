@@ -24,23 +24,43 @@ export type DetailView =
   | { type: "artist"; id: number }
   | null;
 
+interface BreadcrumbEntry {
+  label: string;
+  page: Page;
+  detailView?: DetailView;
+}
+
+export const PAGE_LABELS: Record<Page, string> = {
+  home: "Home",
+  songs: "Songs",
+  albums: "Albums",
+  playlists: "Playlists",
+  artists: "Artists",
+  settings: "Settings",
+  insights: "Insights",
+  about: "About",
+};
+
 interface NavigationState {
   currentPage: Page;
   detailView: DetailView;
   isSearchOpen: boolean;
   isMiniPlayer: boolean;
+  history: BreadcrumbEntry[];
 }
 
 interface NavigationActions {
   setPage: (page: Page) => void;
   setSearchOpen: (open: boolean) => void;
   toggleSearch: () => void;
-  openAlbumDetail: (albumId: number) => void;
-  openPlaylistDetail: (playlistId: number) => void;
-
-  openArtistDetail: (artistId: number) => void;
+  openAlbumDetail: (albumId: number, title?: string) => void;
+  openPlaylistDetail: (playlistId: number, title?: string) => void;
+  openArtistDetail: (artistId: number, title?: string) => void;
   goBack: () => void;
+  navigateToHistoryIndex: (index: number) => void;
+  updateBreadcrumbLabel: (type: "album" | "artist" | "playlist", id: number, label: string) => void;
   toggleMiniPlayer: () => Promise<void>;
+  resetNavigation: () => void;
 }
 
 type NavigationStore = NavigationState & NavigationActions;
@@ -49,34 +69,117 @@ type NavigationStore = NavigationState & NavigationActions;
 /**
  * Store for managing application navigation and UI state (pages, detail views, mini player).
  */
+const MAX_HISTORY = 20;
+
 export const useNavigationStore = create<NavigationStore>((set) => ({
   // Initial State
   currentPage: "home",
   detailView: null,
   isSearchOpen: false,
   isMiniPlayer: false,
+  history: [{ label: PAGE_LABELS.home, page: "home" }],
 
   // Actions
-  setPage: (page) => set({ currentPage: page, detailView: null }),
+  resetNavigation: () =>
+    set({
+      currentPage: "home",
+      detailView: null,
+      isSearchOpen: false,
+      isMiniPlayer: false,
+      history: [{ label: PAGE_LABELS.home, page: "home" }],
+    }),
+
+  setPage: (page) =>
+    set({
+      currentPage: page,
+      detailView: null,
+      history: [{ label: PAGE_LABELS[page], page }],
+    }),
   setSearchOpen: (open) => set({ isSearchOpen: open }),
   toggleSearch: () => set((state) => ({ isSearchOpen: !state.isSearchOpen })),
 
-  openAlbumDetail: (albumId) =>
-    set({ currentPage: "albums", detailView: { type: "album", id: albumId } }),
-
-  openPlaylistDetail: (playlistId) =>
-    set({
-      currentPage: "playlists",
-      detailView: { type: "playlist", id: playlistId },
+  openAlbumDetail: (albumId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Album",
+        page: "albums",
+        detailView: { type: "album", id: albumId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "albums",
+        detailView: { type: "album", id: albumId },
+      };
     }),
 
-  openArtistDetail: (artistId) =>
-    set({
-      currentPage: "artists",
-      detailView: { type: "artist", id: artistId },
+  openPlaylistDetail: (playlistId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Playlist",
+        page: "playlists",
+        detailView: { type: "playlist", id: playlistId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "playlists",
+        detailView: { type: "playlist", id: playlistId },
+      };
     }),
 
-  goBack: () => set({ detailView: null }),
+  openArtistDetail: (artistId, title) =>
+    set((state) => {
+      const newHistory = [...state.history];
+      newHistory.push({
+        label: title || "Artist",
+        page: "artists",
+        detailView: { type: "artist", id: artistId },
+      });
+      if (newHistory.length > MAX_HISTORY) newHistory.splice(0, 1);
+      return {
+        history: newHistory,
+        currentPage: "artists",
+        detailView: { type: "artist", id: artistId },
+      };
+    }),
+
+  goBack: () =>
+    set((state) => {
+      if (state.history.length <= 1) {
+        return { detailView: null };
+      }
+      const newHistory = state.history.slice(0, -1);
+      const lastEntry = newHistory[newHistory.length - 1];
+      return {
+        history: newHistory,
+        currentPage: lastEntry.page,
+        detailView: lastEntry.detailView || null,
+      };
+    }),
+
+  navigateToHistoryIndex: (index) =>
+    set((state) => {
+      if (index < 0 || index >= state.history.length) return state;
+      const newHistory = state.history.slice(0, index + 1);
+      const entry = newHistory[index];
+      return {
+        history: newHistory,
+        currentPage: entry.page,
+        detailView: entry.detailView || null,
+      };
+    }),
+
+  updateBreadcrumbLabel: (type, id, label) =>
+    set((state) => ({
+      history: state.history.map((entry) =>
+        entry.detailView?.type === type && entry.detailView?.id === id
+          ? { ...entry, label }
+          : entry,
+      ),
+    })),
 
   toggleMiniPlayer: async () => {
     const cleanup: (() => void)[] = [];
@@ -124,8 +227,10 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
       }
 
       // Calculate position on current monitor
-      const factor = await appWindow.scaleFactor();
-      const monitor = await currentMonitor();
+      const [factor, monitor] = await Promise.all([
+        appWindow.scaleFactor(),
+        currentMonitor(),
+      ]);
       let x = 0;
       let y = 0;
 
@@ -175,50 +280,48 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
         miniPlayerPosition: settings.miniPlayerPosition,
       });
 
-      // Register all listeners before updating state
-      const unlistenClose = await listen("miniplayer:close", async () => {
-        runCleanup();
-        const mp = await WebviewWindow.getByLabel("miniplayer");
-        if (mp) {
-          try { await mp.hide(); } catch { /* already hidden */ }
-        }
-        await appWindow.show();
-        set({ isMiniPlayer: false, isSearchOpen: false });
-      });
+      // Register all listeners in parallel
+      const [unlistenClose, unlistenNext, unlistenPrev, unlistenShuffle, unlistenRepeat, unlistenFocus] =
+        await Promise.all([
+          listen("miniplayer:close", async () => {
+            runCleanup();
+            const mp = await WebviewWindow.getByLabel("miniplayer");
+            if (mp) {
+              try { await mp.hide(); } catch { /* already hidden */ }
+            }
+            await appWindow.show();
+            set({ isMiniPlayer: false, isSearchOpen: false });
+          }),
+          listen("miniplayer:next", () => {
+            useAudioStore.getState().next();
+          }),
+          listen("miniplayer:previous", () => {
+            useAudioStore.getState().previous();
+          }),
+          listen<{ shuffle: boolean }>(
+            "miniplayer:toggle-shuffle",
+            (e) => { useAudioStore.setState({ shuffle: e.payload.shuffle }); },
+          ),
+          listen<{ repeat: string }>(
+            "miniplayer:toggle-repeat",
+            (e) => { useAudioStore.setState({ repeat: e.payload.repeat as "off" | "all" | "one" }); },
+          ),
+          appWindow.listen("tauri://focus", async () => {
+            if (useNavigationStore.getState().isMiniPlayer) {
+              runCleanup();
+              const mp = await WebviewWindow.getByLabel("miniplayer");
+              if (mp) {
+                try { await mp.hide(); } catch { /* already hidden */ }
+              }
+              set({ isMiniPlayer: false, isSearchOpen: false });
+            }
+          }),
+        ]);
       addCleanup(unlistenClose);
-
-      const unlistenNext = await listen("miniplayer:next", () => {
-        useAudioStore.getState().next();
-      });
       addCleanup(unlistenNext);
-
-      const unlistenPrev = await listen("miniplayer:previous", () => {
-        useAudioStore.getState().previous();
-      });
       addCleanup(unlistenPrev);
-
-      const unlistenShuffle = await listen<{ shuffle: boolean }>(
-        "miniplayer:toggle-shuffle",
-        (e) => { useAudioStore.setState({ shuffle: e.payload.shuffle }); },
-      );
       addCleanup(unlistenShuffle);
-
-      const unlistenRepeat = await listen<{ repeat: string }>(
-        "miniplayer:toggle-repeat",
-        (e) => { useAudioStore.setState({ repeat: e.payload.repeat as "off" | "all" | "one" }); },
-      );
       addCleanup(unlistenRepeat);
-
-      const unlistenFocus = await appWindow.listen("tauri://focus", async () => {
-        if (useNavigationStore.getState().isMiniPlayer) {
-          runCleanup();
-          const mp = await WebviewWindow.getByLabel("miniplayer");
-          if (mp) {
-            try { await mp.hide(); } catch { /* already hidden */ }
-          }
-          set({ isMiniPlayer: false, isSearchOpen: false });
-        }
-      });
       addCleanup(unlistenFocus);
 
       // All setup done — now switch to miniplayer state
@@ -241,5 +344,7 @@ export const useNavigationStore = create<NavigationStore>((set) => ({
 // --- Selectors ---
 export const useCurrentPage = () => useNavigationStore((s) => s.currentPage);
 export const useDetailView = () => useNavigationStore((s) => s.detailView);
+export const useBreadcrumbs = () => useNavigationStore((s) => s.history);
+export const useGoBack = () => useNavigationStore((s) => s.goBack);
 
 

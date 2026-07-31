@@ -13,3 +13,10 @@ export function formatDuration(ms: number): string {
     .toString()
     .padStart(2, "0")}`;
 }
+
+export function formatListeningTime(ms: number): string {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}

@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowUpDown } from "lucide-react";
 
-export type SortDirection = "asc" | "desc";
+type SortDirection = "asc" | "desc";
 
-export interface SortOption {
+interface SortOption {
   label: string;
   value: string;
 }

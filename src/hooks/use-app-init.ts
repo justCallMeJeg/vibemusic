@@ -4,6 +4,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/lib/logger";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useAudioStore } from "@/stores/audio-store";
+import { useProfileStore } from "@/stores/profile-store";
+import { useNavigationStore, Page } from "@/stores/navigation-store";
+import { useUpdateStore } from "@/stores/update-store";
 
 export type CloseAction =
   | "show-quit-dialog"
@@ -97,4 +100,33 @@ export function useScanProgressListener(fetchLibrary: () => Promise<void>) {
       unlistenPromise.then((u) => u());
     };
   }, [fetchLibrary]);
+}
+
+export function useAppInit() {
+  const loadProfiles = useProfileStore((s) => s.loadProfiles);
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const isSettingsLoading = useSettingsStore((s) => s.isLoading);
+
+  useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      loadSettings(activeProfileId);
+    }
+  }, [activeProfileId, loadSettings]);
+
+  useEffect(() => {
+    if (!isSettingsLoading && activeProfileId) {
+      const settings = useSettingsStore.getState();
+
+      if (settings.defaultPage) {
+        useNavigationStore.getState().setPage(settings.defaultPage as Page);
+      }
+
+      useUpdateStore.getState().check(true);
+    }
+  }, [isSettingsLoading, activeProfileId]);
 }

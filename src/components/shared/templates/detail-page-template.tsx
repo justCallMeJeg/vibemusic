@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { CompactPageHeader } from "@/components/shared/compact-page-header";
 import { cn } from "@/lib/utils";
+import { DetailScrollContext } from "@/components/shared/scroll-context";
 
 interface DetailPageTemplateProps {
   title: string;
@@ -39,17 +40,7 @@ export function DetailPageTemplate({
     const header = headerRef.current;
 
     if (header) {
-      if (scrollTop > threshold) {
-        if (header.dataset.visible !== "true") {
-          header.style.opacity = "1";
-          header.dataset.visible = "true";
-        }
-      } else {
-        if (header.dataset.visible !== "false") {
-          header.style.opacity = "0";
-          header.dataset.visible = "false";
-        }
-      }
+      header.dataset.visible = scrollTop > threshold ? "true" : "false";
     }
   };
 
@@ -68,15 +59,17 @@ export function DetailPageTemplate({
         onBack={onBack}
         onPlay={onPlay}
       />
-      {
-        typeof children === "function"
-          ? (
-              children as (
-                onScroll: (e: React.UIEvent<HTMLDivElement>) => void
-              ) => React.ReactNode
-            )(handleScroll)
-          : children // Fallback if user manages scroll differently
-      }
+      <DetailScrollContext.Provider value={handleScroll}>
+        {
+          typeof children === "function"
+            ? (
+                children as (
+                  onScroll: (e: React.UIEvent<HTMLDivElement>) => void
+                ) => React.ReactNode
+              )(handleScroll)
+            : children
+        }
+      </DetailScrollContext.Provider>
     </div>
   );
 }

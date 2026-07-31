@@ -1,16 +1,25 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { debounce } from "@/lib/utils";
-import { useIsPlayerVisible } from "@/stores/audio-store";
+import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
+import { debounce, cn } from "@/lib/utils";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
+import { ListMusic } from "lucide-react";
 
 interface VirtualizedGridProps<T> {
   items: T[];
-  renderItem: (item: T) => React.ReactNode;
-  itemHeight?: number; // Approximate height of a row
+  renderItem: (item: T, index: number) => React.ReactNode;
+  itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string; // Override dynamic padding if provided
+  paddingBottom?: string;
   className?: string;
+  /** Enable keyboard navigation (arrow keys, Enter) */
+  keyboardNav?: boolean;
+  /** Called when Enter is pressed on focused item */
+  onItemActivate?: (index: number) => void;
+  /** Called when Shift+Enter is pressed on focused item */
+  onItemActivateSecondary?: (index: number) => void;
 }
 
 // Helper hook to calculate grid columns based on window width (matching Tailwind breakpoints)
@@ -41,7 +50,9 @@ function useGridColumns() {
   );
 
   useEffect(() => {
-    window.addEventListener("resize", debouncedUpdateColumns);
+    window.addEventListener("resize", debouncedUpdateColumns, {
+      passive: true,
+    });
     return () => window.removeEventListener("resize", debouncedUpdateColumns);
   }, [debouncedUpdateColumns]);
 
@@ -55,29 +66,24 @@ export function VirtualizedGrid<T>({
   emptyState,
   paddingBottom,
   className = "",
+  keyboardNav = false,
+  onItemActivate,
+  onItemActivateSecondary,
 }: VirtualizedGridProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  // Dynamic padding based on player visibility
-  const isPlayerVisible = useIsPlayerVisible();
-  const bottomPadding = paddingBottom
-    ? parseInt(paddingBottom, 10)
-    : isPlayerVisible
-      ? 156
-      : 24;
-
-  // Apply visual scroll mask
-  useScrollMask(24, parentRef);
+  const {
+    parentRef,
+    effectiveKeyboardNav,
+    bottomPadding,
+    getScrollElement,
+    estimateSize,
+    isPlayerVisible,
+  } = useVirtualizerSetup(itemHeight, paddingBottom, keyboardNav);
 
   // Determine number of columns
   const columns = useGridColumns();
 
   // Calculate rows
   const rowCount = Math.ceil(items.length / columns);
-
-  // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
-  const getScrollElement = useCallback(() => parentRef.current, []);
-  const estimateSize = useCallback(() => itemHeight, [itemHeight]);
 
   // Virtualizer
   const virtualizer = useVirtualizer({
@@ -91,49 +97,73 @@ export function VirtualizedGrid<T>({
     <div
       ref={parentRef}
       role="list"
-      className={`flex-1 overflow-y-auto px-2 scroll-mask-y custom-scrollbar ${className} ${
-        items.length === 0 ? "flex flex-col" : ""
-      }`}
+      className={cn(
+        "flex-1 overflow-y-auto px-2 scroll-mask-y",
+        className,
+        items.length === 0 && "flex flex-col",
+        items.length === 0 && isPlayerVisible && "pb-player-bar",
+      )}
     >
       {items.length === 0 ? (
-        emptyState || (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            No items found
-          </div>
-        )
+        emptyState || <EmptyPanel icon={ListMusic} title="No items found" />
       ) : (
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-            width: "100%",
-            position: "relative",
+        <RovingTabindexProvider
+          containerRef={parentRef}
+          itemCount={effectiveKeyboardNav ? items.length : 0}
+          enabled={!!effectiveKeyboardNav}
+          autoFocus={
+            effectiveKeyboardNav &&
+            useInteractionStore.getState().focusSource === "keyboard"
+          }
+          direction="grid"
+          columns={columns}
+          onActivate={onItemActivate}
+          onActivateSecondary={onItemActivateSecondary}
+          onIndexChange={(index: number) => {
+            if (effectiveKeyboardNav && index >= 0) {
+              const rowIndex = Math.floor(index / columns);
+              virtualizer.scrollToIndex(rowIndex, { align: "center" });
+            }
           }}
         >
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const startIndex = virtualRow.index * columns;
-            const rowItems = items.slice(startIndex, startIndex + columns);
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const startIndex = virtualRow.index * columns;
+              const rowItems = items.slice(startIndex, startIndex + columns);
 
-            return (
-              <div
-                role="listitem"
-                key={virtualRow.index}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                }}
-                className="grid gap-4"
-              >
-                {rowItems.map((item) => renderItem(item))}
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <div
+                  role="listitem"
+                  key={virtualRow.index}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                  }}
+                  className="grid pt-px"
+                >
+                  {rowItems.map((item, colIdx) => {
+                    const itemIndex = startIndex + colIdx;
+                    const rendered = renderItem(item, itemIndex);
+                    if (!isValidElement(rendered)) return rendered;
+                    return rendered;
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </RovingTabindexProvider>
       )}
     </div>
   );

@@ -57,4 +57,9 @@ let cargoToml = readFileSync("src-tauri/Cargo.toml", "utf-8");
 cargoToml = cargoToml.replace(/^version = ".*"/m, `version = "${newVersion}"`);
 writeFileSync("src-tauri/Cargo.toml", cargoToml);
 
-console.log("Done. All 3 files updated.");
+// Update Cargo.lock (package version, not workspace members)
+let cargoLock = readFileSync("src-tauri/Cargo.lock", "utf-8");
+cargoLock = cargoLock.replace(/^name = "vibemusic"\nversion = ".*"/m, `name = "vibemusic"\nversion = "${newVersion}"`);
+writeFileSync("src-tauri/Cargo.lock", cargoLock);
+
+console.log("Done. All 4 files updated.");

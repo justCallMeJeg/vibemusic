@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { useUpdateStore } from "@/stores/update-store";
 import { Download, X } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { logger } from "@/lib/logger";
-import ReactMarkdown from "react-markdown";
 import { StandardDialog } from "@/components/shared/standard-dialog";
+
+const ReactMarkdown = lazy(() => import("react-markdown"));
 
 export function UpdateDialog({
   open,
@@ -28,7 +30,14 @@ export function UpdateDialog({
   };
 
   const release = updateManifest ?? latestRelease;
-  const changelogBody = release?.body;
+
+  const title = hasUpdate
+    ? "New Version Available"
+    : "What's New";
+
+  const description = hasUpdate
+    ? `Version ${release?.version} is ready to download.`
+    : `Latest version: ${release?.version}`;
 
   const footer = hasUpdate ? (
     <div className="flex gap-2 justify-end w-full">
@@ -43,7 +52,8 @@ export function UpdateDialog({
       <Button
         onClick={handleDownload}
         disabled={isDownloading}
-        className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px]"
+        variant="default"
+        className="min-w-[140px]"
       >
         <Download className="mr-2 h-4 w-4" />
         Download Update
@@ -66,12 +76,8 @@ export function UpdateDialog({
     <StandardDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={hasUpdate ? "New Version Available" : "What's New"}
-      description={
-        hasUpdate
-          ? `Version ${release?.version} is ready to download.`
-          : `Latest version: ${release?.version}`
-      }
+      title={title}
+      description={description}
       footer={footer}
       contentClassName="max-w-2xl max-h-[80vh] flex flex-col"
       className="flex flex-col flex-1 min-h-0"
@@ -81,27 +87,27 @@ export function UpdateDialog({
           <p className="text-muted-foreground italic">
             No release information available.
           </p>
+        ) : !release?.body ? (
+          <p className="text-muted-foreground italic">
+            No changelog provided.
+          </p>
         ) : (
           <div
-            className="prose prose-invert prose-sm max-w-none break-words
-              prose-headings:text-indigo-400 prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
+            className="prose prose-invert prose-sm max-w-none wrap-break-word
+              prose-headings:text-primary prose-headings:font-semibold prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-headings:mb-3
               prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
               prose-p:text-muted-foreground prose-p:leading-relaxed
-              prose-a:text-indigo-400 prose-a:no-underline
+              prose-a:text-primary prose-a:no-underline
               prose-strong:text-foreground prose-strong:font-semibold
-              prose-code:text-indigo-300 prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
+              prose-code:text-primary prose-code:bg-secondary/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs
               prose-pre:bg-background/50 prose-pre:border prose-pre:border-border
               prose-ul:text-muted-foreground prose-ol:text-muted-foreground
-              prose-li:marker:text-indigo-400
-              prose-blockquote:border-l-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
+              prose-li:marker:text-primary
+              prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:py-1"
           >
-            {changelogBody ? (
-              <ReactMarkdown>{changelogBody}</ReactMarkdown>
-            ) : (
-              <p className="text-muted-foreground italic">
-                No changelog provided.
-              </p>
-            )}
+            <Suspense fallback={<p className="text-muted-foreground italic">Loading changelog...</p>}>
+              <ReactMarkdown>{release.body}</ReactMarkdown>
+            </Suspense>
           </div>
         )}
       </div>

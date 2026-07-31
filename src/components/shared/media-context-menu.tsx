@@ -1,11 +1,7 @@
-import { ReactNode } from "react";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { Play, Shuffle, ListPlus } from "lucide-react";
+import { type ReactNode } from "react";
+import { Play, Shuffle, ListPlus, Pencil, Trash2, Pin, PinOff } from "lucide-react";
+import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
+import type { ContextMenuItemDef } from "@/components/shared/context-menu-types";
 
 interface MediaContextMenuProps {
   children: ReactNode;
@@ -13,8 +9,10 @@ interface MediaContextMenuProps {
   onShuffle?: () => void;
   onPlayNext?: () => void;
   onAddToQueue?: () => void;
-  /** Custom menu items to append */
-  extraItems?: ReactNode;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
 }
 
 export function MediaContextMenu({
@@ -23,34 +21,86 @@ export function MediaContextMenu({
   onShuffle,
   onPlayNext,
   onAddToQueue,
-  extraItems,
+  onEdit,
+  onDelete,
+  onTogglePin,
+  isPinned,
 }: MediaContextMenuProps) {
+  const items: ContextMenuItemDef[] = [];
+
+  if (onPlay) {
+    items.push({
+      type: "action",
+      id: "play",
+      icon: <Play size={16} />,
+      label: "Play",
+      onSelect: onPlay,
+    });
+  }
+  if (onShuffle) {
+    items.push({
+      type: "action",
+      id: "shuffle",
+      icon: <Shuffle size={16} />,
+      label: "Shuffle",
+      onSelect: onShuffle,
+    });
+  }
+  if (onPlayNext) {
+    items.push({
+      type: "action",
+      id: "play-next",
+      icon: <ListPlus size={16} />,
+      label: "Play Next",
+      onSelect: onPlayNext,
+    });
+  }
+  if (onAddToQueue) {
+    items.push({
+      type: "action",
+      id: "add-to-queue",
+      icon: <ListPlus size={16} />,
+      label: "Add to Queue",
+      onSelect: onAddToQueue,
+    });
+  }
+  if (onTogglePin) {
+    if (items.length > 0) items.push({ type: "separator" });
+    items.push({
+      type: "action",
+      id: "toggle-pin",
+      icon: isPinned ? <PinOff size={16} /> : <Pin size={16} />,
+      label: isPinned ? "Unpin" : "Pin",
+      onSelect: onTogglePin,
+    });
+  }
+  if (onEdit) {
+    if (items.length > 0) items.push({ type: "separator" });
+    items.push({
+      type: "action",
+      id: "edit",
+      icon: <Pencil size={16} />,
+      label: "Edit",
+      onSelect: onEdit,
+    });
+  }
+  if (onDelete) {
+    if (items.length > 0 && items[items.length - 1]?.type !== "separator") {
+      items.push({ type: "separator" });
+    }
+    items.push({
+      type: "action",
+      id: "delete",
+      icon: <Trash2 size={16} />,
+      label: "Delete",
+      destructive: true,
+      onSelect: onDelete,
+    });
+  }
+
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent>
-        {onPlay && (
-          <ContextMenuItem onSelect={onPlay}>
-            <Play className="mr-2 h-4 w-4" /> Play
-          </ContextMenuItem>
-        )}
-        {onShuffle && (
-          <ContextMenuItem onSelect={onShuffle}>
-            <Shuffle className="mr-2 h-4 w-4" /> Shuffle
-          </ContextMenuItem>
-        )}
-        {onPlayNext && (
-          <ContextMenuItem onSelect={onPlayNext}>
-            <ListPlus className="mr-2 h-4 w-4" /> Play Next
-          </ContextMenuItem>
-        )}
-        {onAddToQueue && (
-          <ContextMenuItem onSelect={onAddToQueue}>
-            <ListPlus className="mr-2 h-4 w-4" /> Add to Queue
-          </ContextMenuItem>
-        )}
-        {extraItems}
-      </ContextMenuContent>
-    </ContextMenu>
+    <UnifiedContextMenu items={items}>
+      {children}
+    </UnifiedContextMenu>
   );
 }

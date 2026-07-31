@@ -2,7 +2,11 @@ import { create } from "zustand";
 import { load, Store } from "@tauri-apps/plugin-store";
 import { v4 as uuidv4 } from "uuid";
 import { invoke } from "@tauri-apps/api/core";
-import { useLibraryStore } from "./library-store";
+import { useContentStore } from "@features/library/store/content-store";
+import { usePlaylistStore } from "@features/playlists/store/playlist-store";
+import { useAudioStore } from "./audio-store";
+import { useNavigationStore } from "./navigation-store";
+import { useStatsStore } from "./stats-store";
 import { logger } from "@/lib/logger";
 
 const TAILWIND_CLASS_TO_HEX: Record<string, string> = {
@@ -15,6 +19,17 @@ const TAILWIND_CLASS_TO_HEX: Record<string, string> = {
   "bg-indigo-500": "#6366f1",
   "bg-cyan-500": "#06b6d4",
 };
+
+export const AVATAR_COLORS = [
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ec4899",
+  "#6366f1",
+  "#06b6d4",
+] as const;
 
 function migrateColor(color: string): string {
   return TAILWIND_CLASS_TO_HEX[color] || color;
@@ -29,6 +44,7 @@ export interface Profile {
 
 interface ProfileState {
   profiles: Profile[];
+  profilesMap: Map<string, Profile>;
   activeProfileId: string | null;
   isLoading: boolean;
 
@@ -63,6 +79,7 @@ const getStore = async () => {
  */
 export const useProfileStore = create<ProfileState>((set, get) => ({
   profiles: [],
+  profilesMap: new Map(),
   activeProfileId: null,
   isLoading: true,
 
@@ -93,6 +110,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         await invoke("set_active_profile", { profileId: defaultProfile.id });
         set({
           profiles: newProfiles,
+          profilesMap: new Map(newProfiles.map((p) => [p.id, p])),
           activeProfileId: defaultProfile.id,
           isLoading: false,
         });
@@ -101,11 +119,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         if (activeProfileId) {
           await invoke("set_active_profile", { profileId: activeProfileId });
         }
-        set({ profiles, activeProfileId, isLoading: false });
+        set({ profiles, profilesMap: new Map(profiles.map((p) => [p.id, p])), activeProfileId, isLoading: false });
 
         // Fetch library for the active profile on app startup
         if (activeProfileId) {
-          await useLibraryStore.getState().fetchLibrary();
+          await useContentStore.getState().fetchContent();
+          await usePlaylistStore.getState().fetchPlaylists();
         }
       }
     } catch (e) {
@@ -150,7 +169,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     const { profiles } = get();
     const newProfiles = [...profiles, newProfile];
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     const store = await getStore();
     await store.set("profiles", newProfiles);
@@ -193,21 +212,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       p.id === id ? { ...p, ...finalUpdates } : p
     );
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     const store = await getStore();
     await store.set("profiles", newProfiles);
     await store.save();
   },
-
   deleteProfile: async (id) => {
     const { profiles, activeProfileId } = get();
     const newProfiles = profiles.filter((p) => p.id !== id);
 
-    set({ profiles: newProfiles });
+    set({ profiles: newProfiles, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
 
     if (activeProfileId === id) {
-      set({ activeProfileId: null });
+      set({ activeProfileId: null, profilesMap: new Map(newProfiles.map((p) => [p.id, p])) });
     }
 
     const store = await getStore();
@@ -224,7 +242,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   selectProfile: async (id) => {
     // 0. Reset UI State to prevent ghost data
     // Use true to show skeletons immediately, preventing "Empty State" flash
-    useLibraryStore.getState().resetLibrary(true);
+    useContentStore.getState().resetContent(true);
+    useAudioStore.getState().resetAudio();
+    useNavigationStore.getState().resetNavigation();
+    useStatsStore.getState().resetStats();
 
     // 1. Notify backend FIRST
     await invoke("set_active_profile", { profileId: id });
@@ -236,7 +257,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
     // Reload library data for the new profile
     if (id) {
-      await useLibraryStore.getState().fetchLibrary();
+      await useContentStore.getState().fetchContent();
+      await usePlaylistStore.getState().fetchPlaylists();
     }
   },
 }));

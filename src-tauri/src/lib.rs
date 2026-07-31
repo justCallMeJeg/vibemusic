@@ -1,20 +1,26 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
+mod shared;
+
 mod artwork;
 mod audio;
 mod database;
-mod error;
-mod metadata;
+mod install_format;
 mod library;
+mod lyrics;
+mod metadata;
 mod playlists;
 mod profile;
 mod scanner;
+mod stats;
 mod updater;
 mod watcher;
-mod lyrics;
-mod stats;
-mod install_format;
 
+#[cfg(feature = "discord-rpc")]
+mod discord_rpc;
+
+#[cfg(feature = "scrobbler")]
+mod scrobbler;
 
 use audio::{AudioEngine, AudioState};
 use profile::{DbCache, ProfileState};
@@ -22,40 +28,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-
-
 /// Entry point for the Tauri application.
 /// Initializes plugins, state, and runs the application loop.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(
-                    "sqlite:library.db",
-                    vec![
-                        tauri_plugin_sql::Migration {
-                            version: 1,
-                            description: "initial_schema",
-                            sql: include_str!("../migrations/001_initial_schema.sql"),
-                            kind: tauri_plugin_sql::MigrationKind::Up,
-                        },
-                        tauri_plugin_sql::Migration {
-                            version: 2,
-                            description: "add_playlist_artwork",
-                            sql: include_str!("../migrations/002_add_playlist_artwork.sql"),
-                            kind: tauri_plugin_sql::MigrationKind::Up,
-                        },
-                        tauri_plugin_sql::Migration {
-                            version: 3,
-                            description: "add_track_title_index",
-                            sql: include_str!("../migrations/003_add_track_title_index.sql"),
-                            kind: tauri_plugin_sql::MigrationKind::Up,
-                        },
-                    ],
-                )
-                .build(),
-        )
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -92,6 +69,18 @@ pub fn run() {
             app.manage(watcher::init());
             app.manage(install_format::detect_install_format());
 
+            #[cfg(feature = "discord-rpc")]
+            {
+                let discord_handle = discord_rpc::DiscordRpcHandle::new();
+                app.manage(discord_handle);
+            }
+
+            #[cfg(feature = "scrobbler")]
+            {
+                let scrobbler_state = scrobbler::commands::ScrobblerState::new();
+                app.manage(scrobbler_state);
+            }
+
             // Initialize media events
             engine.init_media_events(app.handle().clone());
 
@@ -101,13 +90,23 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
             let _tray = TrayIconBuilder::with_id("tray")
-                .icon(app.default_window_icon().expect("window icon must be configured").clone())
+                .icon(
+                    app.default_window_icon()
+                        .expect("window icon must be configured")
+                        .clone(),
+                )
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
                         if let Some(state) = app.try_state::<AudioState>() {
                             state.0.stop();
+                        }
+                        #[cfg(feature = "discord-rpc")]
+                        if let Some(discord_state) =
+                            app.try_state::<discord_rpc::DiscordRpcHandle>()
+                        {
+                            discord_state.shutdown();
                         }
                         app.exit(0);
                     }
@@ -119,18 +118,18 @@ pub fn run() {
                     }
                     _ => {}
                 })
-                .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
                         button: tauri::tray::MouseButton::Left,
                         ..
-                    } => {
+                    } = event
+                    {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
                     }
-                    _ => {}
                 })
                 .build(app)?;
 
@@ -156,16 +155,17 @@ pub fn run() {
             library::get_artist_tracks,
             library::search,
             // Audio commands
-            audio::audio_play,
-            audio::audio_pause,
-            audio::audio_resume,
-            audio::audio_stop,
-            audio::audio_seek,
-            audio::audio_set_volume,
-            audio::audio_get_state,
-            audio::audio_get_devices,
-            audio::audio_set_device,
-            audio::audio_set_crossfade,
+            audio::commands::audio_play,
+            audio::commands::audio_pause,
+            audio::commands::audio_resume,
+            audio::commands::audio_stop,
+            audio::commands::audio_seek,
+            audio::commands::audio_set_volume,
+            audio::commands::audio_get_state,
+            audio::commands::audio_get_devices,
+            audio::commands::audio_set_device,
+            audio::commands::audio_set_crossfade,
+            audio::commands::audio_set_fade_in_out,
             // Playlist commands
             playlists::create_playlist,
             playlists::delete_playlist,
@@ -175,6 +175,9 @@ pub fn run() {
             playlists::add_track_to_playlist,
             playlists::remove_track_from_playlist,
             playlists::reorder_playlist,
+            playlists::toggle_like_track,
+            playlists::get_liked_track_ids,
+            playlists::toggle_pin_playlist,
             // Profile
             profile::set_active_profile,
             profile::delete_profile_data,
@@ -199,6 +202,25 @@ pub fn run() {
             install_format::get_install_format,
             // App
             quit_app,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_enable,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_disable,
+            #[cfg(feature = "discord-rpc")]
+            discord_rpc_get_status,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_start_auth,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_connect,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_disconnect,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::lastfm_get_status,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::update_now_playing,
+            #[cfg(feature = "scrobbler")]
+            scrobbler::commands::scrobble_track,
+            get_available_features,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -207,5 +229,35 @@ pub fn run() {
 #[tauri::command]
 fn quit_app(state: tauri::State<AudioState>, app: tauri::AppHandle) {
     state.0.stop();
+    #[cfg(feature = "discord-rpc")]
+    if let Some(discord_state) = app.try_state::<discord_rpc::DiscordRpcHandle>() {
+        discord_state.shutdown();
+    }
     app.exit(0);
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_enable(state: tauri::State<discord_rpc::DiscordRpcHandle>) {
+    state.init();
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_disable(state: tauri::State<discord_rpc::DiscordRpcHandle>) {
+    state.shutdown();
+}
+
+#[cfg(feature = "discord-rpc")]
+#[tauri::command]
+fn discord_rpc_get_status(state: tauri::State<discord_rpc::DiscordRpcHandle>) -> bool {
+    state.is_active()
+}
+
+#[tauri::command]
+fn get_available_features() -> serde_json::Value {
+    serde_json::json!({
+        "scrobbler": cfg!(feature = "scrobbler"),
+        "discord_rpc": cfg!(feature = "discord-rpc"),
+    })
 }

@@ -15,14 +15,11 @@ body = """
     ### {{ group | striptags | trim | upper_first }}
     {% for commit in commits %}
         - {% if commit.scope %}**{{ commit.scope }}**: {% endif %}\
-            {{ commit.message | upper_first }}\
-            {% if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %}\
+            {{ commit.message | upper_first }}{% if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %}
     {% endfor %}
 {% endfor %}
 """
 footer = """
----
-*Generated with [git-cliff](https://git-cliff.org)*
 """
 trim = true
 
@@ -30,25 +27,31 @@ trim = true
 conventional_commits = true
 filter_unconventional = true
 split_commits = false
+commit_preprocessors = []
+protect_breaking_commits = false
 commit_parsers = [
-    { message = "^feat", group = "✨ Features" },
-    { message = "^fix", group = "🐛 Bug Fixes" },
-    { message = "^perf", group = "⚡ Performance" },
-    { message = "^refactor", group = "♻️ Refactoring" },
-    { message = "^docs", group = "📚 Documentation" },
-    { message = "^style", group = "🎨 Styling" },
-    { message = "^test", group = "🧪 Testing" },
+    { message = "^feat", group = "<!-- 0 -->✨ Features" },
+    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^perf", group = "<!-- 2 -->⚡ Performance" },
+    { message = "^refactor", group = "<!-- 3 -->♻️ Refactoring" },
+    { message = "^style", group = "<!-- 4 -->🎨 Styling" },
+    { message = "^docs", group = "<!-- 5 -->📚 Documentation" },
+    { message = "^test", group = "<!-- 6 -->🧪 Testing" },
+    { message = "^chore: bump version", skip = true },
     { message = "^chore\\(release\\)", skip = true },
     { message = "^chore\\(deps\\)", skip = true },
     { message = "^chore\\(pr\\)", skip = true },
     { message = "^chore\\(pull\\)", skip = true },
-    { message = "^chore: bump version", skip = true },
-    { message = "^chore", group = "🔧 Miscellaneous" },
-    { body = ".*security", group = "🔒 Security" },
+    { message = "^chore|^ci", group = "<!-- 7 -->🔧 Miscellaneous" },
+    { body = ".*security", group = "<!-- 8 -->🔒 Security" },
 ]
-protect_breaking_commits = false
 filter_commits = false
+fail_on_unmatched_commit = false
+link_parsers = []
+use_branch_tags = false
+topo_order = false
+topo_order_commits = false
+sort_commits = "oldest"
 tag_pattern = "v[0-9].*"
 skip_tags = "nightly"
-topo_order = false
-sort_commits = "oldest"
+recurse_submodules = false

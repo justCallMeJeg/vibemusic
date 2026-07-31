@@ -39,6 +39,7 @@ describe("getTracks", () => {
         artist_id: 1,
         artist_names: ["Artist"],
         artist_ids: [1],
+        artist_roles: ["main"],
         album: "Album",
         album_id: 1,
         duration_ms: 200000,
@@ -133,6 +134,10 @@ describe("createPlaylist", () => {
       artwork_path: null,
       track_count: 0,
       created_at: "2024-01-01",
+      is_liked: false,
+      is_system: false,
+      pinned: false,
+      pinned_at: null,
     };
     mockInvoke.mockResolvedValue(playlist);
     const result = await createPlaylist("My Playlist", "A test playlist");

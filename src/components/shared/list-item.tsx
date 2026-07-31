@@ -1,23 +1,20 @@
-import { memo } from "react";
+import { memo, useRef, type ReactNode } from "react";
+import { useDragSelect } from "@/hooks/use-drag-select";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { ScrollingText } from "@/components/shared/scrolling-text";
-import { Play, Pause } from "lucide-react";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuSeparator,
-} from "@/components/ui/context-menu";
-import { ListPlus, Shuffle, Pencil, Trash2 } from "lucide-react";
+import { Play, Pause, Heart } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UnifiedContextMenu } from "@/components/shared/unified-context-menu";
+import { useTrackContextMenu } from "@/hooks/use-track-context-menu";
+import type { TrackMenuActions, ContextMenuItemDef } from "@/components/shared/context-menu-types";
+import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
+import { useSelection } from "@/hooks/use-selection";
+import { useSelectionStore } from "@/stores/selection-store";
 
 const rowVariants = cva(
-  "group flex items-center gap-3 rounded-md p-2 transition-colors cursor-default select-none relative debug-list-item",
+  "mx-0.5 group flex items-center gap-3 rounded-md p-2 cursor-default select-none relative debug-list-item",
   {
     variants: {
       variant: {
@@ -38,32 +35,160 @@ const rowVariants = cva(
   },
 );
 
+const PlayPauseIcon = memo(function PlayPauseIcon({
+  isPlaying = false,
+  className = "",
+}: {
+  isPlaying?: boolean;
+  className?: string;
+}) {
+  const Icon = isPlaying ? Pause : Play;
+  return <Icon size={16} fill="currentColor" className={className} />;
+});
+
+interface IndexedColumnProps {
+  index?: number;
+  isActive?: boolean;
+  isPlaying?: boolean;
+  onPlay?: (e: React.MouseEvent) => void;
+  /** When "checkbox", renders a Checkbox for batch selection mode */
+  mode?: "index" | "checkbox";
+  isChecked?: boolean;
+  onToggleCheck?: () => void;
+}
+
+const IndexedColumn = memo(function IndexedColumn({
+  index,
+  isActive = false,
+  isPlaying = false,
+  mode = "index",
+  isChecked = false,
+  onToggleCheck,
+}: IndexedColumnProps) {
+  if (mode === "checkbox") {
+    return (
+      <div
+        className="w-8 flex justify-center shrink-0"
+        data-checkbox-column="true"
+      >
+        <Checkbox checked={isChecked} onCheckedChange={onToggleCheck} />
+      </div>
+    );
+  }
+  return (
+    <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
+      {!isActive ? (
+        <>
+          <span className="group-hover:hidden">{index ?? null}</span>
+          <span
+            aria-label="Play"
+            className="hidden group-hover:block text-foreground"
+          >
+            <Play size={16} fill="currentColor" />
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="group-hover:hidden text-primary">
+            <Pause size={16} fill="currentColor" />
+          </span>
+          <span
+            aria-label={isActive && isPlaying ? "Pause" : "Play"}
+            className="hidden group-hover:block text-foreground"
+          >
+            <PlayPauseIcon isPlaying={isActive && isPlaying} />
+          </span>
+        </>
+      )}
+    </div>
+  );
+});
+
+interface ArtworkWithOverlayProps {
+  src?: string | null;
+  alt?: string;
+  isActive?: boolean;
+  isPlaying?: boolean;
+  onPlay?: (e: React.MouseEvent) => void;
+  circular?: boolean;
+  placeholderType?: "artist" | "playlist" | "track";
+}
+
+const ArtworkWithOverlay = memo(function ArtworkWithOverlay({
+  src,
+  alt,
+  isActive = false,
+  isPlaying = false,
+  onPlay,
+  circular = false,
+  placeholderType = "track",
+}: ArtworkWithOverlayProps) {
+  const showOverlay = onPlay || isActive;
+  return (
+    <div className="relative shrink-0">
+      <ArtworkImage
+        src={src}
+        alt={alt || "Artwork"}
+        placeholderType={placeholderType}
+        className={cn(
+          "w-10 h-10 object-cover bg-secondary",
+          circular ? "rounded-full" : "rounded shadow-sm",
+        )}
+      />
+      {showOverlay && (
+        <div
+          className={cn(
+            "absolute inset-0 bg-black/40 flex items-center justify-center rounded transition-opacity",
+            circular && "rounded-full",
+            isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          )}
+        >
+          <PlayPauseIcon
+            isPlaying={isPlaying}
+            className="fill-white text-white"
+          />
+        </div>
+      )}
+    </div>
+  );
+});
+
 interface ListItemProps
   extends
-    Omit<React.HTMLAttributes<HTMLDivElement>, "title" | "onClick">,
+    Omit<
+      React.HTMLAttributes<HTMLDivElement>,
+      "title" | "onClick" | "onPointerDown" | "prefix" | "suffix" | "itemId"
+    >,
     VariantProps<typeof rowVariants> {
   title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   artworkSrc?: string;
   index?: number;
-  leading?: React.ReactNode;
   trailing?: React.ReactNode;
   showArtwork?: boolean;
   isPlaying?: boolean;
   artworkCircular?: boolean;
-  artworkFallback?: string;
-  onClick?: () => void;
-  menuActions?: {
-    onPlay?: () => void;
-    onPause?: () => void;
-    onShuffle?: () => void;
-    onPlayNext?: () => void;
-    onAddToQueue?: () => void;
-    onAddToPlaylist?: (playlistId: number) => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-    playlists?: { id: number; name: string }[];
-  };
+
+  placeholderType?: "artist" | "track";
+  onClick?: (e: React.MouseEvent) => void;
+  menuActions?: TrackMenuActions;
+  onToggleLike?: () => void;
+  isLiked?: boolean;
+
+  /**
+   * Index within the parent list for arrow-key sibling navigation.
+   */
+  dataItemIndex?: number;
+
+  selectable?: boolean;
+  itemId?: number;
+  /** When true, hides the internal IndexedColumn checkbox even during checkbox mode. Use when parent renders its own checkbox externally. */
+  hideCheckboxColumn?: boolean;
+  /** When provided, overrides the internal checkboxMode subscription. Use to avoid mass re-renders. */
+  checkboxMode?: boolean;
+  isSelected?: boolean;
+  prefix?: ReactNode;
+  suffix?: ReactNode;
 }
 
 export const ListItem = memo(function ListItem({
@@ -71,7 +196,6 @@ export const ListItem = memo(function ListItem({
   subtitle,
   artworkSrc,
   index,
-  leading,
   trailing,
   variant,
   active,
@@ -79,71 +203,130 @@ export const ListItem = memo(function ListItem({
   showArtwork = true,
   isPlaying = false,
   artworkCircular,
-  artworkFallback,
+
+  placeholderType,
   onClick,
   menuActions,
+  onToggleLike,
+  isLiked,
+  dataItemIndex,
+  selectable,
+  itemId,
+  checkboxMode: checkboxModeProp,
+  hideCheckboxColumn,
+  isSelected: isSelectedProp,
+  prefix,
+  suffix,
   ...props
 }: ListItemProps) {
-  const showContextMenu =
-    menuActions &&
-    (menuActions.onPlay ||
-      menuActions.onPause ||
-      menuActions.onShuffle ||
-      menuActions.onPlayNext ||
-      menuActions.onAddToQueue ||
-      menuActions.onAddToPlaylist ||
-      menuActions.onEdit ||
-      menuActions.onDelete);
+  const roving = useRovingTabindexContext();
+  const rovingTabIndex =
+    dataItemIndex !== undefined
+      ? roving?.getTabIndex(dataItemIndex)
+      : undefined;
+  const isRovingActive =
+    dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const resolvedTabIndex =
+    rovingTabIndex !== undefined
+      ? rovingTabIndex
+      : dataItemIndex !== undefined && !!roving
+        ? -1
+        : undefined;
+
+  const internal = useSelection({
+    itemId: itemId ?? dataItemIndex ?? 0,
+    index: dataItemIndex ?? 0,
+  });
+
+  const { isSelected: selIsSelected, onClick: selectionOnClick } = internal;
+
+  const isSelected = isSelectedProp ?? selIsSelected;
+  const subscribedCheckboxMode = useSelectionStore(
+    (s) => s.mode === "checkbox",
+  );
+  const checkboxMode = checkboxModeProp ?? subscribedCheckboxMode;
+  const resolvedToggleLike = menuActions?.onToggleLike ?? onToggleLike;
+  const resolvedIsLiked = menuActions?.isLiked ?? isLiked;
+
+  const pointerDownHandled = useRef(false);
+  const { handlePointerDown: dragPointerDown, handlePointerMove: dragPointerMove, handlePointerUp: dragPointerUp } = useDragSelect();
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === "l" || e.key === "L") && resolvedToggleLike) {
+      e.stopPropagation();
+      resolvedToggleLike();
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-checkbox-column="true"]')) return;
+    if (pointerDownHandled.current) {
+      pointerDownHandled.current = false;
+      return;
+    }
+    if (selectable && (checkboxMode || e.ctrlKey || e.shiftKey || e.metaKey)) {
+      selectionOnClick(e);
+      return;
+    }
+    onClick?.(e);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-checkbox-column="true"]')) return;
+    if (target.closest("button, a, input, [role='button']")) return;
+    if (selectable && checkboxMode) {
+      dragPointerDown(e, dataItemIndex ?? index ?? 0);
+      pointerDownHandled.current = true;
+      return;
+    }
+    if (selectable && (e.ctrlKey || e.shiftKey || e.metaKey)) {
+      selectionOnClick(e as unknown as React.MouseEvent);
+      pointerDownHandled.current = true;
+    }
+  };
 
   const row = (
     <div
+      {...props}
+      data-active={active}
+      data-item-index={dataItemIndex}
+      onPointerDown={handlePointerDown}
+      onPointerMove={dragPointerMove}
+      onPointerUp={dragPointerUp}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? "button" : undefined}
       className={cn(
         rowVariants({ variant, active }),
+        !checkboxMode && "transition-colors",
+        isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        isSelected && "bg-accent/20",
+        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
         onClick && "cursor-pointer",
         className,
       )}
-      data-active={active}
-      onClick={onClick}
-      {...props}
+      {...(resolvedTabIndex !== undefined
+        ? { tabIndex: resolvedTabIndex }
+        : {})}
     >
-      {variant === "indexed" && (
-        <div className="w-8 flex justify-center shrink-0 text-muted-foreground text-sm font-variant-numeric tabular-nums">
-          {!active ? (
-            <>
-              <span className="group-hover:hidden">
-                {leading ?? index ?? null}
-              </span>
-              <span
-                aria-label="Play"
-                className="hidden group-hover:block text-foreground"
-              >
-                <Play size={16} fill="currentColor" />
-              </span>
-            </>
-          ) : (
-            <>
-              <span
-                className={cn(
-                  "group-hover:hidden",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Pause size={16} fill="currentColor" />
-              </span>
-              <span
-                aria-label={active && isPlaying ? "Pause" : "Play"}
-                className="hidden group-hover:block text-foreground"
-              >
-                {active && isPlaying ? (
-                  <Pause size={16} fill="currentColor" />
-                ) : (
-                  <Play size={16} fill="currentColor" />
-                )}
-              </span>
-            </>
-          )}
-        </div>
+      {(variant === "indexed" || (checkboxMode && !hideCheckboxColumn)) && (
+        <IndexedColumn
+          index={index}
+          isActive={!!active}
+          isPlaying={isPlaying}
+          mode={checkboxMode ? "checkbox" : "index"}
+          isChecked={isSelected}
+          onToggleCheck={() =>
+            useSelectionStore
+              .getState()
+              .toggle(itemId ?? dataItemIndex ?? 0, dataItemIndex ?? 0)
+          }
+        />
       )}
+
+      {checkboxMode ? null : prefix}
 
       {showArtwork && (
         <div
@@ -152,29 +335,15 @@ export const ListItem = memo(function ListItem({
             variant !== "indexed" && "w-10 h-10",
           )}
         >
-          <ArtworkImage
+          <ArtworkWithOverlay
             src={artworkSrc}
             alt={typeof title === "string" ? title : "Artwork"}
-            fallback={artworkFallback}
-            className={cn(
-              "w-10 h-10 object-cover bg-secondary",
-              artworkCircular ? "rounded-full" : "rounded shadow-sm",
-            )}
+            isActive={!!active}
+            isPlaying={isPlaying}
+            onPlay={handleClick}
+            circular={artworkCircular}
+            placeholderType={placeholderType || "track"}
           />
-          {variant !== "indexed" && (onClick || active) && (
-            <div
-              className={cn(
-                "absolute inset-0 bg-black/40 flex items-center justify-center rounded transition-opacity",
-                active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-              )}
-            >
-              {isPlaying ? (
-                <Pause size={16} className="fill-white text-white" />
-              ) : (
-                <Play size={16} className="fill-white text-white" />
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -199,81 +368,69 @@ export const ListItem = memo(function ListItem({
         )}
       </div>
 
-      {trailing && (
-        <div className="flex items-center gap-2 shrink-0 text-muted-foreground text-sm">
-          {trailing}
-        </div>
-      )}
+      {checkboxMode ? null : suffix}
+
+      <div className="flex items-center gap-2 shrink-0 text-muted-foreground text-sm">
+        {resolvedToggleLike && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); resolvedToggleLike(); }}
+            className={cn(
+              "flex items-center justify-center size-7 rounded-full border border-border/50 hover:bg-accent/20 transition-all",
+              resolvedIsLiked || isRovingActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+              "focus-visible:outline-2 focus-visible:outline-ring",
+            )}
+            aria-label={resolvedIsLiked ? "Unlike" : "Like"}
+          >
+            <Heart
+              size={14}
+              className={cn(
+                "transition-colors",
+                resolvedIsLiked ? "fill-red-500 text-red-500" : "text-muted-foreground",
+              )}
+            />
+          </button>
+        )}
+        {trailing}
+      </div>
     </div>
   );
 
-  if (showContextMenu) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-        <ContextMenuContent>
-          {(menuActions?.onPlay || menuActions?.onPause) && (
-            <ContextMenuItem
-              onSelect={menuActions.onPlay || menuActions.onPause}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              {menuActions.onPause ? "Pause" : "Play"}
-            </ContextMenuItem>
-          )}
-          {menuActions?.onShuffle && (
-            <ContextMenuItem onSelect={menuActions.onShuffle}>
-              <Shuffle className="mr-2 h-4 w-4" /> Shuffle
-            </ContextMenuItem>
-          )}
-          {menuActions?.onPlayNext && (
-            <ContextMenuItem onSelect={menuActions.onPlayNext}>
-              <ListPlus className="mr-2 h-4 w-4" /> Play Next
-            </ContextMenuItem>
-          )}
-          {menuActions?.onAddToQueue && (
-            <ContextMenuItem onSelect={menuActions.onAddToQueue}>
-              <ListPlus className="mr-2 h-4 w-4" /> Add to Queue
-            </ContextMenuItem>
-          )}
-          {menuActions?.onAddToPlaylist && menuActions.playlists && (
-            <ContextMenuSub>
-              <ContextMenuSubTrigger>Add to Playlist</ContextMenuSubTrigger>
-              <ContextMenuSubContent className="w-48">
-                {menuActions.playlists.map((pl) => (
-                  <ContextMenuItem
-                    key={pl.id}
-                    onSelect={() => menuActions.onAddToPlaylist!(pl.id)}
-                  >
-                    {pl.name}
-                  </ContextMenuItem>
-                ))}
-                {menuActions.playlists.length === 0 && (
-                  <div className="px-2 py-1 text-xs text-muted-foreground">
-                    No playlists
-                  </div>
-                )}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-          )}
-          {(menuActions?.onEdit || menuActions?.onDelete) && (
-            <ContextMenuSeparator />
-          )}
-          {menuActions?.onEdit && (
-            <ContextMenuItem onSelect={menuActions.onEdit}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </ContextMenuItem>
-          )}
-          {menuActions?.onDelete && (
-            <ContextMenuItem
-              className="text-destructive focus:text-destructive focus:bg-destructive/10"
-              onSelect={menuActions.onDelete}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </ContextMenuItem>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
+  const selectedCount = useSelectionStore((s) => s.selectedIds.length);
+
+  const menuItems = useTrackContextMenu({
+    onPlay: menuActions?.onPlay,
+    onPause: menuActions?.onPause,
+    onShuffle: menuActions?.onShuffle,
+    onPlayNext: menuActions?.onPlayNext,
+    onAddToQueue: menuActions?.onAddToQueue,
+    onAddToPlaylist: menuActions?.onAddToPlaylist,
+    onEdit: menuActions?.onEdit,
+    onDelete: menuActions?.onDelete,
+    onToggleLike: menuActions?.onToggleLike ?? onToggleLike,
+    isLiked: menuActions?.isLiked ?? isLiked,
+    playlists: menuActions?.playlists,
+  });
+
+  const batchMenuItems: ContextMenuItemDef[] = selectedCount > 1 && isSelected
+    ? [
+        { type: "action", id: "batch-count", label: `${selectedCount} selected`, onSelect: () => {}, disabled: true },
+        { type: "separator" },
+        { type: "action", id: "batch-add-queue", label: "Add to Queue", onSelect: () => menuActions?.onAddToQueue?.() },
+        { type: "action", id: "batch-play-next", label: "Play Next", onSelect: () => menuActions?.onPlayNext?.() },
+        { type: "action", id: "batch-add-playlist", label: "Add to Playlist", onSelect: () => menuActions?.onAddToPlaylist?.(0) },
+        { type: "separator" },
+        { type: "action", id: "batch-select-all", label: "Select All", onSelect: () => useSelectionStore.getState().selectAll() },
+        { type: "action", id: "batch-clear", label: "Clear Selection", onSelect: () => useSelectionStore.getState().clearSelection() },
+      ]
+    : [];
+
+  if (batchMenuItems.length > 0) {
+    return <UnifiedContextMenu items={batchMenuItems}>{row}</UnifiedContextMenu>;
+  }
+
+  if (menuItems.length > 0) {
+    return <UnifiedContextMenu items={menuItems}>{row}</UnifiedContextMenu>;
   }
 
   return row;

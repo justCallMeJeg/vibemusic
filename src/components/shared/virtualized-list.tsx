@@ -1,18 +1,31 @@
-import { useRef, useCallback } from "react";
+import { useCallback, isValidElement } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useScrollMask } from "@/hooks/use-scroll-mask";
-import { useIsPlayerVisible } from "@/stores/audio-store";
+import { useVirtualizerSetup } from "@/hooks/use-virtualizer-setup";
+import { EmptyPanel } from "@/components/shared/empty-panel";
+import { RovingTabindexProvider } from "@/hooks/use-roving-tabindex";
+import { useInteractionStore } from "@/stores/interaction-store";
+import { ListMusic } from "lucide-react";
 
 interface VirtualizedListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
-  itemHeight?: number; // Approximate height of an item
+  itemHeight?: number;
   emptyState?: React.ReactNode;
-  paddingBottom?: string; // Override dynamic padding if provided
+  paddingBottom?: string;
   className?: string;
   header?: React.ReactNode;
   headerHeight?: number;
+  /** Toggle header visibility without removing the header element */
+  showHeader?: boolean;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+  /** Enable keyboard navigation (arrow keys, Enter) */
+  keyboardNav?: boolean;
+  /** Called when Enter is pressed on focused item */
+  onItemActivate?: (index: number) => void;
+  /** Called when Shift+Enter is pressed on focused item */
+  onItemActivateSecondary?: (index: number) => void;
+  /** Override default auto-focus behavior */
+  autoFocus?: boolean;
 }
 
 export function VirtualizedList<T>({
@@ -24,30 +37,29 @@ export function VirtualizedList<T>({
   className = "",
   header,
   headerHeight = 300,
+  showHeader = true,
   onScroll,
+  keyboardNav = false,
+  onItemActivate,
+  onItemActivateSecondary,
+  autoFocus,
 }: VirtualizedListProps<T>) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  // Dynamic padding based on player visibility
-  const isPlayerVisible = useIsPlayerVisible();
-  const bottomPadding = paddingBottom
-    ? parseInt(paddingBottom, 10)
-    : isPlayerVisible
-      ? 156
-      : 24;
-
-  // Apply visual scroll mask
-  useScrollMask(24, parentRef);
+  const {
+    parentRef,
+    effectiveKeyboardNav,
+    bottomPadding,
+    getScrollElement,
+    isPlayerVisible,
+  } = useVirtualizerSetup(itemHeight, paddingBottom, keyboardNav);
 
   // Virtualizer
-  const hasHeader = !!header;
+  const hasHeader = showHeader && !!header;
   const totalItems = items.length + (hasHeader ? 1 : 0);
 
   // Custom header height or default to 300
   const headerHeightPx = headerHeight;
 
   // Memoize callbacks to prevent virtualizer from recalculating unnecessarily
-  const getScrollElement = useCallback(() => parentRef.current, []);
   const estimateSize = useCallback(
     (index: number) => {
       if (hasHeader && index === 0) return headerHeightPx;
@@ -68,50 +80,79 @@ export function VirtualizedList<T>({
       ref={parentRef}
       onScroll={onScroll}
       role="list"
-      className={`flex-1 overflow-y-auto ${className} scroll-mask-y custom-scrollbar`}
+      className={`flex-1 overflow-y-auto ${className} scroll-mask-y ${
+        items.length === 0 && !hasHeader && isPlayerVisible
+          ? "pb-player-bar"
+          : ""
+      }`}
     >
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize() + bottomPadding}px`,
-          width: "100%",
-          position: "relative",
+      <RovingTabindexProvider
+        containerRef={parentRef}
+        itemCount={effectiveKeyboardNav ? items.length : 0}
+        enabled={!!effectiveKeyboardNav}
+        autoFocus={
+          autoFocus ??
+          (effectiveKeyboardNav &&
+            useInteractionStore.getState().focusSource === "keyboard")
+        }
+        direction="vertical"
+        onActivate={onItemActivate}
+        onActivateSecondary={onItemActivateSecondary}
+        onIndexChange={(index: number) => {
+          if (effectiveKeyboardNav && index >= 0) {
+            const adjustedIndex = hasHeader ? index + 1 : index;
+            virtualizer.scrollToIndex(adjustedIndex, { align: "center" });
+          }
         }}
       >
-        {items.length === 0 && !hasHeader
-          ? emptyState || (
-              <div className="flex items-center justify-center flex-1 text-muted-foreground p-8">
-                No items found
-              </div>
-            )
-          : virtualizer.getVirtualItems().map((virtualRow) => {
-              const isHeaderRow = hasHeader && virtualRow.index === 0;
-              const itemIndex = hasHeader
-                ? virtualRow.index - 1
-                : virtualRow.index;
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize() + bottomPadding}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {items.length === 0 && !hasHeader
+            ? emptyState || (
+                <EmptyPanel icon={ListMusic} title="No items found" />
+              )
+            : virtualizer.getVirtualItems().map((virtualRow) => {
+                const isHeaderRow = hasHeader && virtualRow.index === 0;
+                const itemIndex = hasHeader
+                  ? virtualRow.index - 1
+                  : virtualRow.index;
 
-              return (
-                <div
-                  role="listitem"
-                  key={virtualRow.index}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {isHeaderRow
-                    ? header
-                    : items[itemIndex] &&
-                      renderItem(items[itemIndex], itemIndex)}
-                  {/* Check items[itemIndex] existence to be safe, though virtualization logic should align */}
-                </div>
-              );
-            })}
-      </div>
+                return (
+                  <div
+                    role="listitem"
+                    key={virtualRow.index}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    className="pt-px"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {isHeaderRow
+                      ? header
+                      : items[itemIndex] &&
+                        (() => {
+                          const rendered = renderItem(
+                            items[itemIndex],
+                            itemIndex,
+                          );
+                          if (!isValidElement(rendered)) return rendered;
+                          return rendered;
+                        })()}
+                  </div>
+                );
+              })}
+        </div>
+      </RovingTabindexProvider>
     </div>
   );
 }

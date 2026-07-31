@@ -1,9 +1,9 @@
+use crate::install_format::InstallFormat;
 use log::error;
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Runtime, State};
 use tauri_plugin_updater::{Update, UpdaterExt};
-use serde::{Deserialize, Serialize};
-use crate::install_format::InstallFormat;
 
 // --- Types ---
 
@@ -45,8 +45,9 @@ fn get_endpoint_for_channel(channel: &str) -> Option<url::Url> {
     if channel == "dev" {
         // Compile-time override via VIBEMUSIC_NIGHTLY_ENDPOINT env var, set in CI.
         // Falls back to the default if not set (e.g., local dev builds).
-        let url = option_env!("VIBEMUSIC_NIGHTLY_ENDPOINT")
-            .unwrap_or("https://github.com/justCallMeJeg/vibemusic/releases/download/nightly/latest.json");
+        let url = option_env!("VIBEMUSIC_NIGHTLY_ENDPOINT").unwrap_or(
+            "https://github.com/justCallMeJeg/vibemusic/releases/download/nightly/latest.json",
+        );
         url::Url::parse(url).ok()
     } else {
         None // Use default endpoint from config
@@ -70,10 +71,11 @@ pub async fn check_update<R: Runtime>(
     }
 
     let updater = builder.build().map_err(|e| e.to_string())?;
-    
+
     match updater.check().await {
         Ok(Some(update)) => {
-            let install_fmt: InstallFormat = serde_json::from_str(&format!("\"{}\"", install_format)).unwrap_or_default();
+            let install_fmt: InstallFormat =
+                serde_json::from_str(&format!("\"{}\"", install_format)).unwrap_or_default();
             let requires_manual_download = !install_fmt.supports_auto_update();
 
             let metadata = UpdateMetadata {
@@ -83,7 +85,7 @@ pub async fn check_update<R: Runtime>(
                 date: update.date.map(|d| d.to_string()),
                 requires_manual_download,
             };
-            
+
             // Store the update for later download
             match pending_update.update.lock() {
                 Ok(mut g) => *g = Some(update),
@@ -122,8 +124,9 @@ pub async fn get_latest_release<R: Runtime>(
     channel: String,
 ) -> Result<Option<UpdateMetadata>, String> {
     let url = if channel == "dev" {
-        option_env!("VIBEMUSIC_NIGHTLY_ENDPOINT")
-            .unwrap_or("https://github.com/justCallMeJeg/vibemusic/releases/download/nightly/latest.json")
+        option_env!("VIBEMUSIC_NIGHTLY_ENDPOINT").unwrap_or(
+            "https://github.com/justCallMeJeg/vibemusic/releases/download/nightly/latest.json",
+        )
     } else {
         "https://github.com/justCallMeJeg/vibemusic/releases/latest/download/latest.json"
     };
@@ -167,32 +170,40 @@ pub async fn download_update<R: Runtime>(
     pending_update: State<'_, PendingUpdate>,
 ) -> Result<(), String> {
     let update = {
-        let guard = pending_update.update.lock()
+        let guard = pending_update
+            .update
+            .lock()
             .map_err(|e| format!("Updater update lock poisoned: {}", e))?;
         guard.clone()
     };
-    
+
     let Some(update) = update else {
         return Err("No pending update to download".to_string());
     };
 
     let app_handle = app.clone();
     let mut downloaded: u64 = 0;
-    
+
     // Download and get bytes
-    let bytes = update.download(
-        move |chunk_length, content_length| {
-            downloaded += chunk_length as u64;
-            let _ = app_handle.emit("update-download-progress", DownloadProgress {
-                downloaded,
-                total: content_length,
-            });
-        },
-        || {
-            // Download finished callback
-        }
-    ).await.map_err(|e| e.to_string())?;
-    
+    let bytes = update
+        .download(
+            move |chunk_length, content_length| {
+                downloaded += chunk_length as u64;
+                let _ = app_handle.emit(
+                    "update-download-progress",
+                    DownloadProgress {
+                        downloaded,
+                        total: content_length,
+                    },
+                );
+            },
+            || {
+                // Download finished callback
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
     // Store the bytes for later installation
     match pending_update.bytes.lock() {
         Ok(mut g) => *g = Some(bytes),
@@ -201,36 +212,38 @@ pub async fn download_update<R: Runtime>(
             return Err("Internal error: bytes lock poisoned".to_string());
         }
     }
-    
+
     // Emit download complete event
     let _ = app.emit("update-download-complete", ());
-    
+
     Ok(())
 }
 
 /// Install the previously downloaded update
 #[tauri::command]
-pub fn install_update(
-    pending_update: State<'_, PendingUpdate>,
-) -> Result<(), String> {
-    let update = pending_update.update.lock()
+pub fn install_update(pending_update: State<'_, PendingUpdate>) -> Result<(), String> {
+    let update = pending_update
+        .update
+        .lock()
         .map_err(|e| format!("Updater update lock poisoned: {}", e))?
         .take();
-    let bytes = pending_update.bytes.lock()
+    let bytes = pending_update
+        .bytes
+        .lock()
         .map_err(|e| format!("Updater bytes lock poisoned: {}", e))?
         .take();
-    
+
     let Some(update) = update else {
         return Err("No pending update to install".to_string());
     };
-    
+
     let Some(bytes) = bytes else {
         return Err("Update has not been downloaded yet".to_string());
     };
 
     // Install the update (will trigger app restart)
     update.install(&bytes).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
@@ -247,24 +260,30 @@ pub async fn download_and_install_update<R: Runtime>(
     }
 
     let updater = builder.build().map_err(|e| e.to_string())?;
-    
+
     if let Some(update) = updater.check().await.map_err(|e| e.to_string())? {
         let app_handle = app.clone();
         let mut downloaded: u64 = 0;
-        
-        update.download_and_install(
-            move |chunk_length, content_length| {
-                downloaded += chunk_length as u64;
-                let _ = app_handle.emit("update-download-progress", DownloadProgress {
-                    downloaded,
-                    total: content_length,
-                });
-            },
-            || {
-                // Download complete, about to install
-            }
-        ).await.map_err(|e| e.to_string())?;
+
+        update
+            .download_and_install(
+                move |chunk_length, content_length| {
+                    downloaded += chunk_length as u64;
+                    let _ = app_handle.emit(
+                        "update-download-progress",
+                        DownloadProgress {
+                            downloaded,
+                            total: content_length,
+                        },
+                    );
+                },
+                || {
+                    // Download complete, about to install
+                },
+            )
+            .await
+            .map_err(|e| e.to_string())?;
     }
-    
+
     Ok(())
 }

@@ -1,7 +1,7 @@
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface TrackListHeaderProps {
+export interface TrackListHeaderProps {
   /** Show the duration column with clock icon */
   showDuration?: boolean;
   /** Custom class names for the container */

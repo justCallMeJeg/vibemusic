@@ -7,6 +7,7 @@ interface TopTrack {
   title: string;
   artist: string;
   cover_image: string | null;
+  file_path: string;
   play_count: number;
   duration_ms: number;
 }
@@ -79,7 +80,7 @@ export interface WeeklyWrapData {
   most_active_day_plays: number;
 }
 
-export interface StatsData {
+interface StatsData {
   top_tracks: TopTrack[];
   top_artists: TopArtist[];
   top_albums: TopAlbum[];
@@ -105,6 +106,7 @@ interface StatsState {
   fetchStats: (range?: TimeRange) => Promise<void>;
   setTimeRange: (range: TimeRange) => void;
   recordPlayback: (trackId: number, durationMs: number) => Promise<void>;
+  resetStats: () => void;
 }
 
 export const useStatsStore = create<StatsState>((set, get) => ({
@@ -142,4 +144,6 @@ export const useStatsStore = create<StatsState>((set, get) => ({
       logger.error("Failed to record playback", e);
     }
   },
+
+  resetStats: () => set({ data: null, error: null }),
 }));

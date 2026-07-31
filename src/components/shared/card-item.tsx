@@ -1,21 +1,26 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
+import { useDragSelect } from "@/hooks/use-drag-select";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { Play } from "lucide-react";
+import { Play, Pin } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArtworkImage } from "@/components/shared/artwork-image";
 import { MediaContextMenu } from "@/components/shared/media-context-menu";
 import { Button } from "@/components/ui/button";
-import artistPlaceholderArt from "@/assets/artist-placeholder-art.png";
+import { DynamicPlaceholder } from "@/components/shared/dynamic-placeholder";
+import { useRovingTabindexContext } from "@/hooks/use-roving-tabindex";
+import { useSelection } from "@/hooks/use-selection";
+import { useSelectionStore } from "@/stores/selection-store";
 
 const cardVariants = cva(
-  "flex flex-col cursor-pointer transition-colors group relative debug-card-item",
+  "flex flex-col cursor-pointer transition-colors group relative",
   {
     variants: {
       variant: {
         portrait: "rounded-lg p-3 hover:bg-accent/10",
         landscape:
           "flex-row gap-4 p-2 hover:bg-accent/10 rounded-md items-center",
-        compact: "w-40 shrink-0 space-y-3",
+        compact: "w-50 shrink-0 space-y-3 p-2",
         circle: "rounded-lg p-3 hover:bg-accent/10 items-center",
       },
     },
@@ -39,18 +44,78 @@ const imageVariants = cva("relative bg-card overflow-hidden shadow-sm", {
   },
 });
 
+function useCardTabIndex(dataItemIndex: number | undefined) {
+  const roving = useRovingTabindexContext();
+  const rovingTabIndex =
+    dataItemIndex !== undefined
+      ? roving?.getTabIndex(dataItemIndex)
+      : undefined;
+  const isRovingActive =
+    dataItemIndex !== undefined && roving?.activeIndex === dataItemIndex;
+  const resolvedTabIndex =
+    rovingTabIndex !== undefined
+      ? rovingTabIndex
+      : dataItemIndex !== undefined && !!roving
+        ? -1
+        : undefined;
+  return { rovingTabIndex, isRovingActive, resolvedTabIndex };
+}
+
+function CardArtwork({
+  artworkSrc,
+  artworkType,
+  title,
+  liked,
+}: {
+  artworkSrc?: string;
+  artworkType: "album" | "artist" | "playlist";
+  title: string;
+  liked?: boolean;
+}) {
+  if (artworkSrc) {
+    return (
+      <ArtworkImage
+        src={artworkSrc}
+        alt={title}
+        placeholderType={artworkType}
+        className="group-hover:scale-[1.02] transition-transform duration-300"
+      />
+    );
+  }
+  if (artworkType === "playlist") {
+    return (
+      <DynamicPlaceholder
+        type="playlist"
+        title={title}
+        liked={liked}
+        className="group-hover:scale-[1.02] transition-transform"
+      />
+    );
+  }
+  return (
+    <ArtworkImage
+      src={undefined}
+      alt={title}
+      placeholderType={artworkType === "artist" ? "artist" : "track"}
+      className="group-hover:scale-[1.02] transition-transform duration-300"
+    />
+  );
+}
+
 interface CardItemProps
   extends
-    Omit<React.ComponentProps<"button">, "contextMenu">,
+    Omit<React.ComponentProps<"button">, "contextMenu" | "prefix">,
     VariantProps<typeof cardVariants> {
   title: string;
   subtitle?: string;
   tertiaryText?: string;
   artworkSrc?: string;
   artworkType?: "album" | "artist" | "playlist";
+  artworkLiked?: boolean;
   rank?: number;
+  pinned?: boolean;
   onPlay?: () => void;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   menuActions?: {
     onPlay?: () => void;
     onShuffle?: () => void;
@@ -58,7 +123,19 @@ interface CardItemProps
     onAddToQueue?: () => void;
     onEdit?: () => void;
     onDelete?: () => void;
+    onTogglePin?: () => void;
+    isPinned?: boolean;
   };
+  /** Index within a keyboard-navigable list/grid. Consumed by RovingTabindexContext. */
+  dataItemIndex?: number;
+  /** When true, renders a checkbox overlay during selection mode and handles modifier-click behavior */
+  selectable?: boolean;
+  /** Slot rendered at the top of the card (hidden during selection) */
+  prefix?: ReactNode;
+  /** Slot rendered at the bottom of the card (hidden during selection) */
+  suffix?: ReactNode;
+  /** When provided, overrides the internal checkboxMode subscription. Passed by parent to avoid mass re-renders. */
+  checkboxMode?: boolean;
 }
 
 export const CardItem = memo(function CardItem({
@@ -67,51 +144,75 @@ export const CardItem = memo(function CardItem({
   tertiaryText,
   artworkSrc,
   artworkType = "album",
+  artworkLiked,
   variant,
   rank,
+  pinned,
   className,
   onPlay,
   onClick,
   menuActions,
+  dataItemIndex,
+  selectable,
+  checkboxMode: checkboxModeProp,
+  prefix,
+  suffix,
   ...props
 }: CardItemProps) {
+  const { isRovingActive, resolvedTabIndex } = useCardTabIndex(dataItemIndex);
   const isCircle = variant === "circle";
   const isCompact = variant === "compact";
+  const { handlePointerDown: dragPointerDown, handlePointerMove: dragPointerMove, handlePointerUp: dragPointerUp } = useDragSelect();
 
-  const artwork = artworkSrc ? (
-    <ArtworkImage
-      src={artworkSrc}
-      alt={title}
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
-  ) : artworkType === "playlist" ? (
-    <div className="w-full h-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center">
-      <span className="text-4xl font-bold text-muted-foreground select-none group-hover:scale-[1.02] transition-transform">
-        {title.slice(0, 2).toUpperCase()}
-      </span>
-    </div>
-  ) : artworkType === "artist" ? (
-    <ArtworkImage
-      src={undefined}
-      alt={title}
-      fallback={artistPlaceholderArt}
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
-  ) : (
-    <ArtworkImage
-      src={undefined}
-      alt={title}
-      className="group-hover:scale-[1.02] transition-transform duration-300"
-    />
+  const { isSelected, onClick: selectionOnClick } = useSelection({
+    itemId: dataItemIndex ?? 0,
+    index: dataItemIndex ?? 0,
+  });
+  const subscribedCheckboxMode = useSelectionStore(
+    (s) => s.mode === "checkbox",
   );
+  const checkboxMode = checkboxModeProp ?? subscribedCheckboxMode;
 
   const CardContent = (
     <button
-      type="button"
-      className={cn(cardVariants({ variant, className }))}
-      onClick={onClick}
       {...props}
+      type="button"
+      onClick={(e) => {
+        if (selectable) {
+          if (e.ctrlKey || e.metaKey) {
+            selectionOnClick(e);
+            return;
+          }
+          if (e.shiftKey) {
+            useSelectionStore.getState().enableCheckboxMode();
+            selectionOnClick(e);
+            return;
+          }
+        } else if (checkboxMode) {
+          return;
+        }
+        onClick?.(e);
+      }}
+      onPointerDown={(e) => {
+        if (selectable && checkboxMode) {
+          e.preventDefault();
+          dragPointerDown(e, dataItemIndex ?? 0);
+        }
+      }}
+      onPointerMove={dragPointerMove}
+      onPointerUp={dragPointerUp}
+      data-item-index={dataItemIndex}
+      className={cn(
+        cardVariants({ variant, className }),
+        isRovingActive && "bg-accent/15 ring-1 ring-ring/30 rounded-md",
+        isSelected && selectable && "ring-2 ring-accent",
+        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring rounded-md",
+      )}
+      {...(resolvedTabIndex !== undefined
+        ? { tabIndex: resolvedTabIndex }
+        : {})}
     >
+      {checkboxMode ? null : prefix}
       <div className={cn(imageVariants({ variant }), "overflow-visible")}>
         <div
           className={cn(
@@ -119,7 +220,12 @@ export const CardItem = memo(function CardItem({
             isCircle ? "rounded-full" : "rounded-[inherit]",
           )}
         >
-          {artwork}
+          <CardArtwork
+            artworkSrc={artworkSrc}
+            artworkType={artworkType}
+            title={title}
+            liked={artworkLiked}
+          />
           {onPlay && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
               <Button
@@ -141,10 +247,27 @@ export const CardItem = memo(function CardItem({
               </Button>
             </div>
           )}
+          {checkboxMode && selectable && (
+            <div className="absolute top-2 right-2 z-30 bg-black/60 backdrop-blur-sm rounded-md p-1">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() =>
+                  useSelectionStore
+                    .getState()
+                    .toggle(dataItemIndex ?? 0, dataItemIndex ?? 0)
+                }
+              />
+            </div>
+          )}
         </div>
         {rank !== undefined && (
           <div className="absolute -top-1 -left-1 bg-black/60 backdrop-blur-md text-white shadow-sm rounded-full w-6 h-6 flex items-center justify-center font-bold text-[10px] z-20 ring-1 ring-white/20">
             {rank}
+          </div>
+        )}
+        {pinned && (
+          <div className="absolute -top-1 -right-1 bg-black/60 backdrop-blur-md text-white shadow-sm rounded-full w-8 h-8 flex items-center justify-center z-20 ring-1 ring-white/20">
+            <Pin size={18} className="fill-primary text-primary rotate-45" />
           </div>
         )}
       </div>
@@ -164,6 +287,7 @@ export const CardItem = memo(function CardItem({
           </div>
         )}
       </div>
+      {checkboxMode ? null : suffix}
     </button>
   );
 

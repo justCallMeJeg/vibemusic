@@ -1,4 +1,3 @@
-import "@fontsource/instrument-sans";
 import { useEffect, useState } from "react";
 import {
   Download,
@@ -82,14 +81,12 @@ export default function Hero() {
             </div>
             <div className="flex flex-col items-start gap-4">
               <div className="gap-2 flex flex-col">
-                <h1 className="font-heading text-4xl sm:text-5xl xl:text-6xl font-bold tracking-tight text-foreground leading-[1.08] animate-fade-in-up opacity-0 animation-delay-100">
+                <h1 className="font-heading text-4xl sm:text-5xl xl:text-6xl font-bold tracking-tight text-foreground leading-[1.08] text-balance animate-fade-in-up opacity-0 animation-delay-100">
                   Your music.
                   <br />
-                  <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                    Your way.
-                  </span>
+                  <span className="text-primary">Your way.</span>
                 </h1>
-                <p className="text-base xl:text-lg text-muted-foreground leading-relaxed max-w-lg animate-fade-in-up opacity-0 animation-delay-200">
+                <p className="text-base xl:text-lg text-muted-foreground leading-relaxed max-w-2xl animate-fade-in-up opacity-0 animation-delay-200">
                   A private, cross-platform desktop music player that puts you
                   in control. No cloud. No tracking. Just your library,
                   beautifully played.

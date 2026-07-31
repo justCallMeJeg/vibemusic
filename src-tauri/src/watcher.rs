@@ -43,11 +43,10 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
 
     // Re-create watcher to modify paths (notify doesn't support unwatching easily in all versions, easier to drop and recreate for clean slate)
     // Actually notify 5.0+ supports unwatch, but resetting is safer to avoid stale state.
-    
+
     // Create channel for events
     let (tx, rx) = crossbeam_channel::unbounded();
-    let tx_c = tx.clone();
-    
+
     let mut watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
         match res {
             Ok(event) => {
@@ -59,22 +58,23 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
                         | notify::EventKind::Remove(_)
                 ) {
                     // Ignore transient files or temp files
-                     let should_process = event.paths.iter().any(|p| {
-                         let p_str = p.to_string_lossy();
-                         !p_str.contains(".db") && 
-                         !p_str.contains(".wal") && 
-                         !p_str.contains(".tmp") &&
-                         !p_str.contains("covers")
-                     });
-                     
-                     if should_process {
-                         let _ = tx_c.send(());
-                     }
+                    let should_process = event.paths.iter().any(|p| {
+                        let p_str = p.to_string_lossy();
+                        !p_str.contains(".db")
+                            && !p_str.contains(".wal")
+                            && !p_str.contains(".tmp")
+                            && !p_str.contains("covers")
+                    });
+
+                    if should_process {
+                        let _ = tx.send(());
+                    }
                 }
             }
             Err(e) => error!("Watch error: {:?}", e),
         }
-    }).map_err(|e| format!("Failed to create watcher: {}", e))?;
+    })
+    .map_err(|e| format!("Failed to create watcher: {}", e))?;
 
     // Add paths
     for folder in &folders {
@@ -92,19 +92,19 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
     // Start debounce loop in a new thread.
     // Ideally this logic should be more robust (e.g. using a global channel),
     // but for now this per-watch instantiation works because the old channel disconnects when the watcher is dropped.
-    
+
     let app_handle = app.clone();
     let folders_clone = folders.clone();
-    
+
     std::thread::spawn(move || {
         // Debounce loop for this specific watcher instance
-        // If `watch_paths` is called again, this loop naturally dies when `rx` is closed? 
-        // `rx` closes when ALL senders drop. 
-        // The sender is inside the watcher callback. 
-        // When we replace `state.watcher`, the old watcher is Dropped. 
-        // The callback references `tx_c`. Does dropping watcher drop callback? Yes.
-        // So `tx_c` drops. `rx` closes. Loop ends. Perfect.
-        
+        // If `watch_paths` is called again, this loop naturally dies when `rx` is closed?
+        // `rx` closes when ALL senders drop.
+        // The sender is inside the watcher callback.
+        // When we replace `state.watcher`, the old watcher is Dropped.
+        // The callback references `tx`. Does dropping watcher drop callback? Yes.
+        // So `tx` drops. `rx` closes. Loop ends. Perfect.
+
         let debounce_time = Duration::from_secs(2);
         let mut last_event = Instant::now();
         let mut dirty = false;
@@ -113,7 +113,7 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
             // Wait for event with timeout
             // If dirty, timeout = debounce_time remaining.
             // If not dirty, wait forever.
-            
+
             if dirty {
                 let elapsed = last_event.elapsed();
                 if elapsed >= debounce_time {
@@ -137,10 +137,10 @@ pub fn watch_paths(app: AppHandle, folders: Vec<String>) -> Result<(), String> {
                     match rx.recv_timeout(wait) {
                         Ok(_) => {
                             last_event = Instant::now(); // Reset timer on new event
-                        },
+                        }
                         Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
                             // Timeout reached, loop will trigger scan
-                        },
+                        }
                         Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
                     }
                 }
