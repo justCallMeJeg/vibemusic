@@ -100,10 +100,8 @@ pub fn parse_artists(artist_str: Option<&str>) -> Vec<String> {
                             }
                         }
                     }
-                } else {
-                    if seen.insert(trimmed.to_lowercase()) {
-                        artists.push(trimmed.to_string());
-                    }
+                } else if seen.insert(trimmed.to_lowercase()) {
+                    artists.push(trimmed.to_string());
                 }
             }
             artists

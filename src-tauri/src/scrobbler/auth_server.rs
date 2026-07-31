@@ -63,9 +63,9 @@ pub fn start_auth() -> Result<(String, String), String> {
                     query
                         .split('&')
                         .find_map(|pair| {
-                            let mut kv = pair.splitn(2, '=');
-                            let key = kv.next()?;
-                            let value = kv.next()?;
+                            let (key, value) = pair.split_once('=')?;
+                            
+                            
                             if key == "token" {
                                 Some(valueto_string(value))
                             } else {
@@ -122,7 +122,7 @@ fn valueto_string(value: &str) -> String {
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
             if let Ok(hex) = u8::from_str_radix(
-                &std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("00"),
+                std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("00"),
                 16,
             ) {
                 result.push(hex as char);

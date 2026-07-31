@@ -311,8 +311,7 @@ impl DbHelper {
 
         let cases: Vec<String> = new_order
             .iter()
-            .enumerate()
-            .map(|(_, _)| format!("WHEN ? THEN ?"))
+            .map(|_| "WHEN ? THEN ?".to_string())
             .collect();
         let in_placeholders: Vec<&str> = vec!["?"; new_order.len()];
         let sql = format!(
