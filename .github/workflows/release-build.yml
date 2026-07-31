@@ -3,6 +3,13 @@ name: Stable Release Build
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to build and attach assets to. Defaults to the release event tag.
+        required: false
+        default: ""
+        type: string
 
 env:
   VIBEMUSIC_NIGHTLY_ENDPOINT: "https://github.com/gjpgabayeron/vibemusic/releases/download/nightly/latest.json"
@@ -12,18 +19,28 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       VERSION: ${{ steps.version.outputs.VERSION }}
+      TAG: ${{ steps.tag.outputs.TAG }}
 
     steps:
+      - name: Resolve release tag
+        id: tag
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.tag }}"
+          if (-not $tag) { $tag = "${{ github.event.release.tag_name }}" }
+          echo "TAG=$tag" >> $env:GITHUB_OUTPUT
+          Write-Host "Selected tag: $tag"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.tag.outputs.TAG }}
           fetch-depth: 0
 
       - name: Get version from tag
         id: version
         shell: pwsh
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = "${{ steps.tag.outputs.TAG }}"
           $version = $tag -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Release version: $version"
@@ -57,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ needs.prepare.outputs.TAG }}
           fetch-depth: 0
 
       - name: Install dependencies (ubuntu only)
@@ -156,7 +173,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = "${{ needs.prepare.outputs.TAG }}"
           Get-ChildItem -Path artifacts -Recurse -File | Where-Object {
             $_.Name -match '^VibeMusic-' -or $_.Name -eq 'latest.json'
           } | ForEach-Object {
@@ -171,7 +188,7 @@ jobs:
         run: |
           git fetch --tags --depth=100 2>$null
           $version = "${{ needs.prepare.outputs.VERSION }}"
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = "${{ needs.prepare.outputs.TAG }}"
           $repo = "${{ github.repository }}"
           $baseUrl = "https://github.com/$repo/releases/download/$tag"
 
@@ -237,7 +254,7 @@ jobs:
           git fetch --tags --depth=100 2>$null
 
           $version = "${{ needs.prepare.outputs.VERSION }}"
-          $tag = "${{ github.event.release.tag_name }}"
+          $tag = "${{ needs.prepare.outputs.TAG }}"
           $repo = "${{ github.repository }}"
           $baseUrl = "https://github.com/$repo/releases/download/$tag"
           $pubDate = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss") + "Z"
