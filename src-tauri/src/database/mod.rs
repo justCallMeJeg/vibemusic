@@ -8,6 +8,7 @@ pub mod artists;
 pub mod history;
 pub mod playlists_db;
 pub mod search;
+pub mod stats;
 #[cfg(test)]
 mod tests;
 pub mod tracks;
